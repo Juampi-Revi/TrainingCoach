@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Plan" ADD COLUMN     "periodDays" INTEGER NOT NULL DEFAULT 7;
