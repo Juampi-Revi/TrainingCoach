@@ -43,6 +43,15 @@ export default async function CoachStudentDetailPage({
     orderBy: { createdAt: "desc" },
   });
 
+  const pausedAssignment =
+    activeAssignment == null
+      ? await prisma.planAssignment.findFirst({
+          where: { clientUserId, status: "paused" },
+          include: { plan: { select: { id: true, title: true, status: true, periodDays: true, weeksCount: true } } },
+          orderBy: { createdAt: "desc" },
+        })
+      : null;
+
   const assignmentHistory = await prisma.planAssignment.findMany({
     where: { clientUserId },
     include: { plan: { select: { id: true, title: true } } },
@@ -166,6 +175,44 @@ export default async function CoachStudentDetailPage({
     redirect(`/home/coach/alumnos/${clientUserId}`);
   }
 
+  async function updateAssignmentStartDate(formData: FormData) {
+    "use server";
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user) redirect("/login");
+    if (session.user.role !== "coach") redirect("/home/client");
+
+    const assignmentId = String(formData.get("assignmentId") ?? "");
+    const clientUserId = String(formData.get("clientUserId") ?? "");
+    const startDateStr = String(formData.get("startDate") ?? "");
+
+    const coachClient = await prisma.coachClient.findFirst({
+      where: { coachUserId: session.user.id, clientUserId, status: "active" },
+      select: { id: true },
+    });
+    if (!coachClient) redirect("/home/coach/alumnos");
+
+    const allowed = await prisma.planAssignment.findFirst({
+      where: {
+        id: assignmentId,
+        clientUserId,
+        OR: [{ status: "active" }, { status: "paused" }],
+        plan: { coachUserId: session.user.id },
+      },
+      select: { id: true },
+    });
+    if (!allowed) redirect(`/home/coach/alumnos/${clientUserId}`);
+
+    const startDate = startDateStr ? new Date(startDateStr) : null;
+    await prisma.planAssignment.update({
+      where: { id: allowed.id },
+      data: { startDate },
+      select: { id: true },
+    });
+
+    redirect(`/home/coach/alumnos/${clientUserId}`);
+  }
+
   async function pauseActivePlan(formData: FormData) {
     "use server";
 
@@ -176,9 +223,45 @@ export default async function CoachStudentDetailPage({
     const assignmentId = String(formData.get("assignmentId") ?? "");
     const clientUserId = String(formData.get("clientUserId") ?? "");
 
+    const coachClient = await prisma.coachClient.findFirst({
+      where: { coachUserId: session.user.id, clientUserId, status: "active" },
+      select: { id: true },
+    });
+    if (!coachClient) redirect("/home/coach/alumnos");
+
     await prisma.planAssignment.updateMany({
-      where: { id: assignmentId, clientUserId, status: "active" },
+      where: { id: assignmentId, clientUserId, status: "active", plan: { coachUserId: session.user.id } },
       data: { status: "paused" },
+    });
+
+    redirect(`/home/coach/alumnos/${clientUserId}`);
+  }
+
+  async function resumePausedPlan(formData: FormData) {
+    "use server";
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user) redirect("/login");
+    if (session.user.role !== "coach") redirect("/home/client");
+
+    const assignmentId = String(formData.get("assignmentId") ?? "");
+    const clientUserId = String(formData.get("clientUserId") ?? "");
+
+    const coachClient = await prisma.coachClient.findFirst({
+      where: { coachUserId: session.user.id, clientUserId, status: "active" },
+      select: { id: true },
+    });
+    if (!coachClient) redirect("/home/coach/alumnos");
+
+    await prisma.$transaction(async (tx) => {
+      await tx.planAssignment.updateMany({
+        where: { clientUserId, status: "active", plan: { coachUserId: session.user.id } },
+        data: { status: "finished" },
+      });
+      await tx.planAssignment.updateMany({
+        where: { id: assignmentId, clientUserId, status: "paused", plan: { coachUserId: session.user.id } },
+        data: { status: "active" },
+      });
     });
 
     redirect(`/home/coach/alumnos/${clientUserId}`);
@@ -194,8 +277,14 @@ export default async function CoachStudentDetailPage({
     const assignmentId = String(formData.get("assignmentId") ?? "");
     const clientUserId = String(formData.get("clientUserId") ?? "");
 
+    const coachClient = await prisma.coachClient.findFirst({
+      where: { coachUserId: session.user.id, clientUserId, status: "active" },
+      select: { id: true },
+    });
+    if (!coachClient) redirect("/home/coach/alumnos");
+
     await prisma.planAssignment.updateMany({
-      where: { id: assignmentId, clientUserId, status: "active" },
+      where: { id: assignmentId, clientUserId, status: "active", plan: { coachUserId: session.user.id } },
       data: { status: "finished" },
     });
 
@@ -239,6 +328,29 @@ export default async function CoachStudentDetailPage({
               </div>
             </div>
 
+            <form action={updateAssignmentStartDate} className="mt-3 flex flex-wrap items-end gap-2">
+              <input type="hidden" name="assignmentId" value={activeAssignment.id} />
+              <input type="hidden" name="clientUserId" value={clientUserId} />
+              <div>
+                <label className="block text-sm font-medium text-[color:rgb(var(--muted))]" htmlFor="activeStartDate">
+                  Cambiar inicio
+                </label>
+                <input
+                  id="activeStartDate"
+                  name="startDate"
+                  type="date"
+                  defaultValue={activeAssignment.startDate ? new Date(activeAssignment.startDate).toISOString().slice(0, 10) : ""}
+                  className="mt-1 block rounded-lg border border-[color:rgb(var(--border))] bg-[color:rgb(var(--bg))] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:rgb(var(--primary))]"
+                />
+              </div>
+              <button
+                type="submit"
+                className="rounded-lg border border-[color:rgb(var(--border))] bg-[color:rgb(var(--bg))] px-4 py-2 text-sm font-medium hover:bg-[color:rgb(var(--card))]"
+              >
+                Guardar inicio
+              </button>
+            </form>
+
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <form action={pauseActivePlan}>
                 <input type="hidden" name="assignmentId" value={activeAssignment.id} />
@@ -258,6 +370,62 @@ export default async function CoachStudentDetailPage({
                   className="rounded-lg border border-[color:rgb(var(--border))] bg-[color:rgb(var(--bg))] px-4 py-2 text-sm font-medium hover:bg-[color:rgb(var(--card))]"
                 >
                   Finalizar
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : pausedAssignment ? (
+          <div className="mt-3 rounded-xl border border-[color:rgb(var(--border))] bg-[color:rgb(var(--bg))] p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{pausedAssignment.plan.title}</div>
+                <div className="text-sm text-[color:rgb(var(--muted))]">
+                  Estado asignación: pausado · Estado plan: {pausedAssignment.plan.status} · Períodos: {pausedAssignment.plan.weeksCount} · Duración:{" "}
+                  {pausedAssignment.plan.periodDays} días
+                </div>
+                <div className="mt-1 text-sm text-[color:rgb(var(--muted))]">
+                  Inicio: {pausedAssignment.startDate ? new Date(pausedAssignment.startDate).toISOString().slice(0, 10) : "—"}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link className="text-sm text-[color:rgb(var(--primary))] hover:underline" href={`/home/coach/plans/${pausedAssignment.plan.id}`}>
+                  Abrir plan
+                </Link>
+              </div>
+            </div>
+
+            <form action={updateAssignmentStartDate} className="mt-3 flex flex-wrap items-end gap-2">
+              <input type="hidden" name="assignmentId" value={pausedAssignment.id} />
+              <input type="hidden" name="clientUserId" value={clientUserId} />
+              <div>
+                <label className="block text-sm font-medium text-[color:rgb(var(--muted))]" htmlFor="pausedStartDate">
+                  Cambiar inicio
+                </label>
+                <input
+                  id="pausedStartDate"
+                  name="startDate"
+                  type="date"
+                  defaultValue={pausedAssignment.startDate ? new Date(pausedAssignment.startDate).toISOString().slice(0, 10) : ""}
+                  className="mt-1 block rounded-lg border border-[color:rgb(var(--border))] bg-[color:rgb(var(--bg))] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:rgb(var(--primary))]"
+                />
+              </div>
+              <button
+                type="submit"
+                className="rounded-lg border border-[color:rgb(var(--border))] bg-[color:rgb(var(--bg))] px-4 py-2 text-sm font-medium hover:bg-[color:rgb(var(--card))]"
+              >
+                Guardar inicio
+              </button>
+            </form>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <form action={resumePausedPlan}>
+                <input type="hidden" name="assignmentId" value={pausedAssignment.id} />
+                <input type="hidden" name="clientUserId" value={clientUserId} />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[color:rgb(var(--primary))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--primary-fg))] hover:opacity-90"
+                >
+                  Reanudar
                 </button>
               </form>
             </div>

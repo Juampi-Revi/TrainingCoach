@@ -39,7 +39,7 @@ export default async function ClientWeekPage({
   if (session.user.role !== "client") redirect("/home/coach");
 
   const assignment = await prisma.planAssignment.findFirst({
-    where: { clientUserId: session.user.id, status: "active" },
+    where: { clientUserId: session.user.id, OR: [{ status: "active" }, { status: "paused" }] },
     include: { plan: { select: { id: true, title: true, weeksCount: true, periodDays: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -51,6 +51,27 @@ export default async function ClientWeekPage({
           <h1 className="text-2xl font-bold tracking-tight">Semana actual</h1>
           <p className="text-[color:rgb(var(--muted))]">No hay plan activo asignado.</p>
         </div>
+      </div>
+    );
+  }
+
+  if (assignment.status === "paused") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Plan pausado</h1>
+            <p className="text-[color:rgb(var(--muted))]">{assignment.plan.title}</p>
+          </div>
+          <Link className="text-sm text-[color:rgb(var(--muted))] hover:underline" href="/home/client/plan">
+            Volver a mi plan
+          </Link>
+        </div>
+        <section className="rounded-2xl border border-[color:rgb(var(--border))] bg-[color:rgb(var(--card))] p-4">
+          <p className="text-sm text-[color:rgb(var(--muted))]">
+            Tu coach pausó el plan. Cuando lo reanude vas a volver a ver el entrenamiento recomendado y vas a poder iniciar sesiones.
+          </p>
+        </section>
       </div>
     );
   }
