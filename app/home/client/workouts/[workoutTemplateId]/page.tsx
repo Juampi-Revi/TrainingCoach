@@ -13,8 +13,8 @@ export default async function ClientWorkoutDetailPage({ params }: { params: { wo
   if (session.user.role !== "client") redirect("/home/coach");
 
   const assignment = await prisma.planAssignment.findFirst({
-    where: { clientUserId: session.user.id, status: "active" },
-    select: { planId: true, plan: { select: { periodDays: true } } },
+    where: { clientUserId: session.user.id, OR: [{ status: "active" }, { status: "paused" }] },
+    select: { planId: true, status: true, plan: { select: { periodDays: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -125,6 +125,8 @@ export default async function ClientWorkoutDetailPage({ params }: { params: { wo
             >
               Continuar sesión
             </Link>
+          ) : assignment.status === "paused" ? (
+            <div className="text-sm text-[color:rgb(var(--muted))]">Plan pausado</div>
           ) : (
             <form action={startSession}>
               <button

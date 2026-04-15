@@ -10,8 +10,8 @@ export default async function ClientPlanPage() {
   if (!session?.user) redirect("/login");
   if (session.user.role !== "client") redirect("/home/coach");
 
-  const activeAssignment = await prisma.planAssignment.findFirst({
-    where: { clientUserId: session.user.id, status: "active" },
+  const assignment = await prisma.planAssignment.findFirst({
+    where: { clientUserId: session.user.id, OR: [{ status: "active" }, { status: "paused" }] },
     include: {
       plan: { select: { id: true, title: true, goal: true, notes: true, status: true, weeksCount: true } },
     },
@@ -26,17 +26,18 @@ export default async function ClientPlanPage() {
       </div>
 
       <section className="rounded-2xl border border-[color:rgb(var(--border))] bg-[color:rgb(var(--card))] p-4">
-        {!activeAssignment?.plan ? (
+        {!assignment?.plan ? (
           <p className="text-sm text-[color:rgb(var(--muted))]">Todavía no tenés un plan activo asignado.</p>
         ) : (
           <div className="space-y-2">
-            <div className="text-lg font-semibold">{activeAssignment.plan.title}</div>
-            <div className="text-sm text-[color:rgb(var(--muted))]">Estado plan: {activeAssignment.plan.status}</div>
-            <div className="text-sm text-[color:rgb(var(--muted))]">Semanas: {activeAssignment.plan.weeksCount}</div>
-            {activeAssignment.plan.goal ? <div className="text-sm">Objetivo: {activeAssignment.plan.goal}</div> : null}
-            {activeAssignment.plan.notes ? (
+            <div className="text-lg font-semibold">{assignment.plan.title}</div>
+            <div className="text-sm text-[color:rgb(var(--muted))]">Estado asignación: {assignment.status}</div>
+            <div className="text-sm text-[color:rgb(var(--muted))]">Estado plan: {assignment.plan.status}</div>
+            <div className="text-sm text-[color:rgb(var(--muted))]">Semanas: {assignment.plan.weeksCount}</div>
+            {assignment.plan.goal ? <div className="text-sm">Objetivo: {assignment.plan.goal}</div> : null}
+            {assignment.plan.notes ? (
               <div className="rounded-xl border border-[color:rgb(var(--border))] bg-[color:rgb(var(--bg))] p-3 text-sm">
-                {activeAssignment.plan.notes}
+                {assignment.plan.notes}
               </div>
             ) : null}
             <div className="pt-1">
