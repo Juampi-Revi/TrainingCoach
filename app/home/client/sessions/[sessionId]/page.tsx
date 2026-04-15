@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { RestTimer } from "./rest-timer";
 
 function parseOptionalInt(value: FormDataEntryValue | null) {
   const raw = typeof value === "string" ? value.trim() : "";
@@ -204,6 +205,77 @@ export default async function ClientSessionPage({
     redirect("/home/client/week?feedback=session-completed");
   }
 
+  async function repeatSession(formData: FormData) {
+    "use server";
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user) redirect("/login");
+    if (session.user.role !== "client") redirect("/home/coach");
+
+    const sourceSessionId = String(formData.get("sourceSessionId") ?? "");
+
+    const source = await prisma.workoutSession.findFirst({
+      where: { id: sourceSessionId, clientUserId: session.user.id, status: "completed" },
+      select: {
+        id: true,
+        workoutTemplateId: true,
+        exercises: {
+          select: {
+            workoutExerciseId: true,
+            plannedExerciseId: true,
+            performedExerciseId: true,
+            sortOrder: true,
+          },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        },
+      },
+    });
+    if (!source) redirect(`/home/client/sessions/${sourceSessionId}`);
+
+    if (source.workoutTemplateId) {
+      const existing = await prisma.workoutSession.findFirst({
+        where: {
+          clientUserId: session.user.id,
+          status: "in_progress",
+          workoutTemplateId: source.workoutTemplateId,
+        },
+        select: { id: true },
+        orderBy: [{ performedAt: "desc" }, { createdAt: "desc" }],
+      });
+      if (existing) redirect(`/home/client/sessions/${existing.id}`);
+    }
+
+    const created = await prisma.$transaction(async (tx) => {
+      const ws = await tx.workoutSession.create({
+        data: {
+          clientUserId: session.user.id,
+          workoutTemplateId: source.workoutTemplateId,
+          performedAt: new Date(),
+          status: "in_progress",
+        },
+        select: { id: true },
+      });
+
+      if (source.exercises.length > 0) {
+        await tx.workoutSessionExercise.createMany({
+          data: source.exercises.map((se, idx) => ({
+            workoutSessionId: ws.id,
+            workoutExerciseId: se.workoutExerciseId,
+            plannedExerciseId: se.plannedExerciseId,
+            performedExerciseId: se.performedExerciseId,
+            sortOrder: se.sortOrder ?? idx,
+          })),
+        });
+      }
+
+      return ws;
+    });
+
+    revalidatePath("/home/client/week");
+    revalidatePath("/home/client");
+    redirect(`/home/client/sessions/${created.id}`);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-3">
@@ -211,13 +283,31 @@ export default async function ClientSessionPage({
           <h1 className="text-2xl font-bold tracking-tight">{workoutSession.workoutTemplate?.title ?? "Sesión"}</h1>
           <p className="text-[color:rgb(var(--muted))]">Estado: {workoutSession.status}</p>
         </div>
-        <Link className="text-sm text-[color:rgb(var(--muted))] hover:underline" href="/home/client/week">
-          Volver a semana
-        </Link>
+        <div className="flex items-center gap-3">
+          {workoutSession.status === "completed" ? (
+            <form action={repeatSession}>
+              <input type="hidden" name="sourceSessionId" value={workoutSession.id} />
+              <button
+                type="submit"
+                className="rounded-lg bg-[color:rgb(var(--primary))] px-4 py-2 text-sm font-medium text-[color:rgb(var(--primary-fg))] hover:opacity-90"
+              >
+                Repetir entrenamiento
+              </button>
+            </form>
+          ) : null}
+          <Link className="text-sm text-[color:rgb(var(--muted))] hover:underline" href="/home/client/week">
+            Volver a semana
+          </Link>
+        </div>
       </div>
 
       <section className="rounded-2xl border border-[color:rgb(var(--border))] bg-[color:rgb(var(--card))] p-4">
         <h2 className="text-lg font-semibold">Ejercicios</h2>
+        {isEditable ? (
+          <p className="mt-1 text-sm text-[color:rgb(var(--muted))]">
+            Autosave activo: cada &quot;+ Set&quot; y cada guardado persiste en la base al instante. Si recargás, la sesión se rehidrata con los datos actuales.
+          </p>
+        ) : null}
         {workoutSession.exercises.length === 0 ? (
           <p className="mt-2 text-sm text-[color:rgb(var(--muted))]">No hay ejercicios cargados para esta sesión.</p>
         ) : (
@@ -292,6 +382,8 @@ export default async function ClientSessionPage({
                       </div>
                     </form>
                   ) : null}
+
+                  {isEditable ? <RestTimer defaultSeconds={se.workoutExercise?.restSeconds ?? 90} /> : null}
 
                   <div className="mt-3">
                     <div className="flex items-center justify-between gap-3">
@@ -463,4 +555,3 @@ export default async function ClientSessionPage({
     </div>
   );
 }
-
