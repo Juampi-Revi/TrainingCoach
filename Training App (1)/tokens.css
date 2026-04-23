@@ -1,0 +1,84 @@
+/* ─────────────────────────────────────────────────────────────
+   TRAINING APP — Design Tokens
+   Performance / atlético · neón lima sobre casi-negro
+   ───────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Color — primary */
+  --lime: #D7FF3A;
+  --lime-600: #BEE52D;
+  --lime-200: #EEFFA8;
+
+  /* Dark theme (default) */
+  --bg:        #0B0B0C;
+  --bg-1:      #141417;   /* elevated surface */
+  --bg-2:      #1C1C20;   /* input / card inner */
+  --bg-3:      #26262C;   /* hover / selected */
+  --line:      #26262C;
+  --line-2:    #33333A;
+  --text:      #F5F5F4;
+  --text-mute: #8D8D94;
+  --text-dim:  #5C5C63;
+
+  /* Semantic */
+  --success: #6EE7A8;
+  --warn:    #FFB547;
+  --danger:  #FF5B5B;
+  --info:    #7AB8FF;
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+
+  /* Spacing scale (4-based) */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px;
+
+  /* Type */
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 8px 24px rgba(0,0,0,.35);
+  --shadow-lg: 0 24px 48px rgba(0,0,0,.5);
+}
+
+/* Light variant (opt-in via [data-theme="light"]) */
+[data-theme="light"] {
+  --bg:        #F7F7F5;
+  --bg-1:      #FFFFFF;
+  --bg-2:      #F1F1EE;
+  --bg-3:      #E6E6E1;
+  --line:      #E3E3DE;
+  --line-2:    #CECEC7;
+  --text:      #0B0B0C;
+  --text-mute: #6A6A6E;
+  --text-dim:  #9A9A98;
+
+  --success: #1B8A4E;
+  --warn:    #B86C00;
+  --danger:  #C53030;
+  --info:    #2563EB;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 8px 20px rgba(0,0,0,.08);
+  --shadow-lg: 0 24px 48px rgba(0,0,0,.12);
+}
+
+/* Base reset applied within app scope */
+.ta-app, .ta-app * { box-sizing: border-box; }
+.ta-app { font-family: var(--font-sans); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.ta-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Scrollbars inside artboards — hide */
+.ta-app ::-webkit-scrollbar { width: 0; height: 0; }
+.ta-app { scrollbar-width: none; }
+
+/* Utility */
+.ta-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

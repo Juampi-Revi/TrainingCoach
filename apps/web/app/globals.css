@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ─── Tokens ──────────────────────────────────────────────── */
+:root {
+  --lime:      #D7FF3A;
+  --lime-600:  #BEE52D;
+  --lime-200:  #EEFFA8;
+
+  --bg:        #0B0B0C;
+  --bg-1:      #141417;
+  --bg-2:      #1C1C20;
+  --bg-3:      #26262C;
+  --line:      #26262C;
+  --line-2:    #33333A;
+  --text:      #F5F5F4;
+  --text-mute: #8D8D94;
+  --text-dim:  #5C5C63;
+
+  --success:   #6EE7A8;
+  --warn:      #FFB547;
+  --danger:    #FF5B5B;
+  --info:      #7AB8FF;
+
+  --r-xs: 4px;  --r-sm: 8px;  --r-md: 12px;  --r-lg: 16px;  --r-xl: 20px;
+
+  --s-1: 4px;  --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-5: 20px; --s-6: 24px;  --s-8: 32px;  --s-10: 40px; --s-12: 48px;
+
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 8px 24px rgba(0,0,0,.35);
+  --shadow-lg: 0 24px 48px rgba(0,0,0,.5);
+}
+
+/* ─── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: none;
+}
+
+body::-webkit-scrollbar { display: none; }
+
+/* ─── Utilities ───────────────────────────────────────────── */
+.ta-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ta-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Button interactive states ───────────────────────────── */
+.ta-btn { transition: opacity .12s, transform .08s; }
+.ta-btn:hover:not(:disabled) { opacity: .88; }
+.ta-btn:active:not(:disabled) { transform: scale(.97); }
+.ta-btn:disabled { cursor: not-allowed; opacity: .4; }
+
+/* ─── Nav item hover ──────────────────────────────────────── */
+.ta-nav-item { transition: background .12s, color .12s; }
+.ta-nav-item:hover { background: var(--bg-2) !important; color: var(--text) !important; }
+
+/* ─── Row hover ───────────────────────────────────────────── */
+.ta-row { transition: background .1s; cursor: pointer; }
+.ta-row:hover { background: var(--bg-2); }
+
+/* ─── Input focus ─────────────────────────────────────────── */
+.ta-input-inner:focus {
+  outline: none;
+  background: transparent;
+}
+.ta-input-wrap:focus-within {
+  border-color: var(--lime) !important;
+}
+
+/* ─── Animations ──────────────────────────────────────────── */
+@keyframes ta-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes ta-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(.7); }
+}
+@keyframes ta-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ta-spin   { animation: ta-spin 1.2s linear infinite; }
+.ta-pulse  { animation: ta-pulse 1.5s ease-in-out infinite; }
+.ta-fade-in { animation: ta-fade-in .2s ease; }
+
+/* ─── Scrollbar inside panels ─────────────────────────────── */
+.ta-scroll { overflow-y: auto; scrollbar-width: none; }
+.ta-scroll::-webkit-scrollbar { display: none; }
