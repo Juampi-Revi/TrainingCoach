@@ -32,6 +32,7 @@ export async function GET(
                 intensityTarget: true,
                 restSeconds: true,
                 notes: true,
+                groupNote: true,
                 alternatives: {
                   orderBy: { priority: "asc" },
                   include: {
@@ -45,6 +46,7 @@ export async function GET(
                 id: true,
                 name: true,
                 primaryMuscle: true,
+                youtubeUrl: true,
                 media: { select: { id: true, url: true, mediaType: true }, orderBy: { createdAt: "asc" } },
               },
             },
@@ -60,6 +62,7 @@ export async function GET(
       id: session.id,
       status: session.status,
       performedAt: session.performedAt,
+      completedAt: session.completedAt ?? null,
       energyRating: session.energyRating,
       sessionNotes: session.sessionNotes,
       workoutTemplate: session.workoutTemplate,
@@ -73,6 +76,7 @@ export async function GET(
           name: ex.performedExercise.name,
           primaryMuscle: ex.performedExercise.primaryMuscle,
           thumbnailUrl: ex.performedExercise.media[0]?.url ?? null,
+          youtubeUrl: ex.performedExercise.youtubeUrl ?? null,
         },
         media: ex.performedExercise.media.map((m) => ({ id: m.id, url: m.url, mediaType: m.mediaType })),
         alternatives: (ex.workoutExercise?.alternatives ?? []).map((a) => ({
@@ -90,6 +94,7 @@ export async function GET(
                 : null,
               restSeconds: ex.workoutExercise.restSeconds,
               notes: ex.workoutExercise.notes,
+            groupNote: ex.workoutExercise.groupNote,
             }
           : null,
         sets: ex.sets.map((s) => ({
@@ -130,14 +135,16 @@ export async function PATCH(
       return err("Invalid status", 400);
     }
 
+    const now = new Date();
     const updated = await prisma.workoutSession.update({
       where: { id: sessionId },
       data: {
         ...(status !== undefined && { status }),
         ...(energyRating !== undefined && { energyRating }),
         ...(sessionNotes !== undefined && { sessionNotes }),
+        ...(status === "completed" && { completedAt: now }),
       },
-      select: { id: true, status: true, energyRating: true, sessionNotes: true },
+      select: { id: true, status: true, energyRating: true, sessionNotes: true, completedAt: true },
     });
 
     return ok(updated);

@@ -1,0 +1,31 @@
+.git
+.gitignore
+
+# Build artifacts
+**/.next
+**/dist
+**/build
+
+# Dependencies (Docker installs its own)
+node_modules
+**/node_modules
+
+# Local env files (never bake secrets into images)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Dev/editor files
+**/.claude
+**/.agents
+**/.trae
+**/specs
+docs
+"Training App (1)"
+
+# Logs
+**/*.log
+**/npm-debug.log*
+
+# OS files
+.DS_Store

@@ -11,7 +11,7 @@ const AVATAR_TONES = ["#FF5B5B", "#FFB547", "#7AB8FF", "var(--lime)", "#6EE7A8"]
 
 function daysSince(iso: string | undefined): number | null {
   if (!iso) return null;
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  return Math.floor((new Date().getTime() - new Date(iso).getTime()) / 86400000);
 }
 
 function clientStatus(c: CoachClientSummary): { label: string; tone: "success" | "warn" | "danger" } {

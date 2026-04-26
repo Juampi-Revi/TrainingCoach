@@ -1,18 +1,58 @@
-version: '3.8'
 services:
-  postgres:
+
+  # ── Base de datos PostgreSQL ────────────────────────────────────────────────
+  db:
     image: postgres:15
     restart: always
     mem_limit: 512m
-    cpus: "1.0"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: adminpassword
-      POSTGRES_DB: training_db
+      POSTGRES_USER:     ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-adminpassword}
+      POSTGRES_DB:       ${POSTGRES_DB:-training_db}
     ports:
-      - "5434:5432"
+      - "${DB_PORT:-5434}:5432"   # DBeaver → localhost:5434
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-training_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── API (Next.js backend) ────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    ports:
+      - "3003:3003"
+    environment:
+      DATABASE_URL:            postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-adminpassword}@db:5432/${POSTGRES_DB:-training_db}?schema=public
+      JWT_SECRET:              ${JWT_SECRET:?JWT_SECRET is required}
+      NEXTAUTH_URL:            ${NEXTAUTH_URL:-http://localhost:3003}
+      FRONTEND_URL:            ${FRONTEND_URL:-http://localhost:3001}
+      CLOUDINARY_CLOUD_NAME:   ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY:      ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET:   ${CLOUDINARY_API_SECRET:-}
+      NODE_ENV:                production
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Web (Next.js frontend) ───────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # NEXT_PUBLIC vars are baked in at build time — rebuild if this changes
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3003/api/v1}
+    restart: always
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

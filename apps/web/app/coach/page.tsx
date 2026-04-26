@@ -28,13 +28,13 @@ export default function CoachDashboardPage() {
   const activeClients = clients.filter((c) => c.assignment?.status === "active");
   const inactiveClients = clients.filter((c) => {
     if (!c.lastSession) return true;
-    const diff = (Date.now() - new Date(c.lastSession.performedAt).getTime()) / 86400000;
+    const diff = (new Date().getTime() - new Date(c.lastSession.performedAt).getTime()) / 86400000;
     return diff > 7;
   });
 
   const alertRows = inactiveClients.slice(0, 5).map((c, i) => {
     const days = c.lastSession
-      ? Math.floor((Date.now() - new Date(c.lastSession.performedAt).getTime()) / 86400000)
+      ? Math.floor((new Date().getTime() - new Date(c.lastSession.performedAt).getTime()) / 86400000)
       : null;
     return {
       name: (

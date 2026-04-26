@@ -13,21 +13,29 @@ interface ThemeCtx {
 const Ctx = createContext<ThemeCtx>({ theme: "dark", toggle: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof document === "undefined") return "dark";
+    return document.documentElement.classList.contains("light") ? "light" : "dark";
+  });
 
   useEffect(() => {
-    const saved = localStorage.getItem(KEY) as Theme | null;
-    if (saved) {
-      setTheme(saved);
-      document.documentElement.classList.toggle("light", saved === "light");
-    }
+    const id = setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem(KEY) as Theme | null;
+        if (saved === "dark" || saved === "light") setTheme(saved);
+      } catch {}
+    }, 0);
+    return () => clearTimeout(id);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+  }, [theme]);
 
   const toggle = useCallback(() => {
     setTheme((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
-      localStorage.setItem(KEY, next);
-      document.documentElement.classList.toggle("light", next === "light");
+      try { window.localStorage.setItem(KEY, next); } catch {}
       return next;
     });
   }, []);

@@ -25,6 +25,8 @@ interface PlanDetail {
   notes: string | null;
   weeks: Array<{
     weekNumber: number;
+    title: string | null;
+    notes: string | null;
     workouts: Array<{
       id: string;
       sortOrder: number;
@@ -128,11 +130,24 @@ export default function PlanDetailPage() {
   const [picker, setPicker] = useState<{ week: number; day: number } | null>(null);
   const [cellMenu, setCellMenu] = useState<{ week: number; day: number } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [planTitle, setPlanTitle] = useState("");
+  const [planGoal, setPlanGoal] = useState("");
+  const [planNotes, setPlanNotes] = useState("");
+  const [planWeeks, setPlanWeeks] = useState<string>("");
+  const [weekMeta, setWeekMeta] = useState<Record<number, { title: string; notes: string }>>({});
+  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
 
   const load = useCallback(() => {
     api.get<PlanDetail>(`/coach/plans/${planId}`)
       .then((p) => {
         setPlan(p);
+        setPlanTitle(p.title);
+        setPlanGoal(p.goal ?? "");
+        setPlanNotes(p.notes ?? "");
+        setPlanWeeks(String(p.weeksCount));
+        const meta: Record<number, { title: string; notes: string }> = {};
+        p.weeks.forEach((w) => { meta[w.weekNumber] = { title: w.title ?? "", notes: w.notes ?? "" }; });
+        setWeekMeta(meta);
         const cols = p.periodDays ?? 7;
         const g: Array<Array<CellData | null>> = Array.from({ length: p.weeksCount }, (_, wi) => {
           const week = p.weeks?.find((w) => w.weekNumber === wi + 1);
@@ -149,6 +164,22 @@ export default function PlanDetailPage() {
   }, [api, planId]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function savePlanField(field: Record<string, unknown>) {
+    try {
+      await api.patch(`/coach/plans/${planId}`, field);
+    } catch (e) { console.error(e); }
+  }
+
+  async function saveWeekMeta(weekNumber: number) {
+    const meta = weekMeta[weekNumber] ?? { title: "", notes: "" };
+    try {
+      await api.patch(`/coach/plans/${planId}/weeks/${weekNumber}`, {
+        title: meta.title || null,
+        notes: meta.notes || null,
+      });
+    } catch (e) { console.error(e); }
+  }
 
   async function togglePublish() {
     if (!plan) return;
@@ -220,10 +251,10 @@ export default function PlanDetailPage() {
         title={
           <span style={{ color: "var(--text-mute)", fontWeight: 500 }}>
             Planes <span style={{ margin: "0 8px" }}>/</span>
-            <span style={{ color: "var(--text)", fontWeight: 700 }}>{plan.title}</span>
+            <span style={{ color: "var(--text)", fontWeight: 700 }}>{planTitle || plan.title}</span>
           </span>
         }
-        subtitle={`${plan.periodDays} días/sem · ${plan.weeksCount} semanas · ${plan.assignments?.length ?? 0} alumnos`}
+        subtitle={`${plan.periodDays} días/sem · ${planWeeks || plan.weeksCount} semanas · ${plan.assignments?.length ?? 0} alumnos`}
         coachName={user?.name ?? "Coach"}
         actions={
           <>
@@ -254,6 +285,54 @@ export default function PlanDetailPage() {
               Este plan está en borrador — los alumnos no pueden verlo hasta que lo publiques.
             </div>
           )}
+
+          {/* Plan properties */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, marginBottom: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>Nombre del plan</span>
+              <input
+                value={planTitle}
+                onChange={(e) => setPlanTitle(e.target.value)}
+                onBlur={() => savePlanField({ title: planTitle })}
+                placeholder="Nombre del plan"
+                style={{ height: 34, background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontSize: 13, fontWeight: 600, color: "var(--text)", outline: "none", width: "100%", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>Objetivo</span>
+              <input
+                value={planGoal}
+                onChange={(e) => setPlanGoal(e.target.value)}
+                onBlur={() => savePlanField({ goal: planGoal || null })}
+                placeholder="Ej: Hipertrofia, fuerza…"
+                style={{ height: 34, background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontSize: 13, color: "var(--text)", outline: "none", width: "100%", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>Semanas</span>
+              <input
+                type="number" min={1} max={52}
+                value={planWeeks}
+                onChange={(e) => setPlanWeeks(e.target.value)}
+                onBlur={() => {
+                  const n = parseInt(planWeeks);
+                  if (!isNaN(n) && n > 0) savePlanField({ weeksCount: n });
+                }}
+                style={{ height: 34, width: 64, background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontSize: 13, fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text)", outline: "none", textAlign: "center", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>Aclaraciones / notas del plan</span>
+              <textarea
+                value={planNotes}
+                onChange={(e) => setPlanNotes(e.target.value)}
+                onBlur={() => savePlanField({ notes: planNotes || null })}
+                placeholder="Notas generales para el alumno sobre este plan…"
+                rows={2}
+                style={{ background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "8px 10px", fontSize: 13, color: "var(--text)", lineHeight: 1.45, resize: "vertical", outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "var(--font-sans)" }}
+              />
+            </div>
+          </div>
 
           {/* Phase legend */}
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, fontSize: 11, color: "var(--text-mute)", flexWrap: "wrap" }}>
@@ -293,10 +372,40 @@ export default function PlanDetailPage() {
 
                 return (
                   <div key={wi} style={{ display: "grid", gridTemplateColumns: `80px repeat(${cols}, 1fr)`, gap: 6, marginBottom: 6 }}>
-                    {/* Week label */}
-                    <div style={{ padding: "8px 10px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 8, display: "flex", flexDirection: "column", gap: 2, justifyContent: "center" }}>
-                      <span className="ta-mono" style={{ color: "var(--text-mute)", fontSize: 10 }}>S{wi + 1}</span>
-                      <span style={{ fontSize: 11 }}>{phaseLabel}</span>
+                    {/* Week label — click to expand */}
+                    <div>
+                      <button
+                        onClick={() => setExpandedWeek(expandedWeek === wi + 1 ? null : wi + 1)}
+                        style={{
+                          width: "100%", padding: "8px 10px", background: expandedWeek === wi + 1 ? "var(--bg-2)" : "var(--bg-1)",
+                          border: "1px solid var(--line)", borderRadius: expandedWeek === wi + 1 ? "8px 8px 0 0" : 8,
+                          display: "flex", flexDirection: "column", gap: 2, justifyContent: "center", cursor: "pointer", textAlign: "left",
+                        }}
+                      >
+                        <span className="ta-mono" style={{ color: "var(--text-mute)", fontSize: 10 }}>S{wi + 1}</span>
+                        <span style={{ fontSize: 11, color: weekMeta[wi + 1]?.title ? "var(--text)" : "var(--text-mute)", fontWeight: weekMeta[wi + 1]?.title ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {weekMeta[wi + 1]?.title || phaseLabel}
+                        </span>
+                      </button>
+                      {expandedWeek === wi + 1 && (
+                        <div style={{ background: "var(--bg-2)", border: "1px solid var(--line)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "6px 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+                          <input
+                            value={weekMeta[wi + 1]?.title ?? ""}
+                            onChange={(e) => setWeekMeta((m) => ({ ...m, [wi + 1]: { ...(m[wi + 1] ?? { title: "", notes: "" }), title: e.target.value } }))}
+                            onBlur={() => saveWeekMeta(wi + 1)}
+                            placeholder="Título semana…"
+                            style={{ width: "100%", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "4px 7px", fontSize: 11, color: "var(--text)", outline: "none", boxSizing: "border-box" }}
+                          />
+                          <textarea
+                            value={weekMeta[wi + 1]?.notes ?? ""}
+                            onChange={(e) => setWeekMeta((m) => ({ ...m, [wi + 1]: { ...(m[wi + 1] ?? { title: "", notes: "" }), notes: e.target.value } }))}
+                            onBlur={() => saveWeekMeta(wi + 1)}
+                            placeholder="Notas…"
+                            rows={2}
+                            style={{ width: "100%", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "4px 7px", fontSize: 10, color: "var(--text)", lineHeight: 1.4, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "var(--font-sans)" }}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {week.map((cell, di) => {

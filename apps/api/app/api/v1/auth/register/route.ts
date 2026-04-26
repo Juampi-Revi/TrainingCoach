@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { ok, err, withHandler } from "@/lib/api-response";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   return withHandler(async () => {
@@ -10,6 +11,9 @@ export async function POST(req: NextRequest) {
     const { email, password, name } = body ?? {};
 
     if (!email || !password) return err("email and password required", 400);
+
+    const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+    if (!rateLimit(`register:${ip}`, 5, 3_600_000)) return err("Demasiados registros, intentá más tarde", 429);
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return err("Email already registered", 409);

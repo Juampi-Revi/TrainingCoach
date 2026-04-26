@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
-import { Button, Icon, KPI, StateBlock } from "@/components/ui";
+import { Button, KPI, StateBlock } from "@/components/ui";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 
 interface Metric {
@@ -15,20 +15,19 @@ interface Metric {
 
 export default function ProgresoPage() {
   const { api } = useAuth();
-  const [metrics, setMetrics] = useState<Metric[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<Metric[] | null>(null);
   const [weight, setWeight] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     api
       .get<Metric[]>("/client/metrics")
       .then(setMetrics)
       .catch(console.error)
-      .finally(() => setLoading(false));
-  };
+      .finally(() => {});
+  }, [api]);
 
-  useEffect(() => { load(); }, [api]);
+  useEffect(() => { load(); }, [load]);
 
   async function logWeight() {
     if (!weight) return;
@@ -36,6 +35,7 @@ export default function ProgresoPage() {
     try {
       await api.post("/client/metrics", { weight: Number(weight) });
       setWeight("");
+      setMetrics(null);
       load();
     } catch (e) {
       console.error(e);
@@ -44,13 +44,14 @@ export default function ProgresoPage() {
     }
   }
 
-  const latest = metrics[0];
-  const prev = metrics[1];
+  const latest = metrics?.[0];
+  const prev = metrics?.[1];
   const diff =
     latest?.weight && prev?.weight ? (latest.weight - prev.weight).toFixed(1) : null;
 
-  const maxWeight = Math.max(...metrics.map((m) => m.weight ?? 0), 1);
-  const minWeight = Math.min(...metrics.filter((m) => m.weight).map((m) => m.weight as number), maxWeight);
+  const list = metrics ?? [];
+  const maxWeight = Math.max(...list.map((m) => m.weight ?? 0), 1);
+  const minWeight = Math.min(...list.filter((m) => m.weight).map((m) => m.weight as number), maxWeight);
   const range = maxWeight - minWeight || 1;
 
   return (
@@ -118,7 +119,7 @@ export default function ProgresoPage() {
         </div>
       </div>
 
-      {loading ? (
+      {metrics === null ? (
         <StateBlock kind="loading" title="Cargando…" />
       ) : (
         <>
@@ -134,14 +135,14 @@ export default function ProgresoPage() {
               />
               <KPI
                 label="Registros"
-                value={String(metrics.length)}
+                value={String(list.length)}
                 hint="total histórico"
               />
             </div>
           )}
 
           {/* Weight chart */}
-          {metrics.length > 1 && (
+          {list.length > 1 && (
             <div style={{ padding: "0 20px 20px" }}>
               <div
                 style={{
@@ -162,11 +163,11 @@ export default function ProgresoPage() {
                 >
                   <span>Peso corporal</span>
                   <span className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
-                    últimas {Math.min(20, metrics.length)} entradas
+                    últimas {Math.min(20, list.length)} entradas
                   </span>
                 </div>
                 <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
-                  {metrics
+                  {list
                     .filter((m) => m.weight)
                     .slice(0, 20)
                     .reverse()
@@ -186,7 +187,7 @@ export default function ProgresoPage() {
                         />
                       );
                     })}
-                  {metrics
+                  {list
                     .filter((m) => m.weight)
                     .slice(0, 20)
                     .reverse()
@@ -229,14 +230,14 @@ export default function ProgresoPage() {
             >
               Registros
             </div>
-            {metrics.length === 0 ? (
+            {list.length === 0 ? (
               <StateBlock
                 kind="empty"
                 title="Sin registros"
                 body="Registrá tu primer peso para empezar a ver tu progreso."
               />
             ) : (
-              metrics.slice(0, 30).map((m, i) => (
+              list.slice(0, 30).map((m, i) => (
                 <div
                   key={m.id}
                   style={{

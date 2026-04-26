@@ -68,6 +68,7 @@ export interface ExerciseTarget {
   intensityTarget: string | null;
   restSeconds: number | null;
   notes: string | null;
+  groupNote: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -116,13 +117,15 @@ export interface WorkoutTemplateDetail {
     sortOrder: number;
     supersetGroup: string | null;
     isWarmup: boolean;
-    exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null };
+    exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean };
     targetSets: number | null;
     targetReps: string | null;
     intensityType: string | null;
     intensityTarget: string | null;
     restSeconds: number | null;
     notes: string | null;
+    groupNote: string | null;
+    alternativesCount?: number;
   }>;
 }
 
@@ -134,7 +137,7 @@ export interface SessionExercise {
   sortOrder: number;
   supersetGroup: string | null;
   isWarmup: boolean;
-  exercise: { id: string; name: string; primaryMuscle: string | null; thumbnailUrl: string | null };
+  exercise: { id: string; name: string; primaryMuscle: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null };
   media: { id: string; url: string; mediaType: string }[];
   alternatives: { exerciseId: string; name: string; primaryMuscle: string | null }[];
   target: ExerciseTarget | null;
@@ -145,6 +148,7 @@ export interface SessionDetail {
   id: string;
   status: SessionStatus;
   performedAt: string;
+  completedAt: string | null;
   energyRating: number | null;
   sessionNotes: string | null;
   workoutTemplate: { id: string; title: string; description: string | null; warmupNotes: string | null; warmupMinutes: number | null; tags: string[] } | null;

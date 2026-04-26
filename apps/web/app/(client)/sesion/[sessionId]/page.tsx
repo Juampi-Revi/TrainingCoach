@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
-import { Button, Icon, Progress, StateBlock, Tabs } from "@/components/ui";
+import { Button, Icon, StateBlock, Tabs } from "@/components/ui";
 import type { SessionDetail, SessionExercise, WorkoutSet } from "@regen/types";
 
 type EffortMode = "RPE" | "RIR";
@@ -49,6 +50,130 @@ function groupLabel(size: number) {
   return "Circuito";
 }
 
+// ─── Session header ───────────────────────────────────────────────────────────
+
+function SessionHeader({
+  exNum, exTotal, title, subtitle, onExit,
+}: {
+  exNum: number; exTotal: number; title: string; subtitle?: string; onExit: () => void;
+}) {
+  return (
+    <div style={{ position: "relative", padding: "50px 14px 12px", borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
+      <button
+        onClick={onExit}
+        style={{
+          width: 30, height: 30, borderRadius: 7,
+          background: "var(--bg-2)", border: "1px solid var(--line-2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--text)", cursor: "pointer",
+          position: "absolute", top: 48, left: 12,
+        }}
+      >
+        <Icon name="x" size={14} />
+      </button>
+      <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, textAlign: "center", marginTop: 6 }}>
+        EJERCICIO {exNum} / {exTotal}
+      </div>
+      <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 6 }}>
+        {Array.from({ length: exTotal }).map((_, i) => (
+          <div key={i} style={{
+            width: Math.min(18, Math.floor(260 / exTotal) - 2),
+            height: 3, borderRadius: 2,
+            background: i < exNum ? "var(--lime)" : "var(--bg-3)",
+          }} />
+        ))}
+      </div>
+      <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-.01em", textAlign: "center", marginTop: 8 }}>
+        {title}
+      </div>
+      {subtitle && (
+        <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", textAlign: "center", marginTop: 2 }}>
+          {subtitle}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Set row ──────────────────────────────────────────────────────────────────
+
+function SetRowDisplay({
+  s, effortMode, onClick,
+}: {
+  s: WorkoutSet; effortMode: EffortMode; onClick: () => void;
+}) {
+  const effort = effortMode === "RPE" ? s.rpe : s.rir;
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px",
+        gap: 6, alignItems: "center", padding: "8px 8px",
+        background: "var(--bg-1)", border: "1px solid var(--line)",
+        borderRadius: 9, cursor: "pointer", marginBottom: 4,
+      }}
+    >
+      <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700 }}>
+        SET {s.setNumber}
+      </div>
+      <div style={{ background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span className="ta-mono" style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>{s.weight ?? "—"}</span>
+        <span style={{ fontSize: 9, color: "var(--text-dim)" }}>kg</span>
+      </div>
+      <div style={{ background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span className="ta-mono" style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>{s.reps ?? "—"}</span>
+        <span style={{ fontSize: 9, color: "var(--text-dim)" }}>rep</span>
+      </div>
+      <div style={{ textAlign: "center", padding: "3px 0", background: effort == null ? "transparent" : "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 6 }}>
+        <span className="ta-mono" style={{ fontSize: 11, color: effort == null ? "var(--text-dim)" : "var(--lime)", fontWeight: 700 }}>
+          {effort != null ? `${effortMode} ${effort}` : "—"}
+        </span>
+      </div>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <Icon name="check" size={14} color="var(--success)" />
+      </div>
+    </div>
+  );
+}
+
+function ActiveSetRow({
+  setNum, draft, effortMode, onChange,
+}: {
+  setNum: number; draft: SetDraft; effortMode: EffortMode; onChange: (d: Partial<SetDraft>) => void;
+}) {
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px",
+      gap: 6, alignItems: "center", padding: "8px 8px",
+      background: "rgba(215,255,58,.06)", border: "1px solid var(--lime)",
+      borderRadius: 9, marginBottom: 4,
+    }}>
+      <div className="ta-mono" style={{ fontSize: 11, color: "var(--lime)", fontWeight: 700 }}>
+        SET {setNum}
+      </div>
+      <input
+        type="number" inputMode="decimal" value={draft.kg}
+        onChange={(e) => onChange({ kg: e.target.value })}
+        placeholder="0"
+        style={{ background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "6px 8px", fontSize: 15, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none", textAlign: "center" }}
+      />
+      <input
+        type="number" inputMode="decimal" value={draft.reps}
+        onChange={(e) => onChange({ reps: e.target.value })}
+        placeholder="0"
+        style={{ background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "6px 8px", fontSize: 15, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none", textAlign: "center" }}
+      />
+      <input
+        type="number" inputMode="decimal" value={draft.effort}
+        onChange={(e) => onChange({ effort: e.target.value })}
+        placeholder={effortMode}
+        style={{ background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "6px 4px", fontSize: 13, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none", textAlign: "center" }}
+      />
+      <div />
+    </div>
+  );
+}
+
 // ─── Exercise picker ──────────────────────────────────────────────────────────
 
 function ExercisePicker({
@@ -60,15 +185,17 @@ function ExercisePicker({
 }) {
   const { api } = useAuth();
   const [search, setSearch] = useState("");
-  const [options, setOptions] = useState<ExerciseOption[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [options, setOptions] = useState<ExerciseOption[] | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
     const q = search.trim();
     api.get<ExerciseOption[]>(`/coach/exercises${q ? `?q=${encodeURIComponent(q)}` : ""}`)
-      .then(setOptions).catch(console.error).finally(() => setLoading(false));
+      .then(setOptions)
+      .catch((e) => {
+        console.error(e);
+        setOptions([]);
+      });
   }, [api, search]);
 
   async function handleAdd(opt: ExerciseOption) {
@@ -97,12 +224,17 @@ function ExercisePicker({
           <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>Agregar ejercicio</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, height: 40, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "0 12px" }}>
             <Icon name="search" size={14} color="var(--text-mute)" />
-            <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…"
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)" }} />
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setOptions(null); }}
+              placeholder="Buscar…"
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)" }}
+            />
           </div>
         </div>
         <div style={{ overflowY: "auto", flex: 1 }}>
-          {loading ? (
+          {options === null ? (
             <div style={{ padding: 24, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>Cargando…</div>
           ) : options.length === 0 ? (
             <div style={{ padding: 24, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>Sin resultados</div>
@@ -149,50 +281,34 @@ function MediaLightbox({
         style={{ position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
       >×</button>
 
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 540, padding: "0 16px" }}
-      >
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 540, padding: "0 16px" }}>
         {m.mediaType === "video" ? (
-          <video
-            key={m.url}
-            src={m.url}
-            controls
-            autoPlay
-            style={{ width: "100%", borderRadius: 12, maxHeight: "70dvh" }}
-          />
+          <video key={m.url} src={m.url} controls autoPlay style={{ width: "100%", borderRadius: 12, maxHeight: "70dvh" }} />
         ) : (
-          <img
-            src={m.url}
-            alt=""
-            style={{ width: "100%", borderRadius: 12, objectFit: "contain", maxHeight: "70dvh" }}
-          />
+          <div style={{ position: "relative", width: "100%", height: "70dvh" }}>
+            <Image unoptimized src={m.url} alt="" fill sizes="(max-width: 540px) 100vw, 540px" style={{ borderRadius: 12, objectFit: "contain" }} />
+          </div>
         )}
 
         {media.length > 1 && (
           <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 14 }}>
             {media.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setIdx(i)}
-                style={{ width: 8, height: 8, borderRadius: "50%", background: i === idx ? "#fff" : "rgba(255,255,255,.3)", border: "none", cursor: "pointer", padding: 0 }}
-              />
+              <button key={i} onClick={() => setIdx(i)}
+                style={{ width: 8, height: 8, borderRadius: "50%", background: i === idx ? "#fff" : "rgba(255,255,255,.3)", border: "none", cursor: "pointer", padding: 0 }} />
             ))}
           </div>
         )}
 
         {media.length > 1 && (
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, padding: "0 8px" }}>
-            <button
-              onClick={() => setIdx((i) => Math.max(0, i - 1))}
-              disabled={idx === 0}
-              style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: 8, color: "#fff", padding: "8px 18px", fontSize: 14, cursor: "pointer", opacity: idx === 0 ? 0.3 : 1 }}
-            >← Ant.</button>
-            <button
-              onClick={() => setIdx((i) => Math.min(media.length - 1, i + 1))}
-              disabled={idx === media.length - 1}
-              style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: 8, color: "#fff", padding: "8px 18px", fontSize: 14, cursor: "pointer", opacity: idx === media.length - 1 ? 0.3 : 1 }}
-            >Sig. →</button>
+            <button onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}
+              style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: 8, color: "#fff", padding: "8px 18px", fontSize: 14, cursor: "pointer", opacity: idx === 0 ? 0.3 : 1 }}>
+              ← Ant.
+            </button>
+            <button onClick={() => setIdx((i) => Math.min(media.length - 1, i + 1))} disabled={idx === media.length - 1}
+              style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: 8, color: "#fff", padding: "8px 18px", fontSize: 14, cursor: "pointer", opacity: idx === media.length - 1 ? 0.3 : 1 }}>
+              Sig. →
+            </button>
           </div>
         )}
       </div>
@@ -203,15 +319,9 @@ function MediaLightbox({
 // ─── Swap exercise sheet ──────────────────────────────────────────────────────
 
 function SwapSheet({
-  ex,
-  sessionId,
-  onSwapped,
-  onClose,
+  ex, sessionId, onSwapped, onClose,
 }: {
-  ex: SessionExercise;
-  sessionId: string;
-  onSwapped: () => void;
-  onClose: () => void;
+  ex: SessionExercise; sessionId: string; onSwapped: () => void; onClose: () => void;
 }) {
   const { api } = useAuth();
   const [swapping, setSwapping] = useState<string | null>(null);
@@ -219,10 +329,7 @@ function SwapSheet({
   async function doSwap(altExerciseId: string) {
     setSwapping(altExerciseId);
     try {
-      await api.patch(
-        `/client/sessions/${sessionId}/exercises/${ex.id}`,
-        { swapExerciseId: altExerciseId },
-      );
+      await api.patch(`/client/sessions/${sessionId}/exercises/${ex.id}`, { swapExerciseId: altExerciseId });
       onSwapped();
       onClose();
     } catch (e) {
@@ -260,8 +367,7 @@ function SwapSheet({
                 display: "flex", alignItems: "center", gap: 12, width: "100%",
                 padding: "14px 0", borderTop: "none", borderLeft: "none", borderRight: "none",
                 borderBottom: "1px solid var(--line)",
-                background: "none",
-                cursor: swapping === alt.exerciseId ? "wait" : "pointer",
+                background: "none", cursor: swapping === alt.exerciseId ? "wait" : "pointer",
                 opacity: swapping && swapping !== alt.exerciseId ? 0.4 : 1,
                 textAlign: "left",
               }}
@@ -272,9 +378,7 @@ function SwapSheet({
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{alt.name}</div>
                 {alt.primaryMuscle && (
-                  <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 1 }}>
-                    {MUSCLE_LABEL[alt.primaryMuscle] ?? alt.primaryMuscle}
-                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 1 }}>{MUSCLE_LABEL[alt.primaryMuscle] ?? alt.primaryMuscle}</div>
                 )}
               </div>
               {swapping === alt.exerciseId ? (
@@ -292,20 +396,82 @@ function SwapSheet({
 
 // ─── Rest timer overlay ───────────────────────────────────────────────────────
 
-function RestTimerOverlay({ seconds, onSkip }: { seconds: number; onSkip: () => void }) {
+function RestTimerOverlay({
+  seconds, total, nextEx, onSkip, onAdjust,
+}: {
+  seconds: number;
+  total: number;
+  nextEx: SessionExercise | null;
+  onSkip: () => void;
+  onAdjust: (delta: number) => void;
+}) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  const display = mins > 0 ? `${mins}:${String(secs).padStart(2, "0")}` : String(secs);
+  const display = `${mins}:${String(secs).padStart(2, "0")}`;
+  const circumference = 2 * Math.PI * 92;
+  const progress = total > 0 ? Math.max(0, seconds / total) : 0;
+  const dashoffset = circumference * (1 - progress);
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 900 }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".12em", fontWeight: 600, marginBottom: 12 }}>Descansando</div>
-        <div className="ta-mono" style={{ fontSize: 80, fontWeight: 700, color: seconds <= 10 ? "var(--warn)" : "var(--lime)", lineHeight: 1, letterSpacing: "-.04em" }}>
-          {display}
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 900,
+      background: "radial-gradient(circle at 50% 40%, rgba(215,255,58,.08), transparent 60%), var(--bg)",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Header space */}
+      <div style={{ height: 60 }} />
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 20 }}>
+        <div className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", letterSpacing: ".15em", fontWeight: 700 }}>DESCANSO</div>
+
+        {/* SVG ring */}
+        <div style={{ position: "relative", width: 200, height: 200 }}>
+          <svg width="200" height="200" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+            <circle cx="100" cy="100" r="92" fill="none" stroke="var(--bg-2)" strokeWidth="6" />
+            <circle
+              cx="100" cy="100" r="92" fill="none"
+              stroke={seconds <= 10 ? "var(--warn)" : "var(--lime)"}
+              strokeWidth="6" strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashoffset}
+              style={{ transition: "stroke-dashoffset 1s linear, stroke .3s" }}
+            />
+          </svg>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
+            <div className="ta-mono" style={{ fontSize: 52, fontWeight: 700, color: seconds <= 10 ? "var(--warn)" : "var(--text)", letterSpacing: "-.02em", lineHeight: 1 }}>
+              {display}
+            </div>
+            <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".1em" }}>
+              DE {Math.floor(total / 60)}:{String(total % 60).padStart(2, "0")}
+            </div>
+          </div>
         </div>
-        <div style={{ marginTop: 28 }}>
-          <Button variant="secondary" onClick={onSkip}>Saltear descanso</Button>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button size="md" variant="secondary" onClick={() => onAdjust(-15)}>−15s</Button>
+          <Button size="md" variant="secondary" onClick={onSkip}>Saltar</Button>
+          <Button size="md" variant="secondary" onClick={() => onAdjust(15)}>+15s</Button>
         </div>
+
+        {nextEx && (
+          <div style={{
+            padding: "10px 14px", background: "var(--bg-1)", border: "1px solid var(--line)",
+            borderRadius: 10, textAlign: "center", maxWidth: 260,
+          }}>
+            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 4 }}>
+              SIGUIENTE{nextEx.supersetGroup ? ` · ${nextEx.supersetGroup}` : ""}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{nextEx.exercise.name}</div>
+            <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 2 }}>
+              {[
+                nextEx.target?.sets && nextEx.target?.reps ? `${nextEx.target.sets} × ${nextEx.target.reps}` : null,
+                nextEx.target?.intensityType && nextEx.target?.intensityTarget
+                  ? `${nextEx.target.intensityType.toUpperCase()} ${nextEx.target.intensityTarget}`
+                  : null,
+              ].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -325,19 +491,30 @@ export default function SessionInProgressPage() {
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [warmupDismissed, setWarmupDismissed] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restTotal, setRestTotal] = useState(90);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [sessionNotes, setSessionNotes] = useState("");
   const [editingSet, setEditingSet] = useState<{ setNumber: number; reps: string; kg: string; effort: string } | null>(null);
-  const [offlineCount, setOfflineCount] = useState(0);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const queueKey = `regen_offline_${sessionId}`;
+  const [offlineCount, setOfflineCount] = useState(() => {
+    try {
+      const stored = localStorage.getItem(queueKey);
+      if (!stored) return 0;
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const apiRef = useRef(api);
-  apiRef.current = api;
+  const prefillExIdRef = useRef<string | null>(null);
+
+  useEffect(() => { apiRef.current = api; }, [api]);
 
   const load = useCallback(() => {
     apiRef.current
@@ -355,21 +532,16 @@ export default function SessionInProgressPage() {
 
   // Rest timer countdown
   useEffect(() => {
-    if (restSeconds == null || restSeconds <= 0) {
-      if (restSeconds === 0) setRestSeconds(null);
-      return;
-    }
-    const id = setTimeout(() => setRestSeconds((s) => (s ?? 1) - 1), 1000);
+    if (restSeconds == null || restSeconds <= 0) return;
+    const id = setTimeout(() => {
+      setRestSeconds((s) => {
+        if (s == null) return null;
+        if (s <= 1) return null;
+        return s - 1;
+      });
+    }, 1000);
     return () => clearTimeout(id);
   }, [restSeconds]);
-
-  // Offline queue
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(queueKey);
-      if (stored) setOfflineCount(JSON.parse(stored).length);
-    } catch {}
-  }, [queueKey]);
 
   const flushQueue = useCallback(async () => {
     try {
@@ -393,12 +565,15 @@ export default function SessionInProgressPage() {
   }, [queueKey, sessionId, load]);
 
   useEffect(() => {
-    flushQueue();
+    const id = setTimeout(() => flushQueue(), 0);
     window.addEventListener("online", flushQueue);
-    return () => window.removeEventListener("online", flushQueue);
+    return () => {
+      clearTimeout(id);
+      window.removeEventListener("online", flushQueue);
+    };
   }, [flushQueue]);
 
-  // Keyboard awareness — adjust sticky bottom when virtual keyboard opens
+  // Keyboard awareness
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
@@ -413,6 +588,31 @@ export default function SessionInProgressPage() {
       vv.removeEventListener("scroll", update);
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    const ex = session.exercises[currentExIdx];
+    if (!ex) return;
+    if (prefillExIdRef.current === ex.id) return;
+    const intensityType = ex.target?.intensityType?.toUpperCase();
+    const nextMode: EffortMode = intensityType === "RIR" ? "RIR" : "RPE";
+
+    const isNumeric = (v: string | null | undefined) => {
+      if (!v) return false;
+      return /^[0-9]+([.,][0-9]+)?$/.test(v.trim());
+    };
+
+    const targetReps = isNumeric(ex.target?.reps) ? ex.target!.reps!.trim().replace(",", ".") : "";
+    const targetEffort = isNumeric(ex.target?.intensityTarget) ? ex.target!.intensityTarget!.trim().replace(",", ".") : "";
+
+    const id = setTimeout(() => {
+      prefillExIdRef.current = ex.id;
+      setEffortMode(nextMode);
+      setDraft({ reps: targetReps, kg: "", effort: targetEffort });
+      setEditingSet(null);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [session, currentExIdx]);
 
   async function logSet() {
     if (!session) return;
@@ -442,9 +642,30 @@ export default function SessionInProgressPage() {
       await api.put(`/client/sessions/${sessionId}/exercises/${ex.id}/sets/${nextSetNum}`, body);
       setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
       setDraft({ reps: "", kg: draft.kg, effort: "" });
-      const rest = ex.target?.restSeconds ?? 90;
-      setRestSeconds(rest);
       load();
+
+      // Rest logic: supersets rest only after the last exercise in the block
+      const g = ex.supersetGroup;
+      if (g) {
+        const groupExs = session.exercises.filter((e) => e.supersetGroup === g);
+        const posInGroup = groupExs.findIndex((e) => e.id === ex.id);
+        const nextInGroup = groupExs[posInGroup + 1];
+        if (nextInGroup) {
+          // Not last in block — move to next exercise, no rest
+          goToEx(session.exercises.findIndex((e) => e.id === nextInGroup.id));
+        } else {
+          // Last in block — rest, then return to first of group
+          const firstIdx = session.exercises.findIndex((e) => e.id === groupExs[0]!.id);
+          const rest = ex.target?.restSeconds ?? 90;
+          setRestTotal(rest);
+          setRestSeconds(rest);
+          goToEx(firstIdx);
+        }
+      } else {
+        const rest = ex.target?.restSeconds ?? 90;
+        setRestTotal(rest);
+        setRestSeconds(rest);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -499,66 +720,51 @@ export default function SessionInProgressPage() {
   }
 
   if (loading || !session) {
-    return (
-      <div style={{ minHeight: "100dvh", background: "var(--bg)" }}>
-        <StateBlock kind="loading" title="Cargando sesión…" />
-      </div>
-    );
+    return <div style={{ minHeight: "100dvh", background: "var(--bg)" }}><StateBlock kind="loading" title="Cargando sesión…" /></div>;
   }
 
   const ex: SessionExercise | undefined = session.exercises[currentExIdx];
   const completedExs = session.exercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
 
-  // Warmup info
   const warmupExercises = session.exercises.filter((e) => e.isWarmup);
   const workExercises = session.exercises.filter((e) => !e.isWarmup);
-  const warmupNotes = session.workoutTemplate?.warmupNotes;
-  const warmupMinutes = session.workoutTemplate?.warmupMinutes;
-  const hasWarmup = warmupExercises.length > 0 || !!warmupNotes || !!warmupMinutes;
 
-  // Group metadata for work exercises
   const groupSizes: Record<string, number> = {};
   workExercises.forEach((e) => {
     if (e.supersetGroup) groupSizes[e.supersetGroup] = (groupSizes[e.supersetGroup] ?? 0) + 1;
   });
 
+  // Build subtitle for session header
+  let exSubtitle: string | undefined;
+  if (ex) {
+    const parts: string[] = [];
+    if (ex.isWarmup) parts.push("CALENTAMIENTO");
+    else if (ex.supersetGroup) {
+      const gc = GROUP_COLORS[ex.supersetGroup];
+      parts.push(`${ex.supersetGroup} · ${groupLabel(groupSizes[ex.supersetGroup] ?? 1).toUpperCase()}`);
+      void gc;
+    }
+    if (ex.target?.sets) parts.push(`${ex.target.sets} series`);
+    if (ex.target?.intensityType && ex.target?.intensityTarget) {
+      parts.push(`${ex.target.intensityType.toUpperCase()} ${ex.target.intensityTarget}`);
+    }
+    if (parts.length) exSubtitle = parts.join(" · ");
+  }
+
+  const hasMedia = (ex?.media?.length ?? 0) > 0;
+  const nextEx = session.exercises[currentExIdx + 1] ?? null;
+
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 120 }}>
 
-      {/* ── Back button + title bar ── */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 16px 0",
-      }}>
-        <button
-          onClick={() => router.push("/semana")}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            background: "none", border: "none", cursor: "pointer",
-            color: "var(--text-mute)", fontSize: 13, fontWeight: 600, padding: "4px 0",
-          }}
-        >
-          <Icon name="chevL" size={14} color="var(--text-mute)" />
-          Volver
-        </button>
-        {lastSaved && (
-          <span style={{ fontSize: 11, color: "var(--success)" }}>✓ {lastSaved}</span>
-        )}
-      </div>
-
-      {/* ── Progress bar ── */}
-      <div style={{ padding: "6px 16px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-          <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em" }}>
-            Progreso
-          </span>
-          <span style={{ fontSize: 11, color: completedExs === session.exercises.length ? "var(--success)" : "var(--text-mute)", fontWeight: 700 }} className="ta-mono">
-            {completedExs}/{session.exercises.length}
-          </span>
-        </div>
-        <Progress value={completedExs} total={session.exercises.length} height={5}
-          color={completedExs === session.exercises.length ? "var(--success)" : "var(--lime)"} />
-      </div>
+      {/* Session header */}
+      <SessionHeader
+        exNum={currentExIdx + 1}
+        exTotal={session.exercises.length}
+        title={ex?.exercise.name ?? "—"}
+        subtitle={exSubtitle}
+        onExit={() => router.push("/semana")}
+      />
 
       {/* ── Offline banner ── */}
       {offlineCount > 0 && (
@@ -576,144 +782,84 @@ export default function SessionInProgressPage() {
         </div>
       )}
 
-      {/* ── Warmup card ── */}
-      {hasWarmup && !warmupDismissed && (
-        <div style={{
-          margin: "10px 16px 0",
-          padding: "12px 14px",
-          background: "rgba(132,204,22,.07)",
-          border: "1px solid rgba(132,204,22,.22)",
-          borderLeft: "3px solid var(--lime)",
-          borderRadius: 10,
-        }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 10, color: "var(--lime)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, marginBottom: 6 }}>
-                Calentamiento{warmupMinutes ? ` · ${warmupMinutes} min` : ""}
-              </div>
-              {warmupNotes && (
-                <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, marginBottom: warmupExercises.length > 0 ? 8 : 0 }}>
-                  {warmupNotes}
-                </div>
-              )}
-              {warmupExercises.map((we, i) => (
-                <button
-                  key={we.id}
-                  onClick={() => goToEx(session.exercises.findIndex(e => e.id === we.id))}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8, width: "100%",
-                    background: "none", border: "none", cursor: "pointer",
-                    padding: "3px 0", textAlign: "left",
-                  }}
-                >
-                  <span className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", fontWeight: 700, width: 18, flexShrink: 0 }}>C{i + 1}</span>
-                  <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{we.exercise.name}</span>
-                  {we.target?.sets && we.target?.reps && (
-                    <span style={{ fontSize: 12, color: "var(--text-dim)", marginLeft: 2 }}>{we.target.sets}×{we.target.reps}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setWarmupDismissed(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0 }}>
-              <Icon name="x" size={14} color="var(--text-mute)" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Current exercise header ── */}
-      <div style={{ padding: "14px 20px 4px", display: "flex", alignItems: "flex-start", gap: 14 }}>
-        {/* Thumbnail — clickable if media exists */}
+      {/* ── Embedded media panel (only when exercise has media) ── */}
+      {hasMedia && (
         <div
-          onClick={() => ex?.media?.length ? setMediaOpen(true) : undefined}
-          style={{ position: "relative", flexShrink: 0, cursor: ex?.media?.length ? "pointer" : "default" }}
+          onClick={() => setMediaOpen(true)}
+          style={{
+            position: "relative", height: 140,
+            background: "linear-gradient(135deg, #1f1f23, #0f0f12)",
+            borderBottom: "1px solid var(--line)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}
         >
-          <div style={{ width: 52, height: 52, borderRadius: 10, overflow: "hidden", background: "var(--bg-2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {ex?.exercise.thumbnailUrl ? (
-              <img src={ex.exercise.thumbnailUrl} alt={ex.exercise.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <Icon name="dumbbell" size={20} color="var(--text-dim)" />
+          {ex!.exercise.thumbnailUrl ? (
+            <Image unoptimized src={ex!.exercise.thumbnailUrl} alt="" fill sizes="100vw" style={{ objectFit: "cover", opacity: 0.5 }} />
+          ) : null}
+          <div style={{ position: "relative", zIndex: 1, width: 52, height: 52, borderRadius: 26, background: "rgba(215,255,58,.95)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="play" size={20} color="#0B0B0C" />
+          </div>
+          <div style={{ position: "absolute", bottom: 8, left: 8, display: "flex", gap: 4, zIndex: 1 }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setMediaOpen(true); }}
+              style={{ padding: "4px 8px", background: "rgba(11,11,12,.7)", backdropFilter: "blur(8px)", border: "1px solid var(--line-2)", borderRadius: 5, color: "var(--text)", fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
+            >
+              Técnica
+            </button>
+            {(ex?.alternatives?.length ?? 0) > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
+                style={{ padding: "4px 8px", background: "rgba(11,11,12,.4)", border: "1px solid var(--line-2)", borderRadius: 5, color: "var(--text-mute)", fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
+              >
+                Alternativas
+              </button>
             )}
           </div>
-          {ex?.media?.length ? (
-            <div style={{ position: "absolute", bottom: -3, right: -3, background: "var(--lime)", color: "#0B0B0C", fontSize: 9, fontWeight: 700, width: 16, height: 16, borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid var(--bg)" }}>
-              {ex.media.length}
-            </div>
-          ) : null}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600, marginBottom: 2 }}>
-            {session.workoutTemplate?.title ?? "Sesión"} · Ej {currentExIdx + 1}/{session.exercises.length}
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em" }}>
-            {ex?.exercise.name ?? "—"}
-          </div>
-          {/* Group label */}
-          {ex?.supersetGroup && (
-            <div style={{ fontSize: 11, color: GROUP_COLORS[ex.supersetGroup] ?? "var(--text-mute)", fontWeight: 600, marginTop: 2 }}>
-              {groupLabel(groupSizes[ex.supersetGroup] ?? 1)} {ex.supersetGroup}
+          {lastSaved && (
+            <div style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}>
+              <span style={{ fontSize: 10, color: "var(--success)" }}>✓ {lastSaved}</span>
             </div>
           )}
-          {/* Warmup label */}
-          {ex?.isWarmup && (
-            <div style={{ fontSize: 11, color: "var(--lime)", fontWeight: 600, marginTop: 2 }}>
-              Calentamiento
-            </div>
-          )}
-          {/* Exercise notes from coach */}
-          {ex?.target?.notes && (
-            <div style={{ fontSize: 12, color: "var(--lime)", marginTop: 3, lineHeight: 1.4 }}>
-              {ex.target.notes}
-            </div>
-          )}
-
-          {/* Action row: view media + swap */}
-          {ex && (
-            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-              {ex.media?.length > 0 && (
-                <button
-                  onClick={() => setMediaOpen(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-                >
-                  <Icon name="image" size={12} color="var(--text-mute)" />
-                  Ver demo ({ex.media.length})
-                </button>
-              )}
-              {ex.alternatives?.length > 0 && (
-                <button
-                  onClick={() => setSwapOpen(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-                >
-                  <Icon name="repeat" size={12} color="var(--text-mute)" />
-                  Cambiar
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Target line */}
-      {ex && (
-        <div className="ta-mono" style={{ padding: "0 20px 4px", fontSize: 11, color: "var(--text-mute)" }}>
-          {[
-            ex.target?.sets && ex.target?.reps ? `${ex.target.sets} × ${ex.target.reps}` : null,
-            ex.target?.intensityTarget ? `@ ${ex.target.intensityType?.toUpperCase() ?? ""} ${ex.target.intensityTarget}` : null,
-            ex.target?.restSeconds ? `${ex.target.restSeconds}s descanso` : null,
-          ].filter(Boolean).join(" · ")}
         </div>
       )}
 
-      {/* ── Series log ── */}
+      {/* ── No-media action row ── */}
+      {!hasMedia && ex && (
+        <div style={{ padding: "8px 16px 0", display: "flex", gap: 6, alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            {(ex.alternatives?.length ?? 0) > 0 && (
+              <button
+                onClick={() => setSwapOpen(true)}
+                style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              >
+                <Icon name="repeat" size={12} color="var(--text-mute)" />
+                Cambiar
+              </button>
+            )}
+          </div>
+          {lastSaved && <span style={{ fontSize: 11, color: "var(--success)" }}>✓ {lastSaved}</span>}
+        </div>
+      )}
+
+      {/* ── Coach notes ── */}
+      {ex?.target?.notes && (
+        <div style={{ margin: "10px 16px 0", padding: "10px 12px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 10 }}>
+          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 4 }}>NOTA DEL COACH</div>
+          <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.45 }}>{ex.target.notes}</div>
+        </div>
+      )}
+
+      {/* ── Sets log ── */}
       {ex && (
-        <div style={{ padding: "14px 16px 8px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 1fr", gap: 6, padding: "0 4px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600 }}>
-            <div>Serie</div>
-            <div style={{ textAlign: "center" }}>Reps</div>
-            <div style={{ textAlign: "center" }}>Kg</div>
+        <div style={{ padding: "14px 16px 4px" }}>
+          {/* Column headers */}
+          <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, padding: "0 8px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>
+            <div />
+            <div style={{ textAlign: "center" }}>kg</div>
+            <div style={{ textAlign: "center" }}>reps</div>
             <div style={{ textAlign: "center" }}>{effortMode}</div>
+            <div />
           </div>
 
           {ex.sets.map((s: WorkoutSet) => {
@@ -721,20 +867,22 @@ export default function SessionInProgressPage() {
             if (isEditing) {
               return (
                 <div key={s.id} style={{ marginBottom: 6 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 1fr", gap: 6, alignItems: "center", padding: "8px 4px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: "10px 10px 0 0" }}>
-                    <div className="ta-mono" style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-2)", color: "var(--text-mute)", fontSize: 11, fontWeight: 600 }}>
-                      {s.setNumber}
-                    </div>
-                    {(["reps", "kg", "effort"] as const).map((field) => (
+                  <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, alignItems: "center", padding: "8px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: "10px 10px 0 0" }}>
+                    <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 700 }}>SET {s.setNumber}</div>
+                    {(["kg", "reps", "effort"] as const).map((field) => (
                       <input key={field} type="number" inputMode="decimal"
-                        value={editingSet![field]}
-                        onChange={(e) => setEditingSet((d) => d ? { ...d, [field]: e.target.value } : d)}
+                        value={field === "kg" ? editingSet!.kg : field === "reps" ? editingSet!.reps : editingSet!.effort}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditingSet((d) => d ? { ...d, [field === "kg" ? "kg" : field === "reps" ? "reps" : "effort"]: val } : d);
+                        }}
                         placeholder="—"
-                        style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "8px 0", fontSize: 17, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                        style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "8px 0", fontSize: 15, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                       />
                     ))}
+                    <div />
                   </div>
-                  <div style={{ display: "flex", gap: 6, padding: "6px 4px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
+                  <div style={{ display: "flex", gap: 6, padding: "6px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
                     <button onClick={() => deleteSet(s.setNumber)}
                       style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                       Eliminar
@@ -752,37 +900,25 @@ export default function SessionInProgressPage() {
               );
             }
             return (
-              <div key={s.id}
+              <SetRowDisplay
+                key={s.id}
+                s={s}
+                effortMode={effortMode}
                 onClick={() => setEditingSet({ setNumber: s.setNumber, reps: String(s.reps ?? ""), kg: String(s.weight ?? ""), effort: String((effortMode === "RPE" ? s.rpe : s.rir) ?? "") })}
-                style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 1fr", gap: 6, alignItems: "center", padding: "8px 4px", borderRadius: 10, marginBottom: 4, cursor: "pointer" }}
-                className="ta-row"
-              >
-                <div className="ta-mono" style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--success)", color: "#0B0B0C", fontSize: 11, fontWeight: 600 }}>
-                  <Icon name="check" size={12} />
-                </div>
-                {[s.reps ?? "—", s.weight ?? "—", (effortMode === "RPE" ? s.rpe : s.rir) ?? "—"].map((v, i) => (
-                  <div key={i} className="ta-mono" style={{ textAlign: "center", fontSize: 17, fontWeight: 600 }}>{v}</div>
-                ))}
-              </div>
+              />
             );
           })}
 
-          {/* Active new serie row */}
-          <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 1fr", gap: 6, alignItems: "center", padding: "8px 4px", background: "var(--bg-1)", border: "1px solid var(--lime)", borderRadius: 10, marginBottom: 4 }}>
-            <div className="ta-mono" style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-2)", color: "var(--text-mute)", fontSize: 11, fontWeight: 600 }}>
-              {ex.sets.length + 1}
-            </div>
-            {(["reps", "kg", "effort"] as const).map((field) => (
-              <input key={field} type="number" inputMode="decimal" value={draft[field]}
-                onChange={(e) => setDraft((d) => ({ ...d, [field]: e.target.value }))}
-                placeholder="—"
-                style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "8px 0", fontSize: 17, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-              />
-            ))}
-          </div>
+          {/* Active new set row */}
+          <ActiveSetRow
+            setNum={ex.sets.length + 1}
+            draft={draft}
+            effortMode={effortMode}
+            onChange={(d) => setDraft((prev) => ({ ...prev, ...d }))}
+          />
 
           {/* Effort toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
             <span style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600 }}>Esfuerzo</span>
             <Tabs variant="pills" tabs={["RPE", "RIR"]} active={effortMode} onChange={(t) => setEffortMode(t as EffortMode)} />
           </div>
@@ -792,10 +928,9 @@ export default function SessionInProgressPage() {
       {/* ── Exercise list ── */}
       <div style={{ margin: "8px 16px 0", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
 
-        {/* Warmup section */}
         {warmupExercises.length > 0 && (
           <>
-            <div style={{ padding: "7px 12px", background: "rgba(132,204,22,.06)", borderBottom: "1px solid var(--line)", fontSize: 10, fontWeight: 700, color: "var(--lime)", textTransform: "uppercase", letterSpacing: ".1em" }}>
+            <div style={{ padding: "7px 12px", background: "rgba(234,179,8,.06)", borderBottom: "1px solid var(--line)", fontSize: 10, fontWeight: 700, color: "var(--warn)", textTransform: "uppercase", letterSpacing: ".1em" }}>
               Calentamiento
             </div>
             {warmupExercises.map((e, wIdx) => {
@@ -804,9 +939,9 @@ export default function SessionInProgressPage() {
               const active = realIdx === currentExIdx;
               return (
                 <button key={e.id} onClick={() => goToEx(realIdx)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", minHeight: 44, background: active ? "rgba(132,204,22,.06)" : "transparent", border: "none", borderBottom: "1px solid var(--line)", cursor: "pointer", textAlign: "left" }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", minHeight: 44, background: active ? "rgba(234,179,8,.06)" : "transparent", border: "none", borderBottom: "1px solid var(--line)", cursor: "pointer", textAlign: "left" }}
                 >
-                  <span className="ta-mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--lime)", width: 18, flexShrink: 0 }}>C{wIdx + 1}</span>
+                  <span className="ta-mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--warn)", width: 18, flexShrink: 0 }}>C{wIdx + 1}</span>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 700 : 500, color: done ? "var(--text-mute)" : "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {e.exercise.name}
                   </span>
@@ -820,7 +955,7 @@ export default function SessionInProgressPage() {
           </>
         )}
 
-        {/* Work exercises — grouped by supersetGroup */}
+        {/* Work exercises grouped by superset */}
         {(() => {
           const groups: Array<{ group: string | null; items: Array<{ e: SessionExercise; realIdx: number }> }> = [];
           for (const e of workExercises) {
@@ -843,6 +978,9 @@ export default function SessionInProgressPage() {
                 {isSuperset && groupName && (
                   <div style={{ padding: "5px 12px 5px 14px", borderBottom: "1px solid var(--line)", borderLeft: `3px solid ${gc}`, background: `${gc}0d`, display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: gc ?? "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em" }}>{groupName}</span>
+                    {g.items[0]?.e.target?.groupNote && (
+                      <span style={{ fontSize: 10, color: gc ?? "var(--text-mute)", opacity: 0.8 }}>· {g.items[0].e.target.groupNote}</span>
+                    )}
                   </div>
                 )}
                 {g.items.map(({ e, realIdx }, itemIdx) => {
@@ -878,7 +1016,6 @@ export default function SessionInProgressPage() {
           });
         })()}
 
-        {/* Add exercise */}
         <button onClick={() => setShowPicker(true)}
           style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", background: "transparent", border: "none", borderTop: "1px solid var(--line)", cursor: "pointer", color: "var(--text-dim)", fontSize: 13 }}
         >
@@ -887,7 +1024,7 @@ export default function SessionInProgressPage() {
         </button>
       </div>
 
-      {/* ── Session notes toggle ── */}
+      {/* ── Session notes ── */}
       <div style={{ padding: "4px 16px 8px" }}>
         <button
           onClick={() => setNotesOpen((o) => !o)}
@@ -897,66 +1034,71 @@ export default function SessionInProgressPage() {
           {notesOpen ? "Cerrar notas" : sessionNotes ? "Notas de sesión" : "Agregar nota de sesión"}
         </button>
         {notesOpen && (
-          <div
-            style={{
-              marginTop: 6, padding: 12, background: "var(--bg-1)",
-              border: "1px solid var(--line-2)", borderRadius: 10,
-            }}
-          >
+          <div style={{ marginTop: 6, padding: 12, background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: 10 }}>
             <textarea
               value={sessionNotes}
               onChange={(e) => setSessionNotes(e.target.value)}
               onBlur={() => saveNotes(sessionNotes)}
               placeholder="¿Cómo te sentiste? ¿Algo que destacar de la sesión?"
               rows={3}
-              style={{
-                width: "100%", background: "transparent", border: "none", outline: "none",
-                fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)",
-                lineHeight: 1.5, resize: "none",
-              }}
+              style={{ width: "100%", background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)", lineHeight: 1.5, resize: "none" }}
             />
           </div>
         )}
       </div>
 
       {/* ── Bottom CTAs ── */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: keyboardOffset, padding: "14px 16px 28px", background: "linear-gradient(to top, var(--bg) 70%, transparent)", display: "flex", gap: 8 }}>
-        {/* Back arrow — go to previous exercise */}
-        {currentExIdx > 0 && (
-          <Button size="xl" variant="secondary" style={{ width: 56 }}
-            onClick={() => goToEx(currentExIdx - 1)}
-            icon="chevL"
-          />
+      <div style={{
+        position: "fixed", left: 0, right: 0, bottom: keyboardOffset,
+        padding: "4px 16px 28px",
+        background: "linear-gradient(to top, var(--bg) 70%, transparent)",
+        display: "flex", flexDirection: "column", gap: 6,
+      }}>
+        {completedExs < session.exercises.length && (
+          <button
+            onClick={completeSession}
+            disabled={completing}
+            style={{ alignSelf: "center", background: "none", border: "none", cursor: "pointer", padding: "4px 0", color: "var(--text-dim)", fontSize: 12, fontWeight: 600, letterSpacing: ".02em" }}
+          >
+            Terminar entrenamiento
+          </button>
         )}
+        <div style={{ display: "flex", gap: 8 }}>
+          {currentExIdx > 0 && (
+            <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(currentExIdx - 1)} icon="chevL" />
+          )}
 
-        {completedExs === session.exercises.length ? (
-          <Button size="xl" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={completeSession}>
-            {completing ? "Completando…" : "Finalizar sesión"}
-          </Button>
-        ) : (
-          <>
-            {currentExIdx < session.exercises.length - 1 && (
-              <Button size="xl" variant="secondary" style={{ width: 56 }}
-                onClick={() => goToEx(currentExIdx + 1)}
-                icon="chevR"
-              />
-            )}
-            <Button size="xl" icon="check" style={{ flex: 1, fontSize: 16 }}
-              disabled={saving || !draft.reps}
-              onClick={logSet}
-            >
-              {saving ? "Guardando…" : "Guardar serie"}
+          {completedExs === session.exercises.length ? (
+            <Button size="xl" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={completeSession}>
+              {completing ? "Completando…" : "Finalizar sesión"}
             </Button>
-          </>
-        )}
+          ) : (
+            <>
+              {currentExIdx < session.exercises.length - 1 && (
+                <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(currentExIdx + 1)} icon="chevR" />
+              )}
+              <Button size="xl" icon="check" style={{ flex: 1, fontSize: 16 }}
+                disabled={saving || !draft.reps}
+                onClick={logSet}
+              >
+                {saving ? "Guardando…" : `Guardar set ${ex?.sets.length ? ex.sets.length + 1 : 1}`}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Rest timer overlay */}
       {restSeconds != null && restSeconds > 0 && (
-        <RestTimerOverlay seconds={restSeconds} onSkip={() => setRestSeconds(null)} />
+        <RestTimerOverlay
+          seconds={restSeconds}
+          total={restTotal}
+          nextEx={nextEx}
+          onSkip={() => setRestSeconds(null)}
+          onAdjust={(delta) => setRestSeconds((s) => s != null ? Math.max(1, s + delta) : null)}
+        />
       )}
 
-      {/* Exercise picker */}
       {showPicker && (
         <ExercisePicker sessionId={sessionId}
           onAdd={(wse) => {
@@ -968,19 +1110,12 @@ export default function SessionInProgressPage() {
         />
       )}
 
-      {/* Media lightbox */}
       {mediaOpen && ex?.media?.length > 0 && (
         <MediaLightbox media={ex.media} onClose={() => setMediaOpen(false)} />
       )}
 
-      {/* Swap exercise sheet */}
       {swapOpen && ex && (
-        <SwapSheet
-          ex={ex}
-          sessionId={sessionId}
-          onSwapped={() => load()}
-          onClose={() => setSwapOpen(false)}
-        />
+        <SwapSheet ex={ex} sessionId={sessionId} onSwapped={() => load()} onClose={() => setSwapOpen(false)} />
       )}
     </div>
   );

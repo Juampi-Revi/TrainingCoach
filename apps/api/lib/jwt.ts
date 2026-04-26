@@ -1,8 +1,10 @@
 import jwt from "jsonwebtoken";
 
-const _jwtSecret = process.env.JWT_SECRET;
-if (!_jwtSecret) throw new Error("JWT_SECRET environment variable is required but not set");
-const SECRET: string = _jwtSecret;;
+export const JWT_SECRET: string = (() => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET environment variable is required but not set");
+  return secret;
+})();
 const EXPIRES_IN = "30d";
 
 export interface TokenPayload {
@@ -13,9 +15,9 @@ export interface TokenPayload {
 }
 
 export function signToken(payload: TokenPayload): string {
-  return jwt.sign(payload, SECRET, { expiresIn: EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: EXPIRES_IN });
 }
 
 export function verifyToken(token: string): TokenPayload {
-  return jwt.verify(token, SECRET) as TokenPayload;
+  return jwt.verify(token, JWT_SECRET) as TokenPayload;
 }

@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -17,7 +16,9 @@ model User {
   email        String   @unique
   passwordHash String
   displayName  String?
-  billingStatus String  @default("good") // 'good' | 'due'
+  billingStatus       String    @default("good") // 'good' | 'due'
+  passwordResetToken  String?   @unique
+  passwordResetExpiry DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -164,6 +165,7 @@ model Exercise {
   primaryMuscle String?
   equipment     String?
   isSystem      Boolean  @default(false)
+  youtubeUrl    String?
   source        String?
   sourceId      String?
   createdAt     DateTime @default(now())
@@ -198,6 +200,7 @@ model WorkoutExercise {
   restSeconds       Int?
   tempo             String?
   notes             String?
+  groupNote         String?  // coach note shown next to superset group label (first exercise of group only)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -231,6 +234,7 @@ model WorkoutSession {
   clientUserId      String
   workoutTemplateId String?
   performedAt       DateTime @db.Timestamptz
+  completedAt       DateTime? @db.Timestamptz
   status            String   // 'in_progress' | 'completed' | 'discarded'
   energyRating      Int?
   sessionNotes      String?

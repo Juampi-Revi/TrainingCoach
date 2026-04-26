@@ -35,7 +35,12 @@ export async function GET(
       workoutExercises: {
         orderBy: { sortOrder: "asc" },
         include: {
-          exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } },
+          exercise: {
+            select: {
+              id: true, name: true, primaryMuscle: true, equipment: true,
+              media: { select: { url: true }, take: 1, orderBy: { createdAt: "asc" as const } },
+            },
+          },
         },
       },
     },
@@ -48,11 +53,20 @@ export async function GET(
     title: template.title,
     description: template.description,
     warmupNotes: template.warmupNotes,
+    warmupMinutes: template.warmupMinutes,
     tags: template.tags,
     exercises: template.workoutExercises.map((we) => ({
       id: we.id,
       sortOrder: we.sortOrder,
-      exercise: we.exercise,
+      supersetGroup: we.supersetGroup,
+      isWarmup: we.isWarmup,
+      exercise: {
+        id: we.exercise.id,
+        name: we.exercise.name,
+        primaryMuscle: we.exercise.primaryMuscle,
+        equipment: we.exercise.equipment,
+        thumbnailUrl: we.exercise.media[0]?.url ?? null,
+      },
       targetSets: we.targetSets,
       targetReps: we.targetReps,
       intensityType: we.intensityType,

@@ -86,7 +86,9 @@ export default function SemanaPage() {
   }
 
   const today = data.workouts.find((w) => !w.session || w.session.status === "in_progress");
-  const upcoming = data.workouts.filter((w) => w !== today);
+  const remaining = data.workouts.filter((w) => w !== today);
+  const pending = remaining.filter((w) => w.session?.status !== "completed");
+  const completed = remaining.filter((w) => w.session?.status === "completed");
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 84 }}>
@@ -182,7 +184,7 @@ export default function SemanaPage() {
             </div>
             <div
               className="ta-mono ta-ellipsis"
-              style={{ fontSize: 13, fontWeight: 600, marginTop: 4, color: "var(--lime)" }}
+              style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: "var(--text)" }}
             >
               {data.plan.title}
             </div>
@@ -289,61 +291,113 @@ export default function SemanaPage() {
           </div>
         )}
 
-        {/* Upcoming */}
-        {upcoming.map((w, i) => (
-          <Link
-            key={i}
-            href={`/semana/${w.workoutTemplateId}`}
-            style={{ textDecoration: "none", display: "block" }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: 14,
-                borderRadius: 12,
-                background: "var(--bg-1)",
-                border: "1px solid var(--line)",
-                marginBottom: 8,
-              }}
-            >
-              <div
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 9,
-                  background:
-                    w.session?.status === "completed" ? "var(--bg-3)" : "var(--bg-2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1px solid var(--line)",
-                }}
-              >
-                {w.session?.status === "completed" ? (
-                  <Icon name="check" size={18} color="var(--success)" />
-                ) : (
-                  <Icon name="dumbbell" size={18} color="var(--text-mute)" />
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>{w.title}</div>
-                <div
-                  className="ta-ellipsis"
-                  style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 1 }}
-                >
-                  {w.description ?? w.tags.join(" · ")} · {w.exerciseCount} ej
-                </div>
-              </div>
-              {w.session?.status === "completed" && (
-                <Badge tone="success" size="sm">
-                  Lista
-                </Badge>
-              )}
+        {pending.length > 0 && (
+          <>
+            <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
+              Pendientes
             </div>
-          </Link>
-        ))}
+            {pending.map((w, i) => (
+              <Link
+                key={i}
+                href={`/semana/${w.workoutTemplateId}`}
+                style={{ textDecoration: "none", display: "block" }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 14,
+                    borderRadius: 12,
+                    background: "var(--bg-1)",
+                    border: "1px solid var(--line)",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 9,
+                      background: "var(--bg-2)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px solid var(--line)",
+                    }}
+                  >
+                    <Icon name="dumbbell" size={18} color="var(--text-mute)" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{w.title}</div>
+                    <div
+                      className="ta-ellipsis"
+                      style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}
+                    >
+                      {w.description ?? w.tags.join(" · ")} · {w.exerciseCount} ej
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </>
+        )}
+
+        {completed.length > 0 && (
+          <>
+            <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
+              Completadas
+            </div>
+            {completed.map((w, i) => (
+              <Link
+                key={i}
+                href={`/semana/${w.workoutTemplateId}`}
+                style={{ textDecoration: "none", display: "block" }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 14,
+                    borderRadius: 12,
+                    background: "var(--bg-1)",
+                    border: "1px solid var(--line)",
+                    marginBottom: 8,
+                    opacity: 0.9,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 9,
+                      background: "var(--bg-3)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px solid var(--line)",
+                    }}
+                  >
+                    <Icon name="check" size={18} color="var(--success)" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{w.title}</div>
+                    <div
+                      className="ta-ellipsis"
+                      style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}
+                    >
+                      {w.description ?? w.tags.join(" · ")} · {w.exerciseCount} ej
+                    </div>
+                  </div>
+                  <Badge tone="success" size="sm">
+                    Lista
+                  </Badge>
+                </div>
+              </Link>
+            ))}
+          </>
+        )}
       </div>
 
       <MobileTabBar active="home" />

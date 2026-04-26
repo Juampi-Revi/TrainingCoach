@@ -34,6 +34,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       primaryMuscle: ex.primaryMuscle,
       equipment: ex.equipment,
       isSystem: ex.isSystem,
+      youtubeUrl: ex.youtubeUrl ?? null,
       thumbnailUrl: ex.media[0]?.url ?? null,
     });
   });
@@ -60,6 +61,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
           name,
           primaryMuscle: body.primaryMuscle !== undefined ? (body.primaryMuscle || null) : ex!.primaryMuscle,
           equipment: body.equipment !== undefined ? (body.equipment?.trim() || null) : ex!.equipment,
+          youtubeUrl: body.youtubeUrl !== undefined ? (body.youtubeUrl?.trim() || null) : ex!.youtubeUrl,
         },
       });
     } catch (e: unknown) {
@@ -74,6 +76,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       primaryMuscle: updated.primaryMuscle,
       equipment: updated.equipment,
       isSystem: updated.isSystem,
+      youtubeUrl: updated.youtubeUrl ?? null,
       thumbnailUrl: null,
     });
   });

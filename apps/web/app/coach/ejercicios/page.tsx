@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, ConfirmModal, Icon, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
@@ -279,10 +280,13 @@ function ExerciseFormModal({ exercise, onClose, onSaved, onDeleted }: ExerciseFo
                         onMouseLeave={(e) => { (e.currentTarget as HTMLVideoElement).pause(); (e.currentTarget as HTMLVideoElement).currentTime = 0; }}
                       />
                     ) : (
-                      <img
+                      <Image
+                        unoptimized
                         src={m.url}
                         alt=""
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        fill
+                        sizes="(max-width: 520px) 50vw, 240px"
+                        style={{ objectFit: "cover" }}
                       />
                     )}
                     <div
@@ -420,41 +424,43 @@ function ExerciseFormModal({ exercise, onClose, onSaved, onDeleted }: ExerciseFo
 
 export default function EjerciciosPage() {
   const { api, user } = useAuth();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [search, setSearch] = useState("");
   const [muscle, setMuscle] = useState("Todos");
   const [modal, setModal] = useState<{ open: true; exercise?: Exercise } | null>(null);
 
   useEffect(() => {
     const q = search.trim();
-    setLoading(true);
     api
       .get<Exercise[]>(`/coach/exercises${q ? `?q=${encodeURIComponent(q)}` : ""}`)
       .then(setExercises)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        console.error(e);
+        setExercises([]);
+      });
   }, [api, search]);
 
+  const list = exercises ?? [];
   const muscleOptions = ["Todos", ...Array.from(new Set(
-    exercises.map((e) => e.primaryMuscle).filter((m): m is string => m !== null)
+    list.map((e) => e.primaryMuscle).filter((m): m is string => m !== null)
   ))];
-  const filtered = exercises.filter((e) => muscle === "Todos" || (e.primaryMuscle ?? "") === muscle);
+  const filtered = list.filter((e) => muscle === "Todos" || (e.primaryMuscle ?? "") === muscle);
 
   function handleSaved(saved: Exercise) {
     setExercises((prev) => {
-      const idx = prev.findIndex((e) => e.id === saved.id);
+      const list = prev ?? [];
+      const idx = list.findIndex((e) => e.id === saved.id);
       if (idx >= 0) {
-        const next = [...prev];
+        const next = [...list];
         next[idx] = saved;
         return next;
       }
-      return [saved, ...prev];
+      return [saved, ...list];
     });
   }
 
   function handleDeleted(id: string) {
-    setExercises((prev) => prev.filter((e) => e.id !== id));
+    setExercises((prev) => (prev ? prev.filter((e) => e.id !== id) : prev));
   }
 
   return (
@@ -462,7 +468,7 @@ export default function EjerciciosPage() {
       <DesktopShell
         active="library"
         title="Ejercicios"
-        subtitle={`${exercises.length} ejercicios`}
+        subtitle={`${list.length} ejercicios`}
         coachName={user?.name ?? "Coach"}
         actions={
           <>
@@ -478,7 +484,10 @@ export default function EjerciciosPage() {
               <Icon name="search" size={14} color="var(--text-mute)" />
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setExercises(null);
+                }}
                 placeholder="Buscar ejercicio…"
                 style={{
                   flex: 1, background: "transparent", border: "none", outline: "none",
@@ -506,7 +515,10 @@ export default function EjerciciosPage() {
             <Icon name="search" size={14} color="var(--text-mute)" />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setExercises(null);
+              }}
               placeholder="Buscar ejercicio…"
               style={{
                 flex: 1, background: "transparent", border: "none", outline: "none",
@@ -534,7 +546,7 @@ export default function EjerciciosPage() {
             ))}
           </div>
 
-          {loading ? (
+          {exercises === null ? (
             <StateBlock kind="loading" title="Cargando ejercicios…" />
           ) : filtered.length === 0 ? (
             <StateBlock kind="empty" title="Sin resultados" body="Probá con otro término de búsqueda." />
@@ -563,15 +575,18 @@ export default function EjerciciosPage() {
                   {/* Thumbnail */}
                   <div
                     style={{
-                      height: 100, background: "var(--bg-2)",
+                      height: 100, background: "var(--bg-2)", position: "relative",
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}
                   >
                     {ex.thumbnailUrl ? (
-                      <img
+                      <Image
+                        unoptimized
                         src={ex.thumbnailUrl}
                         alt={ex.name}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        fill
+                        sizes="(max-width: 600px) 100vw, 220px"
+                        style={{ objectFit: "cover" }}
                       />
                     ) : (
                       <Icon name="dumbbell" size={28} color="var(--text-dim)" />

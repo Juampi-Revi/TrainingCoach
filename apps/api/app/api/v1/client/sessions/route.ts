@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
-import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
+import { ok, unauthorized, err, forbidden, withHandler } from "@/lib/api-response";
 
 // GET /api/v1/client/sessions — history list
 export async function GET(req: NextRequest) {
@@ -68,6 +68,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     const { workoutTemplateId } = body ?? {};
     if (!workoutTemplateId) return err("workoutTemplateId required", 400);
+
+    const authorized = await prisma.planAssignment.findFirst({
+      where: {
+        clientUserId: auth.user.sub,
+        status: "active",
+        plan: {
+          OR: [
+            { weeks: { some: { workoutTemplates: { some: { id: workoutTemplateId } } } } },
+            { weeks: { some: { workouts: { some: { workoutTemplateId } } } } },
+            { workouts: { some: { workoutTemplateId } } },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    if (!authorized) return forbidden("Workout not in your plan");
 
     const template = await prisma.workoutTemplate.findUnique({
       where: { id: workoutTemplateId },

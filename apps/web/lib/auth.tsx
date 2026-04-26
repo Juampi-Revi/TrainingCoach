@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import { createClient } from "./api";
@@ -32,36 +33,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ token: null, user: null, ready: false });
 
   useEffect(() => {
-    const stored = localStorage.getItem(TOKEN_KEY);
-    if (!stored) {
-      setState({ token: null, user: null, ready: true });
-      return;
-    }
+    const id = setTimeout(() => {
+      try {
+        const stored = window.localStorage.getItem(TOKEN_KEY);
+        if (!stored) {
+          setState({ token: null, user: null, ready: true });
+          return;
+        }
+        setState({ token: stored, user: null, ready: false });
+      } catch {
+        setState({ token: null, user: null, ready: true });
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    const stored = state.token;
+    if (!stored || state.ready) return;
     const client = createClient(stored);
     client
       .get<AuthUser>("/auth/me")
       .then((user) => setState({ token: stored, user, ready: true }))
       .catch(() => {
-        localStorage.removeItem(TOKEN_KEY);
+        try { window.localStorage.removeItem(TOKEN_KEY); } catch {}
         setState({ token: null, user: null, ready: true });
       });
-  }, []);
+  }, [state.ready, state.token]);
 
   const login = useCallback(async (creds: LoginRequest) => {
     const client = createClient(null);
     const res = await client.post<LoginResponse>("/auth/login", creds);
-    localStorage.setItem(TOKEN_KEY, res.token);
+    try { window.localStorage.setItem(TOKEN_KEY, res.token); } catch {}
     setState({ token: res.token, user: res.user, ready: true });
     return res.user;
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
+    try { window.localStorage.removeItem(TOKEN_KEY); } catch {}
     setState({ token: null, user: null, ready: true });
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const stored = localStorage.getItem(TOKEN_KEY);
+    let stored: string | null = null;
+    try { stored = window.localStorage.getItem(TOKEN_KEY); } catch {}
     if (!stored) return;
     try {
       const user = await createClient(stored).get<AuthUser>("/auth/me");
@@ -69,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  const api = createClient(state.token);
+  const api = useMemo(() => createClient(state.token), [state.token]);
 
   return (
     <AuthContext.Provider value={{ ...state, login, logout, refreshUser, api }}>

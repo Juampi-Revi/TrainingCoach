@@ -18,7 +18,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         workoutExercises: {
           orderBy: { sortOrder: "asc" },
           include: {
-            exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } },
+            exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true, youtubeUrl: true, isSystem: true } },
+            _count: { select: { alternatives: true } },
           },
         },
       },
@@ -46,6 +47,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         intensityTarget: we.intensityTarget ? String(we.intensityTarget) : null,
         restSeconds: we.restSeconds,
         notes: we.notes,
+        groupNote: we.groupNote ?? null,
+        alternativesCount: we._count.alternatives,
       })),
     });
   });

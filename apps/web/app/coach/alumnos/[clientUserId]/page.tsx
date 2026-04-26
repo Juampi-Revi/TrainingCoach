@@ -132,7 +132,7 @@ interface ApiClientResponse {
 }
 
 function daysSince(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  return Math.floor((new Date().getTime() - new Date(iso).getTime()) / 86400000);
 }
 
 export default function AthleteDetailPage() {

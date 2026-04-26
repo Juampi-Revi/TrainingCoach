@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { ok, err, withHandler } from "@/lib/api-response";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   return withHandler(async () => {
@@ -10,6 +11,9 @@ export async function POST(req: NextRequest) {
     const { email, password } = body ?? {};
 
     if (!email || !password) return err("email and password required", 400);
+
+    const key = `login:${String(email).toLowerCase()}`;
+    if (!rateLimit(key, 10, 60_000)) return err("Demasiados intentos, esperá 1 minuto", 429);
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) return err("Invalid credentials", 401);

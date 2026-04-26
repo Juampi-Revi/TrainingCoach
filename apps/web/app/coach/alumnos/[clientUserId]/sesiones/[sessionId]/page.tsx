@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Avatar, Badge, Button, Icon, StateBlock, Tabs } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
@@ -33,7 +34,7 @@ export default function CoachSessionDetailPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [api, sessionId]);
+  }, [api, clientUserId, sessionId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -194,10 +195,13 @@ export default function CoachSessionDetailPage() {
                   {String(ei + 1).padStart(2, "0")}
                 </div>
                 {ex.exercise.thumbnailUrl && (
-                  <img
+                  <Image
+                    unoptimized
                     src={ex.exercise.thumbnailUrl}
                     alt={ex.exercise.name}
-                    style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0, background: "var(--bg-3)" }}
+                    width={40}
+                    height={40}
+                    style={{ borderRadius: 8, objectFit: "cover", flexShrink: 0, background: "var(--bg-3)" }}
                   />
                 )}
                 <div style={{ flex: 1 }}>

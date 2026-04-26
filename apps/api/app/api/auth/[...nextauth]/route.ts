@@ -1,6 +1,7 @@
-import NextAuth from "next-auth";
-import { authOptions } from "@/auth.config";
+import { NextResponse } from "next/server";
 
-const handler = NextAuth(authOptions);
+export function GET() {
+  return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+}
 
-export { handler as GET, handler as POST };
+export const POST = GET;

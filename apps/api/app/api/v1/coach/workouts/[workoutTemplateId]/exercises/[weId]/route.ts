@@ -34,6 +34,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         ...(body.sortOrder !== undefined && { sortOrder: Number(body.sortOrder) }),
         ...(body.supersetGroup !== undefined && { supersetGroup: body.supersetGroup || null }),
         ...(body.isWarmup !== undefined && { isWarmup: Boolean(body.isWarmup) }),
+        ...(body.groupNote !== undefined && { groupNote: body.groupNote || null }),
       },
       include: { exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } } },
     });
@@ -50,6 +51,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       intensityTarget: updated.intensityTarget ? String(updated.intensityTarget) : null,
       restSeconds: updated.restSeconds,
       notes: updated.notes,
+      groupNote: updated.groupNote ?? null,
     });
   });
 }
