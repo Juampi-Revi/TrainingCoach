@@ -188,10 +188,18 @@ export default function CoachSessionDetailPage() {
                     color: "var(--text-mute)",
                     width: 22,
                     fontWeight: 600,
+                    flexShrink: 0,
                   }}
                 >
                   {String(ei + 1).padStart(2, "0")}
                 </div>
+                {ex.exercise.thumbnailUrl && (
+                  <img
+                    src={ex.exercise.thumbnailUrl}
+                    alt={ex.exercise.name}
+                    style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0, background: "var(--bg-3)" }}
+                  />
+                )}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{ex.exercise.name}</div>
                   {ex.target && (

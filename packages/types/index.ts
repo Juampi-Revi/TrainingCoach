@@ -108,11 +108,14 @@ export interface WorkoutTemplateDetail {
   title: string;
   description: string | null;
   warmupNotes: string | null;
+  warmupMinutes: number | null;
   tags: string[];
   type: string;
   exercises: Array<{
     id: string;
     sortOrder: number;
+    supersetGroup: string | null;
+    isWarmup: boolean;
     exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null };
     targetSets: number | null;
     targetReps: string | null;
@@ -129,7 +132,11 @@ export interface WorkoutTemplateDetail {
 export interface SessionExercise {
   id: string;
   sortOrder: number;
-  exercise: { id: string; name: string; primaryMuscle: string | null };
+  supersetGroup: string | null;
+  isWarmup: boolean;
+  exercise: { id: string; name: string; primaryMuscle: string | null; thumbnailUrl: string | null };
+  media: { id: string; url: string; mediaType: string }[];
+  alternatives: { exerciseId: string; name: string; primaryMuscle: string | null }[];
   target: ExerciseTarget | null;
   sets: WorkoutSet[];
 }
@@ -140,7 +147,7 @@ export interface SessionDetail {
   performedAt: string;
   energyRating: number | null;
   sessionNotes: string | null;
-  workoutTemplate: { id: string; title: string; description: string | null; warmupNotes: string | null; tags: string[] } | null;
+  workoutTemplate: { id: string; title: string; description: string | null; warmupNotes: string | null; warmupMinutes: number | null; tags: string[] } | null;
   exercises: SessionExercise[];
 }
 

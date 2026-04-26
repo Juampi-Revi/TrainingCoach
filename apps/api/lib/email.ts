@@ -1,3 +1,32 @@
+type SendResetParams = {
+  to: string;
+  name: string;
+  resetUrl: string;
+};
+
+export async function sendResetEmail({ to, name, resetUrl }: SendResetParams) {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.EMAIL_FROM?.trim();
+  if (!apiKey || !from) return { sent: false };
+
+  const subject = "Resetear contraseña — Training Challenge";
+  const text = `Hola ${name},\n\nHacé clic en el siguiente link para resetear tu contraseña (válido por 1 hora):\n\n${resetUrl}\n\nSi no pediste este email, ignoralo.`;
+  const html = `
+    <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
+      <p>Hola <strong>${escapeHtml(name)}</strong>,</p>
+      <p>Hacé clic para resetear tu contraseña (válido por 1 hora):</p>
+      <p><a href="${resetUrl}" style="background:#D7FF3A;color:#0B0B0C;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;">Resetear contraseña</a></p>
+      <p style="color:#888;font-size:12px;">Si no pediste este email, ignoralo.</p>
+    </div>`;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to, subject, text, html }),
+  });
+  return { sent: res.ok };
+}
+
 type SendInviteParams = {
   to: string;
   coachName: string;

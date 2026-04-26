@@ -179,6 +179,7 @@ export default function AlumnosPage() {
         actions={
           <>
             <div
+              className="coach-header-action-secondary"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -215,7 +216,41 @@ export default function AlumnosPage() {
           </>
         }
       >
-        <div style={{ padding: 28 }}>
+        <div className="coach-pad">
+          {/* Mobile-only search bar */}
+          <div
+            className="coach-mobile-search"
+            style={{
+              display: "none",
+              alignItems: "center",
+              gap: 8,
+              height: 40,
+              background: "var(--bg-2)",
+              border: "1px solid var(--line-2)",
+              borderRadius: 10,
+              padding: "0 12px",
+              marginBottom: 16,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-mute)" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M11 19a8 8 0 1 1 5.3-14 8 8 0 0 1-5.3 14zM21 21l-4.3-4.3" />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar alumno…"
+              style={{
+                flex: 1,
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                fontFamily: "var(--font-sans)",
+                fontSize: 14,
+                color: "var(--text)",
+              }}
+            />
+          </div>
+
           {loading ? (
             <StateBlock kind="loading" title="Cargando alumnos…" />
           ) : filtered.length === 0 && !search ? (

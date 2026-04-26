@@ -18,6 +18,7 @@ const ITEMS: Array<{ id: TabId; icon: IconName; label: string; href: string }> =
 export function MobileTabBar({ active }: MobileTabBarProps) {
   return (
     <nav
+      className="client-tab-bar"
       style={{
         position: "fixed",
         left: 0,

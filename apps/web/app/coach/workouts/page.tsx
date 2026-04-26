@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Icon, StateBlock } from "@/components/ui";
+import { useToast } from "@/lib/toast";
+import { Badge, Button, ConfirmModal, Icon, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { WorkoutTemplateSummary } from "@regen/types";
 
@@ -18,10 +19,13 @@ const TAG_COLORS: Record<string, string> = {
 
 export default function WorkoutsPage() {
   const { api, user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const [templates, setTemplates] = useState<WorkoutTemplateSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     api
@@ -31,11 +35,31 @@ export default function WorkoutsPage() {
       .finally(() => setLoading(false));
   }, [api]);
 
+  function deleteTemplate(e: React.MouseEvent, templateId: string, title: string) {
+    e.stopPropagation();
+    setConfirmDialog({
+      message: `¿Eliminar "${title}"? No se puede deshacer.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setDeletingId(templateId);
+        try {
+          await api.del(`/coach/workouts/${templateId}`);
+          setTemplates((prev) => prev.filter((t) => t.id !== templateId));
+          toast.success("Entrenamiento eliminado");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "No se pudo eliminar el entrenamiento");
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
+  }
+
   async function createTemplate() {
     setCreating(true);
     try {
       const t = await api.post<{ id: string }>("/coach/workouts", {
-        title: "Nuevo template",
+        title: "Nuevo entrenamiento",
         description: "",
       });
       router.push(`/coach/workouts/${t.id}`);
@@ -46,28 +70,29 @@ export default function WorkoutsPage() {
   }
 
   return (
+    <>
     <DesktopShell
       active="templates"
-      title="Templates"
-      subtitle={`${templates.length} templates`}
+      title="Entrenamientos"
+      subtitle={`${templates.length} entrenamientos`}
       coachName={user?.name ?? "Coach"}
       actions={
         <Button size="sm" icon="plus" disabled={creating} onClick={createTemplate}>
-          {creating ? "Creando…" : "Nuevo template"}
+          {creating ? "Creando…" : "Nuevo entrenamiento"}
         </Button>
       }
     >
       <div style={{ padding: 28 }}>
         {loading ? (
-          <StateBlock kind="loading" title="Cargando templates…" />
+          <StateBlock kind="loading" title="Cargando entrenamientos…" />
         ) : templates.length === 0 ? (
           <StateBlock
             kind="empty"
-            title="Sin templates"
-            body="Creá tu primer workout template."
+            title="Sin entrenamientos"
+            body="Creá tu primer entrenamiento."
             cta={
               <Button size="sm" icon="plus" onClick={createTemplate}>
-                Crear template
+                Crear entrenamiento
               </Button>
             }
           />
@@ -84,7 +109,7 @@ export default function WorkoutsPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px",
+                gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px",
                 padding: "10px 16px",
                 background: "var(--bg-2)",
                 borderBottom: "1px solid var(--line)",
@@ -100,6 +125,7 @@ export default function WorkoutsPage() {
               <div>Etiquetas</div>
               <div style={{ textAlign: "center" }}>Ejercicios</div>
               <div>Actualizado</div>
+              <div />
               <div />
             </div>
 
@@ -117,7 +143,7 @@ export default function WorkoutsPage() {
                   className="ta-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px",
+                    gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px",
                     padding: "12px 16px",
                     borderBottom:
                       i < templates.length - 1 ? "1px solid var(--line)" : "none",
@@ -150,6 +176,14 @@ export default function WorkoutsPage() {
                     })}
                   </div>
                   <Icon name="chevR" size={14} color="var(--text-mute)" />
+                  <button
+                    onClick={(e) => deleteTemplate(e, t.id, t.title)}
+                    disabled={deletingId === t.id}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 4, opacity: deletingId === t.id ? 0.4 : 1, display: "flex", alignItems: "center" }}
+                    title="Eliminar entrenamiento"
+                  >
+                    <Icon name="trash" size={13} color="var(--text-mute)" />
+                  </button>
                 </div>
               );
             })}
@@ -157,5 +191,13 @@ export default function WorkoutsPage() {
         )}
       </div>
     </DesktopShell>
+    {confirmDialog && (
+      <ConfirmModal
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   );
 }

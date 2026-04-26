@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Avatar, Badge, Button, Icon, StateBlock } from "@/components/ui";
+import { useToast } from "@/lib/toast";
+import { Avatar, Badge, Button, ConfirmModal, Icon, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { PlanSummary } from "@regen/types";
 
@@ -11,10 +12,13 @@ const AVATAR_TONES = ["#7AB8FF", "#FFB547", "#FF5B5B"];
 
 export default function PlanesPage() {
   const { api, user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     api
@@ -23,6 +27,26 @@ export default function PlanesPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [api]);
+
+  function deletePlan(e: React.MouseEvent, planId: string, planTitle: string) {
+    e.stopPropagation();
+    setConfirmDialog({
+      message: `¿Eliminar "${planTitle}"? No se puede deshacer.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setDeletingId(planId);
+        try {
+          await api.del(`/coach/plans/${planId}`);
+          setPlans((prev) => prev.filter((p) => p.id !== planId));
+          toast.success("Plan eliminado");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "No se pudo eliminar el plan");
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
+  }
 
   async function createPlan() {
     setCreating(true);
@@ -40,6 +64,7 @@ export default function PlanesPage() {
   }
 
   return (
+    <>
     <DesktopShell
       active="plans"
       title="Planes"
@@ -53,14 +78,14 @@ export default function PlanesPage() {
         </>
       }
     >
-      <div style={{ padding: 28 }}>
+      <div className="coach-pad">
         {loading ? (
           <StateBlock kind="loading" title="Cargando planes…" />
         ) : (
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
               gap: 14,
             }}
           >
@@ -96,7 +121,14 @@ export default function PlanesPage() {
                     )}
                     {p.status === "draft" && <Badge tone="neutral">Borrador</Badge>}
                   </div>
-                  <Icon name="more" size={16} color="var(--text-mute)" />
+                  <button
+                    onClick={(e) => deletePlan(e, p.id, p.title)}
+                    disabled={deletingId === p.id}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 4, opacity: deletingId === p.id ? 0.4 : 1, display: "flex", alignItems: "center" }}
+                    title="Eliminar plan"
+                  >
+                    <Icon name="trash" size={14} color="var(--text-mute)" />
+                  </button>
                 </div>
 
                 <div>
@@ -215,5 +247,13 @@ export default function PlanesPage() {
         )}
       </div>
     </DesktopShell>
+    {confirmDialog && (
+      <ConfirmModal
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   );
 }

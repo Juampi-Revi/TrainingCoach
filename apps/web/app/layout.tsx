@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { ThemeProvider } from "@/lib/theme";
+import { ToastProvider } from "@/lib/toast";
 
 export const metadata: Metadata = {
   title: "Regen",
@@ -13,11 +15,20 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+const themeScript = `(function(){try{var t=localStorage.getItem('regen_theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}})()`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

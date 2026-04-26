@@ -2,14 +2,16 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { Button, Input, Icon } from "@/components/ui";
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,8 +20,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login({ email, password });
-      router.replace(user?.role === "coach" ? "/coach" : "/semana");
+      const user = await login({ email, password });
+      router.replace(user.role === "coach" ? "/coach" : "/semana");
     } catch {
       setError("Email o contraseña incorrectos");
     } finally {
@@ -75,15 +77,44 @@ export default function LoginPage() {
             placeholder="tu@email.com"
             required
           />
-          <Input
-            label="Contraseña"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-          />
+
+          <div>
+            <Input
+              label="Contraseña"
+              type={showPwd ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 2,
+                    color: "var(--text-mute)",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  tabIndex={-1}
+                >
+                  <Icon name={showPwd ? "eyeOff" : "eye"} size={16} />
+                </button>
+              }
+            />
+            <div style={{ textAlign: "right", marginTop: 6 }}>
+              <Link
+                href="/olvide-contrasenia"
+                style={{ fontSize: 12, color: "var(--text-mute)", textDecoration: "none" }}
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+          </div>
 
           {error && (
             <div
@@ -100,16 +131,17 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Button
-            type="submit"
-            block
-            size="lg"
-            disabled={loading}
-            style={{ marginTop: 4 }}
-          >
+          <Button type="submit" block size="lg" disabled={loading} style={{ marginTop: 4 }}>
             {loading ? "Ingresando…" : "Ingresar"}
           </Button>
         </form>
+
+        <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--text-mute)" }}>
+          ¿No tenés cuenta?{" "}
+          <Link href="/registro" style={{ color: "var(--lime)", fontWeight: 600, textDecoration: "none" }}>
+            Registrate
+          </Link>
+        </div>
       </div>
     </div>
   );

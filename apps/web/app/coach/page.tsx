@@ -75,16 +75,9 @@ export default function CoachDashboardPage() {
         </>
       }
     >
-      <div style={{ padding: 28 }}>
+      <div className="coach-pad">
         {/* KPIs */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 12,
-            marginBottom: 24,
-          }}
-        >
+        <div className="coach-kpi-grid" style={{ marginBottom: 24 }}>
           <KPI
             label="Alumnos activos"
             value={String(activeClients.length)}
@@ -102,7 +95,7 @@ export default function CoachDashboardPage() {
         {loading ? (
           <StateBlock kind="loading" title="Cargando alumnos…" />
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 16 }}>
+          <div className="coach-two-col">
             {/* Alerts table */}
             <div>
               <div
@@ -245,7 +238,7 @@ export default function CoachDashboardPage() {
                   {[
                     { icon: "users" as const, t: "Lista de alumnos", href: "/coach/alumnos" },
                     { icon: "calendar" as const, t: "Planes", href: "/coach/planes" },
-                    { icon: "book" as const, t: "Templates", href: "/coach/workouts" },
+                    { icon: "book" as const, t: "Entrenamientos", href: "/coach/workouts" },
                     { icon: "dumbbell" as const, t: "Ejercicios", href: "/coach/ejercicios" },
                   ].map((it) => (
                     <div

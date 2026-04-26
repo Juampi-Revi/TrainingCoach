@@ -1,11 +1,13 @@
 import type { CSSProperties } from "react";
 
 export type IconName =
-  | "search" | "plus" | "check" | "chevR" | "chevL" | "chevD"
+  | "search" | "plus" | "check" | "chevR" | "chevL" | "chevD" | "chevUp"
   | "play" | "pause" | "timer" | "reset" | "flame" | "dumbbell"
   | "user" | "users" | "calendar" | "chart" | "msg" | "bell"
   | "alert" | "edit" | "trash" | "filter" | "more" | "x" | "logo"
-  | "send" | "home" | "history" | "settings" | "star" | "book";
+  | "send" | "home" | "history" | "settings" | "star" | "book"
+  | "eye" | "eyeOff" | "lock" | "sun" | "moon"
+  | "image" | "repeat";
 
 interface IconProps {
   name: IconName;
@@ -22,6 +24,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   chevR:    <path d="M9 6l6 6-6 6" />,
   chevL:    <path d="M15 6l-6 6 6 6" />,
   chevD:    <path d="M6 9l6 6 6-6" />,
+  chevUp:   <path d="M6 15l6-6 6 6" />,
   play:     <path d="M6 4l14 8-14 8V4z" fill="currentColor" stroke="none" />,
   pause:    <><rect x="6" y="4" width="4" height="16" fill="currentColor" stroke="none" /><rect x="14" y="4" width="4" height="16" fill="currentColor" stroke="none" /></>,
   timer:    <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l3 2" /><path d="M9 2h6" /></>,
@@ -47,6 +50,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
   settings: <><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.5-2.3.9a7 7 0 0 0-2.2-1.3L14 3h-4l-.4 2.3a7 7 0 0 0-2.2 1.3l-2.3-.9-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .5 0 .9.1 1.3l-2 1.5 2 3.5 2.3-.9a7 7 0 0 0 2.2 1.3L10 21h4l.4-2.3a7 7 0 0 0 2.2-1.3l2.3.9 2-3.5-2-1.5c.1-.4.1-.8.1-1.3z" /></>,
   star:     <path d="M12 3l3 6 6 .9-4.3 4.3 1 6.3L12 17.8 6.3 20.5l1-6.3L3 9.9 9 9l3-6z" />,
   book:     <><path d="M4 4v16a2 2 0 0 0 2 2h14V4H6a2 2 0 0 0-2 2z" /><path d="M4 20h14" /></>,
+  eye:      <><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></>,
+  eyeOff:   <><path d="M17.9 17.9A10.9 10.9 0 0 1 12 19C5 19 1 12 1 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A11 11 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2" /><path d="M1 1l22 22" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
+  lock:     <><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+  sun:      <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
+  moon:     <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+  image:    <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>,
+  repeat:   <><path d="M17 2l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></>,
 };
 
 export function Icon({ name, size = 18, color = "currentColor", style, className }: IconProps) {

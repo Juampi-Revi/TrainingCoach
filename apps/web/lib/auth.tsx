@@ -20,8 +20,9 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (creds: LoginRequest) => Promise<void>;
+  login: (creds: LoginRequest) => Promise<AuthUser>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   api: ReturnType<typeof createClient>;
 }
 
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await client.post<LoginResponse>("/auth/login", creds);
     localStorage.setItem(TOKEN_KEY, res.token);
     setState({ token: res.token, user: res.user, ready: true });
+    return res.user;
   }, []);
 
   const logout = useCallback(() => {
@@ -58,10 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ token: null, user: null, ready: true });
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const stored = localStorage.getItem(TOKEN_KEY);
+    if (!stored) return;
+    try {
+      const user = await createClient(stored).get<AuthUser>("/auth/me");
+      setState((prev) => ({ ...prev, user }));
+    } catch {}
+  }, []);
+
   const api = createClient(state.token);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, api }}>
+    <AuthContext.Provider value={{ ...state, login, logout, refreshUser, api }}>
       {children}
     </AuthContext.Provider>
   );

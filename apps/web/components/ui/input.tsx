@@ -1,10 +1,11 @@
 "use client";
 
-import type { CSSProperties, InputHTMLAttributes } from "react";
+import type { CSSProperties, InputHTMLAttributes, ReactNode } from "react";
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
   suffix?: string;
+  rightElement?: ReactNode;
   error?: string;
   wrapStyle?: CSSProperties;
   size?: "sm" | "md" | "lg";
@@ -16,6 +17,7 @@ const HEIGHTS = { sm: 32, md: 40, lg: 48 };
 export function Input({
   label,
   suffix,
+  rightElement,
   error,
   wrapStyle,
   size = "md",
@@ -70,6 +72,11 @@ export function Input({
           <span style={{ fontSize: 12, color: "var(--text-mute)", marginLeft: 6, flexShrink: 0 }}>
             {suffix}
           </span>
+        )}
+        {rightElement && (
+          <div style={{ marginLeft: 6, flexShrink: 0, display: "flex", alignItems: "center" }}>
+            {rightElement}
+          </div>
         )}
       </div>
       {error && <span style={{ fontSize: 12, color: "var(--danger)" }}>{error}</span>}

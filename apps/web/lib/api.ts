@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003/api/v1";
 
 type FetchOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
@@ -17,16 +17,26 @@ async function request<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...rest,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...rest,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(`No se pudo conectar con la API (${API_BASE})`, 0);
+  }
 
-  const json = await res.json();
+  let json: { ok?: boolean; data?: T; error?: string } | null = null;
+  try {
+    json = await res.json();
+  } catch {
+    throw new ApiError(`HTTP ${res.status} — respuesta no válida desde ${path}`, res.status);
+  }
 
-  if (!res.ok || !json.ok) {
-    throw new ApiError(json.error ?? "Request failed", res.status);
+  if (!res.ok || !json?.ok) {
+    throw new ApiError(json?.error ?? "Request failed", res.status);
   }
 
   return json.data as T;
@@ -52,7 +62,8 @@ export function createClient(token: string | null) {
       request<T>(path, { method: "PUT", body, token: t }),
     patch: <T>(path: string, body?: unknown) =>
       request<T>(path, { method: "PATCH", body, token: t }),
-    del: <T>(path: string) => request<T>(path, { method: "DELETE", token: t }),
+    del: <T>(path: string, body?: unknown) =>
+      request<T>(path, { method: "DELETE", body, token: t }),
   };
 }
 

@@ -14,5 +14,6 @@ export { Progress } from "./progress";
 export { KPI } from "./kpi";
 export { Input, NumCell } from "./input";
 export { StateBlock } from "./state-block";
+export { ConfirmModal } from "./confirm-modal";
 export { Table } from "./table";
 export type { ColDef } from "./table";

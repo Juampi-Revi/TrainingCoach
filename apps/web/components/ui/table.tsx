@@ -20,13 +20,14 @@ export function Table({ cols, rows, onRowClick, style }: TableProps) {
   const template = cols.map((c) => c.w ?? "1fr").join(" ");
 
   return (
+    <div style={{ overflowX: "auto", borderRadius: 12, ...style }}>
     <div
       style={{
         background: "var(--bg-1)",
         border: "1px solid var(--line)",
         borderRadius: 12,
         overflow: "hidden",
-        ...style,
+        minWidth: 480,
       }}
     >
       <div
@@ -102,6 +103,7 @@ export function Table({ cols, rows, onRowClick, style }: TableProps) {
           Sin datos
         </div>
       )}
+    </div>
     </div>
   );
 }

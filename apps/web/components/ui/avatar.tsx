@@ -4,10 +4,11 @@ interface AvatarProps {
   name?: string;
   size?: number;
   tone?: string;
+  textColor?: string;
   style?: CSSProperties;
 }
 
-export function Avatar({ name = "?", size = 32, tone, style }: AvatarProps) {
+export function Avatar({ name = "?", size = 32, tone, textColor, style }: AvatarProps) {
   const initials = name
     .split(" ")
     .map((n) => n[0])
@@ -28,7 +29,7 @@ export function Avatar({ name = "?", size = 32, tone, style }: AvatarProps) {
         fontFamily: "var(--font-sans)",
         fontWeight: 600,
         fontSize: size * 0.38,
-        color: "var(--text)",
+        color: textColor ?? "var(--text)",
         flexShrink: 0,
         letterSpacing: ".02em",
         border: "1px solid var(--line-2)",

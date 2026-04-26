@@ -109,7 +109,7 @@ export default function SemanaPage() {
               <span style={{ color: "var(--text-mute)", fontWeight: 500 }}>/ {data.totalWeeks}</span>
             </div>
           </div>
-          <Avatar name={user?.name ?? "U"} size={36} tone="var(--lime)" />
+          <Avatar name={user?.name ?? "U"} size={36} tone="var(--lime)" textColor="#0B0B0C" />
         </div>
 
         {/* Week strip */}

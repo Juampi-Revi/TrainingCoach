@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon, Avatar } from "@/components/ui";
 import type { IconName } from "@/components/ui";
+import { CoachBottomNav } from "./coach-bottom-nav";
 
 type NavId = "dashboard" | "athletes" | "plans" | "templates" | "library" | "messages";
 
@@ -18,10 +19,20 @@ const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
   { id: "dashboard", icon: "home",     label: "Dashboard",  href: "/coach"            },
   { id: "athletes",  icon: "users",    label: "Alumnos",    href: "/coach/alumnos"    },
   { id: "plans",     icon: "calendar", label: "Planes",     href: "/coach/planes"     },
-  { id: "templates", icon: "book",     label: "Templates",  href: "/coach/workouts"   },
+  { id: "templates", icon: "book",     label: "Entrenamientos", href: "/coach/workouts" },
   { id: "library",   icon: "dumbbell", label: "Ejercicios", href: "/coach/ejercicios" },
   { id: "messages",  icon: "msg",      label: "Mensajes",   href: "/coach/mensajes"   },
 ];
+
+// Map desktop NavId to bottom-nav NavId (templates/messages don't have tab bar equivalent)
+const BOTTOM_NAV_MAP: Record<NavId, "dashboard" | "athletes" | "plans" | "library" | "settings"> = {
+  dashboard: "dashboard",
+  athletes:  "athletes",
+  plans:     "plans",
+  templates: "plans",
+  library:   "library",
+  messages:  "dashboard",
+};
 
 export function DesktopShell({
   children,
@@ -32,9 +43,10 @@ export function DesktopShell({
   coachName = "Coach",
 }: DesktopShellProps) {
   return (
-    <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
-      {/* Sidebar */}
+    <div className="coach-layout">
+      {/* Sidebar — hidden on mobile via CSS */}
       <aside
+        className="coach-sidebar"
         style={{
           width: 220,
           borderRight: "1px solid var(--line)",
@@ -43,6 +55,9 @@ export function DesktopShell({
           flexDirection: "column",
           padding: "18px 12px",
           flexShrink: 0,
+          height: "100vh",
+          position: "sticky",
+          top: 0,
         }}
       >
         {/* Logo */}
@@ -116,7 +131,7 @@ export function DesktopShell({
             background: "var(--bg-2)",
           }}
         >
-          <Avatar name={coachName} size={28} tone="var(--lime)" />
+          <Avatar name={coachName} size={28} tone="var(--lime)" textColor="#0B0B0C" />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>
               {coachName}
@@ -130,35 +145,49 @@ export function DesktopShell({
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <main className="coach-main">
         {title && (
           <header
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              padding: "18px 28px",
+              padding: "16px 20px",
               borderBottom: "1px solid var(--line)",
               flexShrink: 0,
+              gap: 12,
             }}
           >
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em" }}>{title}</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div
+                className="ta-ellipsis"
+                style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-.02em" }}
+              >
+                {title}
+              </div>
               {subtitle && (
-                <div style={{ fontSize: 13, color: "var(--text-mute)", marginTop: 2 }}>
+                <div
+                  className="ta-ellipsis"
+                  style={{ fontSize: 13, color: "var(--text-mute)", marginTop: 2 }}
+                >
                   {subtitle}
                 </div>
               )}
             </div>
             {actions && (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{actions}</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                {actions}
+              </div>
             )}
           </header>
         )}
-        <div className="ta-scroll" style={{ flex: 1 }}>
+        <div className="ta-scroll coach-scroll">
           {children}
         </div>
       </main>
+
+      {/* Bottom nav — visible on mobile only via CSS */}
+      <CoachBottomNav active={BOTTOM_NAV_MAP[active]} />
     </div>
   );
 }

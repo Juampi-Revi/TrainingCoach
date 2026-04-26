@@ -24,6 +24,13 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+next-env.d.ts
 
 # Prisma generated
 apps/api/node_modules/.prisma
+
+# AI / IDE tooling
+.claude
+.agents
+.trae
+skills-lock.json

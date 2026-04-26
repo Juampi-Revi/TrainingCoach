@@ -3,9 +3,114 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Avatar, Badge, Button, Card, Icon, Progress, StateBlock, Tabs } from "@/components/ui";
+import { useToast } from "@/lib/toast";
+import { Avatar, Badge, Button, Card, ConfirmModal, Icon, Progress, StateBlock, Tabs } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { SessionSummary } from "@regen/types";
+
+interface PlanOption { id: string; title: string; weeksCount: number }
+
+function AssignPlanModal({
+  clientUserId,
+  currentPlanId,
+  onClose,
+  onAssigned,
+}: {
+  clientUserId: string;
+  currentPlanId?: string;
+  onClose: () => void;
+  onAssigned: (planId: string, planTitle: string, weeksCount: number) => void;
+}) {
+  const { api } = useAuth();
+  const [plans, setPlans] = useState<PlanOption[]>([]);
+  const [selected, setSelected] = useState(currentPlanId ?? "");
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<{ id: string; title: string; weeksCount: number }[]>("/coach/plans")
+      .then(setPlans)
+      .catch(console.error);
+  }, [api]);
+
+  async function handleAssign() {
+    if (!selected) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.post(`/coach/clients/${clientUserId}`, { planId: selected, startDate });
+      const plan = plans.find((p) => p.id === selected)!;
+      onAssigned(selected, plan.title, plan.weeksCount);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al asignar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,.6)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 1000, padding: "0 16px",
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 440,
+          background: "var(--bg-1)", border: "1px solid var(--line)",
+          borderRadius: 16, padding: 28,
+        }}
+      >
+        <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 20 }}>
+          Asignar plan
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-mute)", display: "block", marginBottom: 6 }}>Plan</label>
+          <div style={{ padding: "0 12px", height: 44, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, display: "flex", alignItems: "center" }}>
+            <select
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: selected ? "var(--text)" : "var(--text-mute)" }}
+            >
+              <option value="">Seleccionar plan…</option>
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>{p.title} · {p.weeksCount} sem</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-mute)", display: "block", marginBottom: 6 }}>Fecha de inicio</label>
+          <div style={{ padding: "0 12px", height: 44, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, display: "flex", alignItems: "center" }}>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)" }}
+            />
+          </div>
+        </div>
+
+        {error && <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 14 }}>{error}</div>}
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="secondary" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancelar</Button>
+          <Button onClick={handleAssign} disabled={saving || !selected} style={{ flex: 1 }}>
+            {saving ? "Asignando…" : "Asignar"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface ClientDetail {
   id: string;
@@ -32,12 +137,16 @@ function daysSince(iso: string): number {
 
 export default function AthleteDetailPage() {
   const { api, user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const { clientUserId } = useParams<{ clientUserId: string }>();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("Historial");
   const [unlinking, setUnlinking] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  const [removingPlan, setRemovingPlan] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     api
@@ -82,6 +191,7 @@ export default function AthleteDetailPage() {
   const weightDiff = latestWeight && prevWeight ? (latestWeight - prevWeight).toFixed(1) : null;
 
   return (
+  <>
     <DesktopShell
       active="athletes"
       title={
@@ -103,6 +213,14 @@ export default function AthleteDetailPage() {
           >
             Volver
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon="calendar"
+            onClick={() => setShowAssign(true)}
+          >
+            {client.assignment?.plan ? "Cambiar plan" : "Asignar plan"}
+          </Button>
           {client.assignment?.plan && (
             <Button
               variant="outline"
@@ -113,20 +231,48 @@ export default function AthleteDetailPage() {
               Ver plan
             </Button>
           )}
+          {client.assignment?.plan && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={removingPlan}
+              onClick={() => setConfirmDialog({
+                message: "¿Quitar el plan activo de este alumno?",
+                onConfirm: async () => {
+                  setConfirmDialog(null);
+                  setRemovingPlan(true);
+                  try {
+                    await api.patch(`/coach/clients/${clientUserId}`, { planStatus: "finished" });
+                    setClient((prev) => prev ? { ...prev, assignment: null } : prev);
+                    toast.success("Plan quitado");
+                  } catch {
+                    toast.error("No se pudo quitar el plan");
+                    setRemovingPlan(false);
+                  }
+                },
+              })}
+              style={{ color: "var(--warn)", borderColor: "var(--warn)" }}
+            >
+              {removingPlan ? "Quitando…" : "Quitar plan"}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
             disabled={unlinking}
-            onClick={async () => {
-              if (!confirm(`¿Desvincular a ${client.name ?? client.email}? Perderás acceso a sus datos.`)) return;
-              setUnlinking(true);
-              try {
-                await api.del(`/coach/clients/${clientUserId}`);
-                router.replace("/coach/alumnos");
-              } catch {
-                setUnlinking(false);
-              }
-            }}
+            onClick={() => setConfirmDialog({
+              message: `¿Desvincular a ${client.name ?? client.email}? Perderás acceso a sus datos.`,
+              onConfirm: async () => {
+                setConfirmDialog(null);
+                setUnlinking(true);
+                try {
+                  await api.del(`/coach/clients/${clientUserId}`);
+                  router.replace("/coach/alumnos");
+                } catch {
+                  setUnlinking(false);
+                }
+              },
+            })}
             style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
           >
             {unlinking ? "Desvinculando…" : "Desvincular"}
@@ -134,7 +280,7 @@ export default function AthleteDetailPage() {
         </>
       }
     >
-      <div style={{ padding: "0 28px" }}>
+      <div className="coach-pad" style={{ paddingTop: 0, paddingBottom: 0 }}>
         {/* Header */}
         <div
           style={{
@@ -145,7 +291,7 @@ export default function AthleteDetailPage() {
             alignItems: "center",
           }}
         >
-          <Avatar name={name} size={72} tone="var(--lime)" />
+          <Avatar name={name} size={72} tone="var(--lime)" textColor="#0B0B0C" />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em" }}>{name}</div>
@@ -212,12 +358,8 @@ export default function AthleteDetailPage() {
         </div>
 
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.5fr 1fr",
-            gap: 18,
-            padding: "18px 0 28px",
-          }}
+          className="coach-two-col"
+          style={{ padding: "18px 0 28px" }}
         >
           {/* Left: sessions timeline */}
           <div>
@@ -444,5 +586,28 @@ export default function AthleteDetailPage() {
         </div>
       </div>
     </DesktopShell>
+
+    {showAssign && (
+      <AssignPlanModal
+        clientUserId={clientUserId}
+        currentPlanId={client.assignment?.plan?.id}
+        onClose={() => setShowAssign(false)}
+        onAssigned={(planId, planTitle, weeksCount) => {
+          setClient((prev) => prev ? {
+            ...prev,
+            assignment: { status: "active", plan: { id: planId, title: planTitle, weeksCount } },
+          } : prev);
+          toast.success(`Plan "${planTitle}" asignado`);
+        }}
+      />
+    )}
+    {confirmDialog && (
+      <ConfirmModal
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+  </>
   );
 }

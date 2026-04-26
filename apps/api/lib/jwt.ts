@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 
-const SECRET = process.env.JWT_SECRET ?? process.env.NEXTAUTH_SECRET ?? "dev-secret";
+const _jwtSecret = process.env.JWT_SECRET;
+if (!_jwtSecret) throw new Error("JWT_SECRET environment variable is required but not set");
+const SECRET: string = _jwtSecret;;
 const EXPIRES_IN = "30d";
 
 export interface TokenPayload {

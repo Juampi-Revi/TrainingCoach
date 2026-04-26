@@ -1,16 +1,33 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
-import { ok, unauthorized, notFound } from "@/lib/api-response";
+import { ok, unauthorized, notFound, forbidden, withHandler } from "@/lib/api-response";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ workoutTemplateId: string }> },
 ) {
+  return withHandler(async () => {
   const auth = requireRole(req, "client");
   if (!auth.ok) return unauthorized(auth.message);
 
   const { workoutTemplateId } = await params;
+
+  const authorized = await prisma.planAssignment.findFirst({
+    where: {
+      clientUserId: auth.user.sub,
+      status: "active",
+      plan: {
+        OR: [
+          { weeks: { some: { workoutTemplates: { some: { id: workoutTemplateId } } } } },
+          { weeks: { some: { workouts: { some: { workoutTemplateId } } } } },
+          { workouts: { some: { workoutTemplateId } } },
+        ],
+      },
+    },
+    select: { id: true },
+  });
+  if (!authorized) return forbidden("Access denied");
 
   const template = await prisma.workoutTemplate.findUnique({
     where: { id: workoutTemplateId },
@@ -43,5 +60,6 @@ export async function GET(
       restSeconds: we.restSeconds,
       notes: we.notes,
     })),
+  });
   });
 }
