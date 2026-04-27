@@ -16,7 +16,7 @@ COPY --from=deps /repo/node_modules ./node_modules
 COPY packages ./packages
 COPY apps/web ./apps/web
 # NEXT_PUBLIC_API_URL is baked in at build time
-ARG NEXT_PUBLIC_API_URL=http://localhost:3003/api/v1
+ARG NEXT_PUBLIC_API_URL=https://api.yourcoachfit.com/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN cd apps/web && /repo/node_modules/.bin/next build
