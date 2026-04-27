@@ -32,4 +32,4 @@ COPY --from=builder /repo/apps/web/.next     ./apps/web/.next
 COPY --from=builder /repo/apps/web/package.json   ./apps/web/
 COPY --from=builder /repo/apps/web/next.config.ts ./apps/web/
 EXPOSE 3001
-CMD ["sh", "-c", "cd apps/web && PORT=3001 HOSTNAME=0.0.0.0 node ../node_modules/.bin/next start"]
+CMD ["sh", "-c", "cd apps/web && PORT=3001 HOSTNAME=0.0.0.0 node /repo/node_modules/.bin/next start"]
