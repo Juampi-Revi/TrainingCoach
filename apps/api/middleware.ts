@@ -4,6 +4,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3001",
   "http://localhost:3000",
   "http://localhost:3011",
+  "https://yourcoachfit.com",
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ];
 
