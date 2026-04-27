@@ -33,5 +33,6 @@ COPY --from=builder /repo/apps/api/.next     ./apps/api/.next
 COPY --from=builder /repo/apps/api/package.json   ./apps/api/
 COPY --from=builder /repo/apps/api/next.config.ts ./apps/api/
 COPY --from=builder /repo/apps/api/prisma         ./apps/api/prisma
+RUN node_modules/.bin/prisma generate --schema=apps/api/prisma/schema.prisma
 EXPOSE 3003
 CMD ["sh", "-c", "cd apps/api && PORT=3003 HOSTNAME=0.0.0.0 /repo/node_modules/.bin/next start"]
