@@ -50,12 +50,21 @@ function groupLabel(size: number) {
   return "Circuito";
 }
 
+function fmtDuration(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 // ─── Session header ───────────────────────────────────────────────────────────
 
 function SessionHeader({
-  exNum, exTotal, title, subtitle, onExit,
+  exNum, exTotal, title, subtitle, time, onExit,
 }: {
-  exNum: number; exTotal: number; title: string; subtitle?: string; onExit: () => void;
+  exNum: number; exTotal: number; title: string; subtitle?: string; time?: string; onExit: () => void;
 }) {
   return (
     <div style={{ position: "relative", padding: "50px 14px 12px", borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
@@ -74,6 +83,25 @@ function SessionHeader({
       <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, textAlign: "center", marginTop: 6 }}>
         EJERCICIO {exNum} / {exTotal}
       </div>
+      {time && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: "var(--bg-2)",
+              border: "1px solid var(--line-2)",
+              color: "var(--text)",
+            }}
+          >
+            <Icon name="timer" size={12} color="var(--text-mute)" />
+            <span className="ta-mono" style={{ fontSize: 11, fontWeight: 700 }}>{time}</span>
+          </div>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 6 }}>
         {Array.from({ length: exTotal }).map((_, i) => (
           <div key={i} style={{
@@ -114,7 +142,7 @@ function SetRowDisplay({
       }}
     >
       <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700 }}>
-        SET {s.setNumber}
+        SERIE {s.setNumber}
       </div>
       <div style={{ background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 6, padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <span className="ta-mono" style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>{s.weight ?? "—"}</span>
@@ -149,7 +177,7 @@ function ActiveSetRow({
       borderRadius: 9, marginBottom: 4,
     }}>
       <div className="ta-mono" style={{ fontSize: 11, color: "var(--lime)", fontWeight: 700 }}>
-        SET {setNum}
+        SERIE {setNum}
       </div>
       <input
         type="number" inputMode="decimal" value={draft.kg}
@@ -477,6 +505,98 @@ function RestTimerOverlay({
   );
 }
 
+function WarmupOverlay({
+  elapsedMs,
+  targetMs,
+  notes,
+  running,
+  onToggle,
+  onReset,
+  onDone,
+}: {
+  elapsedMs: number;
+  targetMs: number | null;
+  notes: string | null | undefined;
+  running: boolean;
+  onToggle: () => void;
+  onReset: () => void;
+  onDone: () => void;
+}) {
+  const display = fmtDuration(elapsedMs);
+  const circumference = 2 * Math.PI * 92;
+  const progress = targetMs && targetMs > 0 ? Math.min(1, elapsedMs / targetMs) : 0;
+  const dashoffset = circumference * (1 - progress);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 950,
+      background: "radial-gradient(circle at 50% 40%, rgba(215,255,58,.08), transparent 60%), var(--bg)",
+      display: "flex", flexDirection: "column",
+    }}>
+      <div style={{ height: 60 }} />
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 20 }}>
+        <div className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", letterSpacing: ".15em", fontWeight: 700 }}>CALENTAMIENTO</div>
+
+        <div style={{ position: "relative", width: 200, height: 200 }}>
+          <svg width="200" height="200" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+            <circle cx="100" cy="100" r="92" fill="none" stroke="var(--bg-2)" strokeWidth="6" />
+            {targetMs && targetMs > 0 && (
+              <circle
+                cx="100" cy="100" r="92" fill="none"
+                stroke="var(--lime)"
+                strokeWidth="6" strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashoffset}
+                style={{ transition: "stroke-dashoffset 1s linear" }}
+              />
+            )}
+          </svg>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            <div className="ta-mono" style={{ fontSize: 52, fontWeight: 700, color: "var(--text)", letterSpacing: "-.02em", lineHeight: 1 }}>
+              {display}
+            </div>
+            {targetMs && targetMs > 0 && (
+              <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".1em" }}>
+                OBJ {fmtDuration(targetMs)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {notes && (
+          <div style={{
+            padding: "10px 14px",
+            background: "var(--bg-1)",
+            border: "1px solid var(--line)",
+            borderRadius: 12,
+            maxWidth: 340,
+            width: "100%",
+          }}>
+            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 6 }}>
+              INDICACIONES
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text)", whiteSpace: "pre-wrap" }}>{notes}</div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button size="md" variant="secondary" icon={running ? "pause" : "play"} onClick={onToggle}>
+            {running ? "Pausa" : "Play"}
+          </Button>
+          <Button size="md" variant="secondary" onClick={onReset}>Reiniciar</Button>
+        </div>
+
+        <div style={{ width: "100%", maxWidth: 340 }}>
+          <Button size="xl" icon="check" onClick={onDone} style={{ width: "100%" }}>
+            Terminé el calentamiento
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SessionInProgressPage() {
@@ -500,21 +620,87 @@ export default function SessionInProgressPage() {
   const [sessionNotes, setSessionNotes] = useState("");
   const [editingSet, setEditingSet] = useState<{ setNumber: number; reps: string; kg: string; effort: string } | null>(null);
   const queueKey = `regen_offline_${sessionId}`;
-  const [offlineCount, setOfflineCount] = useState(() => {
-    try {
-      const stored = localStorage.getItem(queueKey);
-      if (!stored) return 0;
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? parsed.length : 0;
-    } catch {
-      return 0;
-    }
-  });
+  const [offlineCount, setOfflineCount] = useState(0);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const timerKey = `regen_session_timer_${sessionId}`;
+  const warmupDoneKey = `regen_warmup_done_${sessionId}`;
+  const warmupTimerKey = `regen_warmup_timer_${sessionId}`;
+  const [workoutTimer, setWorkoutTimer] = useState<{ accMs: number; runningSince: number | null }>({ accMs: 0, runningSince: null });
+  const [workoutTick, setWorkoutTick] = useState(0);
+  const [warmupDone, setWarmupDone] = useState(true);
+  const [warmupTimer, setWarmupTimer] = useState<{ accMs: number; runningSince: number | null }>({ accMs: 0, runningSince: null });
+  const [warmupTick, setWarmupTick] = useState(0);
+  const [loggerOpen, setLoggerOpen] = useState(false);
   const apiRef = useRef(api);
   const prefillExIdRef = useRef<string | null>(null);
+  const initIdxRef = useRef(false);
 
   useEffect(() => { apiRef.current = api; }, [api]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        const stored = window.localStorage.getItem(queueKey);
+        if (!stored) { setOfflineCount(0); return; }
+        const parsed = JSON.parse(stored);
+        setOfflineCount(Array.isArray(parsed) ? parsed.length : 0);
+      } catch {
+        setOfflineCount(0);
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [queueKey]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(timerKey);
+        if (!raw) {
+          setWorkoutTimer({ accMs: 0, runningSince: Date.now() });
+          return;
+        }
+        const parsed = JSON.parse(raw) as { accMs?: unknown; runningSince?: unknown };
+        const accMs = typeof parsed.accMs === "number" ? parsed.accMs : 0;
+        setWorkoutTimer({ accMs, runningSince: Date.now() });
+      } catch {
+        setWorkoutTimer({ accMs: 0, runningSince: Date.now() });
+      }
+    }, 0);
+
+    const persistPause = () => {
+      setWorkoutTimer((prev) => {
+        const now = Date.now();
+        const next = { accMs: prev.accMs + (prev.runningSince ? now - prev.runningSince : 0), runningSince: null as number | null };
+        try { window.localStorage.setItem(timerKey, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") persistPause();
+      else {
+        setWorkoutTimer((prev) => {
+          if (prev.runningSince != null) return prev;
+          const next = { ...prev, runningSince: Date.now() };
+          try { window.localStorage.setItem(timerKey, JSON.stringify(next)); } catch {}
+          return next;
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+      persistPause();
+    };
+  }, [timerKey]);
+
+  useEffect(() => {
+    if (workoutTimer.runningSince == null) return;
+    const id = setInterval(() => setWorkoutTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [workoutTimer.runningSince]);
 
   const load = useCallback(() => {
     apiRef.current
@@ -522,6 +708,11 @@ export default function SessionInProgressPage() {
       .then((s) => {
         setSession(s);
         setSessionNotes(s.sessionNotes ?? "");
+        if (!initIdxRef.current) {
+          initIdxRef.current = true;
+          const firstWorkIdx = s.exercises.findIndex((e) => !e.isWarmup);
+          if (firstWorkIdx >= 0) setCurrentExIdx(firstWorkIdx);
+        }
         if (s.status === "completed") router.replace(`/sesion/${sessionId}/completada`);
       })
       .catch(console.error)
@@ -529,6 +720,93 @@ export default function SessionInProgressPage() {
   }, [sessionId, router]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!session) return;
+    const hasWarmup =
+      !!session.workoutTemplate?.warmupMinutes ||
+      !!session.workoutTemplate?.warmupNotes ||
+      session.exercises.some((e) => e.isWarmup);
+
+    const id = setTimeout(() => {
+      if (!hasWarmup) {
+        setWarmupDone(true);
+        return;
+      }
+
+      let done = false;
+      try { done = window.localStorage.getItem(warmupDoneKey) === "1"; } catch {}
+      setWarmupDone(done);
+
+      try {
+        const raw = window.localStorage.getItem(warmupTimerKey);
+        if (!raw) { setWarmupTimer({ accMs: 0, runningSince: null }); return; }
+        const parsed = JSON.parse(raw) as { accMs?: unknown; runningSince?: unknown };
+        const accMs = typeof parsed.accMs === "number" ? parsed.accMs : 0;
+        setWarmupTimer({ accMs, runningSince: null });
+      } catch {
+        setWarmupTimer({ accMs: 0, runningSince: null });
+      }
+    }, 0);
+
+    return () => clearTimeout(id);
+  }, [session, warmupDoneKey, warmupTimerKey]);
+
+  useEffect(() => {
+    if (warmupTimer.runningSince == null) return;
+    const id = setInterval(() => setWarmupTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [warmupTimer.runningSince]);
+
+  useEffect(() => {
+    if (warmupTimer.runningSince == null) return;
+    const pause = () => {
+      setWarmupTimer((prev) => {
+        const now = Date.now();
+        if (prev.runningSince == null) return prev;
+        const next = { accMs: prev.accMs + (now - prev.runningSince), runningSince: null as number | null };
+        try { window.localStorage.setItem(warmupTimerKey, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") pause();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      pause();
+    };
+  }, [warmupTimer.runningSince, warmupTimerKey]);
+
+  const toggleWarmup = useCallback(() => {
+    setWarmupTimer((prev) => {
+      const now = Date.now();
+      const next =
+        prev.runningSince == null
+          ? { ...prev, runningSince: now }
+          : { accMs: prev.accMs + (now - prev.runningSince), runningSince: null as number | null };
+      try { window.localStorage.setItem(warmupTimerKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [warmupTimerKey]);
+
+  const resetWarmup = useCallback(() => {
+    const next = { accMs: 0, runningSince: null as number | null };
+    try { window.localStorage.setItem(warmupTimerKey, JSON.stringify(next)); } catch {}
+    setWarmupTimer(next);
+  }, [warmupTimerKey]);
+
+  const finishWarmup = useCallback(() => {
+    try { window.localStorage.setItem(warmupDoneKey, "1"); } catch {}
+    setWarmupDone(true);
+    setWarmupTimer((prev) => {
+      const now = Date.now();
+      const next = { accMs: prev.accMs + (prev.runningSince ? now - prev.runningSince : 0), runningSince: null as number | null };
+      try { window.localStorage.setItem(warmupTimerKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [warmupDoneKey, warmupTimerKey]);
 
   // Rest timer countdown
   useEffect(() => {
@@ -724,10 +1002,24 @@ export default function SessionInProgressPage() {
   }
 
   const ex: SessionExercise | undefined = session.exercises[currentExIdx];
-  const completedExs = session.exercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
 
   const warmupExercises = session.exercises.filter((e) => e.isWarmup);
   const workExercises = session.exercises.filter((e) => !e.isWarmup);
+  const completedExs = workExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
+  const warmupExists =
+    warmupExercises.length > 0 ||
+    !!session.workoutTemplate?.warmupMinutes ||
+    !!session.workoutTemplate?.warmupNotes;
+  const warmupTargetMs =
+    session.workoutTemplate?.warmupMinutes != null ? session.workoutTemplate.warmupMinutes * 60_000 : null;
+  const now = Date.now();
+  const workoutNow = now + workoutTick * 0;
+  const warmupNow = now + warmupTick * 0;
+  const workoutElapsedMs = workoutTimer.accMs + (workoutTimer.runningSince ? workoutNow - workoutTimer.runningSince : 0);
+  const warmupElapsedMs = warmupTimer.accMs + (warmupTimer.runningSince ? warmupNow - warmupTimer.runningSince : 0);
+  const headerExIdx = ex ? workExercises.findIndex((e) => e.id === ex.id) : -1;
+  const headerExTotal = workExercises.length || session.exercises.length;
+  const headerExNum = headerExIdx >= 0 ? headerExIdx + 1 : currentExIdx + 1;
 
   const groupSizes: Record<string, number> = {};
   workExercises.forEach((e) => {
@@ -738,8 +1030,7 @@ export default function SessionInProgressPage() {
   let exSubtitle: string | undefined;
   if (ex) {
     const parts: string[] = [];
-    if (ex.isWarmup) parts.push("CALENTAMIENTO");
-    else if (ex.supersetGroup) {
+    if (ex.supersetGroup) {
       const gc = GROUP_COLORS[ex.supersetGroup];
       parts.push(`${ex.supersetGroup} · ${groupLabel(groupSizes[ex.supersetGroup] ?? 1).toUpperCase()}`);
       void gc;
@@ -753,16 +1044,24 @@ export default function SessionInProgressPage() {
 
   const hasMedia = (ex?.media?.length ?? 0) > 0;
   const nextEx = session.exercises[currentExIdx + 1] ?? null;
+  const currentWorkPos = ex ? workExercises.findIndex((e) => e.id === ex.id) : -1;
+  const prevRealIdx =
+    currentWorkPos > 0 ? session.exercises.findIndex((s) => s.id === workExercises[currentWorkPos - 1]!.id) : null;
+  const nextRealIdx =
+    currentWorkPos >= 0 && currentWorkPos < workExercises.length - 1
+      ? session.exercises.findIndex((s) => s.id === workExercises[currentWorkPos + 1]!.id)
+      : null;
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 120 }}>
 
       {/* Session header */}
       <SessionHeader
-        exNum={currentExIdx + 1}
-        exTotal={session.exercises.length}
+        exNum={headerExNum}
+        exTotal={headerExTotal}
         title={ex?.exercise.name ?? "—"}
         subtitle={exSubtitle}
+        time={fmtDuration(workoutElapsedMs)}
         onExit={() => router.push("/semana")}
       />
 
@@ -852,106 +1151,142 @@ export default function SessionInProgressPage() {
 
       {/* ── Sets log ── */}
       {ex && (
-        <div style={{ padding: "14px 16px 4px" }}>
-          {/* Column headers */}
-          <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, padding: "0 8px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>
-            <div />
-            <div style={{ textAlign: "center" }}>kg</div>
-            <div style={{ textAlign: "center" }}>reps</div>
-            <div style={{ textAlign: "center" }}>{effortMode}</div>
-            <div />
+        <>
+          <div style={{ padding: "10px 16px 0" }}>
+            <button
+              onClick={() => setLoggerOpen((o) => !o)}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid var(--line)",
+                background: "var(--bg-1)",
+                cursor: "pointer",
+                color: "var(--text)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Icon name="book" size={14} color="var(--text-mute)" />
+                <span style={{ fontSize: 13, fontWeight: 700 }}>Registro de series</span>
+              </div>
+              <Icon name={loggerOpen ? "chevUp" : "chevD"} size={14} color="var(--text-mute)" />
+            </button>
           </div>
 
-          {ex.sets.map((s: WorkoutSet) => {
-            const isEditing = editingSet?.setNumber === s.setNumber;
-            if (isEditing) {
-              return (
-                <div key={s.id} style={{ marginBottom: 6 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, alignItems: "center", padding: "8px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: "10px 10px 0 0" }}>
-                    <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 700 }}>SET {s.setNumber}</div>
-                    {(["kg", "reps", "effort"] as const).map((field) => (
-                      <input key={field} type="number" inputMode="decimal"
-                        value={field === "kg" ? editingSet!.kg : field === "reps" ? editingSet!.reps : editingSet!.effort}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setEditingSet((d) => d ? { ...d, [field === "kg" ? "kg" : field === "reps" ? "reps" : "effort"]: val } : d);
-                        }}
-                        placeholder="—"
-                        style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "8px 0", fontSize: 15, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                      />
-                    ))}
-                    <div />
-                  </div>
-                  <div style={{ display: "flex", gap: 6, padding: "6px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
-                    <button onClick={() => deleteSet(s.setNumber)}
-                      style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                      Eliminar
-                    </button>
-                    <button onClick={() => setEditingSet(null)}
-                      style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                      Cancelar
-                    </button>
-                    <button onClick={saveEditedSet}
-                      style={{ flex: 1, padding: "5px 10px", borderRadius: 8, border: "none", background: "var(--lime)", color: "#0B0B0C", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      Guardar
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-            return (
-              <SetRowDisplay
-                key={s.id}
-                s={s}
+          {loggerOpen && (
+            <div style={{ padding: "14px 16px 4px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, padding: "0 8px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>
+                <div />
+                <div style={{ textAlign: "center" }}>kg</div>
+                <div style={{ textAlign: "center" }}>reps</div>
+                <div style={{ textAlign: "center" }}>{effortMode}</div>
+                <div />
+              </div>
+
+              {ex.sets.map((s: WorkoutSet) => {
+                const isEditing = editingSet?.setNumber === s.setNumber;
+                if (isEditing) {
+                  return (
+                    <div key={s.id} style={{ marginBottom: 6 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, alignItems: "center", padding: "8px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: "10px 10px 0 0" }}>
+                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 700 }}>SERIE {s.setNumber}</div>
+                        {(["kg", "reps", "effort"] as const).map((field) => (
+                          <input key={field} type="number" inputMode="decimal"
+                            value={field === "kg" ? editingSet!.kg : field === "reps" ? editingSet!.reps : editingSet!.effort}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditingSet((d) => d ? { ...d, [field === "kg" ? "kg" : field === "reps" ? "reps" : "effort"]: val } : d);
+                            }}
+                            placeholder="—"
+                            style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "8px 0", fontSize: 15, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                          />
+                        ))}
+                        <div />
+                      </div>
+                      <div style={{ display: "flex", gap: 6, padding: "6px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
+                        <button onClick={() => deleteSet(s.setNumber)}
+                          style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                          Eliminar
+                        </button>
+                        <button onClick={() => setEditingSet(null)}
+                          style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                          Cancelar
+                        </button>
+                        <button onClick={saveEditedSet}
+                          style={{ flex: 1, padding: "5px 10px", borderRadius: 8, border: "none", background: "var(--lime)", color: "#0B0B0C", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                          Guardar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <SetRowDisplay
+                    key={s.id}
+                    s={s}
+                    effortMode={effortMode}
+                    onClick={() => setEditingSet({ setNumber: s.setNumber, reps: String(s.reps ?? ""), kg: String(s.weight ?? ""), effort: String((effortMode === "RPE" ? s.rpe : s.rir) ?? "") })}
+                  />
+                );
+              })}
+
+              <ActiveSetRow
+                setNum={ex.sets.length + 1}
+                draft={draft}
                 effortMode={effortMode}
-                onClick={() => setEditingSet({ setNumber: s.setNumber, reps: String(s.reps ?? ""), kg: String(s.weight ?? ""), effort: String((effortMode === "RPE" ? s.rpe : s.rir) ?? "") })}
+                onChange={(d) => setDraft((prev) => ({ ...prev, ...d }))}
               />
-            );
-          })}
 
-          {/* Active new set row */}
-          <ActiveSetRow
-            setNum={ex.sets.length + 1}
-            draft={draft}
-            effortMode={effortMode}
-            onChange={(d) => setDraft((prev) => ({ ...prev, ...d }))}
-          />
-
-          {/* Effort toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-            <span style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600 }}>Esfuerzo</span>
-            <Tabs variant="pills" tabs={["RPE", "RIR"]} active={effortMode} onChange={(t) => setEffortMode(t as EffortMode)} />
-          </div>
-        </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+                <span style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600 }}>Esfuerzo</span>
+                <Tabs variant="pills" tabs={["RPE", "RIR"]} active={effortMode} onChange={(t) => setEffortMode(t as EffortMode)} />
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Exercise list ── */}
       <div style={{ margin: "8px 16px 0", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
 
-        {warmupExercises.length > 0 && (
+        {warmupExists && (
           <>
             <div style={{ padding: "7px 12px", background: "rgba(234,179,8,.06)", borderBottom: "1px solid var(--line)", fontSize: 10, fontWeight: 700, color: "var(--warn)", textTransform: "uppercase", letterSpacing: ".1em" }}>
               Calentamiento
             </div>
-            {warmupExercises.map((e, wIdx) => {
-              const realIdx = session.exercises.findIndex((s) => s.id === e.id);
-              const done = e.sets.length >= (e.target?.sets ?? 3);
-              const active = realIdx === currentExIdx;
-              return (
-                <button key={e.id} onClick={() => goToEx(realIdx)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", minHeight: 44, background: active ? "rgba(234,179,8,.06)" : "transparent", border: "none", borderBottom: "1px solid var(--line)", cursor: "pointer", textAlign: "left" }}
-                >
-                  <span className="ta-mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--warn)", width: 18, flexShrink: 0 }}>C{wIdx + 1}</span>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 700 : 500, color: done ? "var(--text-mute)" : "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {e.exercise.name}
-                  </span>
-                  <span className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: done ? "var(--success)" : active ? "var(--lime)" : "var(--text-dim)", flexShrink: 0 }}>
-                    {e.sets.length}/{e.target?.sets ?? "—"}
-                  </span>
-                  {done && <Icon name="check" size={13} color="var(--success)" />}
-                </button>
-              );
-            })}
+            <button
+              disabled={warmupDone}
+              onClick={() => setWarmupDone(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                width: "100%",
+                padding: "10px 12px",
+                minHeight: 44,
+                background: warmupDone ? "transparent" : "rgba(234,179,8,.06)",
+                border: "none",
+                borderBottom: "1px solid var(--line)",
+                cursor: warmupDone ? "default" : "pointer",
+                textAlign: "left",
+                opacity: warmupDone ? 0.9 : 1,
+              }}
+            >
+              <span className="ta-mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--warn)", width: 44, flexShrink: 0 }}>
+                BLOQUE
+              </span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                Calentamiento
+              </span>
+              <span className="ta-mono" style={{ fontSize: 11, fontWeight: 700, color: warmupDone ? "var(--success)" : "var(--text-dim)", flexShrink: 0 }}>
+                {warmupDone ? "LISTO" : warmupTargetMs ? fmtDuration(warmupTargetMs) : "—"}
+              </span>
+              {warmupDone && <Icon name="check" size={13} color="var(--success)" />}
+            </button>
           </>
         )}
 
@@ -1048,45 +1383,65 @@ export default function SessionInProgressPage() {
       </div>
 
       {/* ── Bottom CTAs ── */}
-      <div style={{
-        position: "fixed", left: 0, right: 0, bottom: keyboardOffset,
-        padding: "4px 16px 28px",
-        background: "linear-gradient(to top, var(--bg) 70%, transparent)",
-        display: "flex", flexDirection: "column", gap: 6,
-      }}>
-        {completedExs < session.exercises.length && (
-          <button
-            onClick={completeSession}
-            disabled={completing}
-            style={{ alignSelf: "center", background: "none", border: "none", cursor: "pointer", padding: "4px 0", color: "var(--text-dim)", fontSize: 12, fontWeight: 600, letterSpacing: ".02em" }}
-          >
-            Terminar entrenamiento
-          </button>
-        )}
-        <div style={{ display: "flex", gap: 8 }}>
-          {currentExIdx > 0 && (
-            <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(currentExIdx - 1)} icon="chevL" />
+      {!(warmupExists && !warmupDone) && (
+        <div style={{
+          position: "fixed", left: 0, right: 0, bottom: keyboardOffset,
+          padding: "4px 16px 28px",
+          background: "linear-gradient(to top, var(--bg) 70%, transparent)",
+          display: "flex", flexDirection: "column", gap: 6,
+        }}>
+          {completedExs < workExercises.length && (
+            <button
+              onClick={completeSession}
+              disabled={completing}
+              style={{ alignSelf: "center", background: "none", border: "none", cursor: "pointer", padding: "4px 0", color: "var(--text-dim)", fontSize: 12, fontWeight: 600, letterSpacing: ".02em" }}
+            >
+              Terminar entrenamiento
+            </button>
           )}
+          <div style={{ display: "flex", gap: 8 }}>
+            {prevRealIdx != null && prevRealIdx >= 0 && (
+              <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(prevRealIdx)} icon="chevL" />
+            )}
 
-          {completedExs === session.exercises.length ? (
-            <Button size="xl" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={completeSession}>
-              {completing ? "Completando…" : "Finalizar sesión"}
-            </Button>
-          ) : (
-            <>
-              {currentExIdx < session.exercises.length - 1 && (
-                <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(currentExIdx + 1)} icon="chevR" />
-              )}
-              <Button size="xl" icon="check" style={{ flex: 1, fontSize: 16 }}
-                disabled={saving || !draft.reps}
-                onClick={logSet}
-              >
-                {saving ? "Guardando…" : `Guardar set ${ex?.sets.length ? ex.sets.length + 1 : 1}`}
+            {completedExs === workExercises.length ? (
+              <Button size="xl" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={completeSession}>
+                {completing ? "Completando…" : "Finalizar sesión"}
               </Button>
-            </>
-          )}
+            ) : (
+              <>
+                {nextRealIdx != null && nextRealIdx >= 0 && (
+                  <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(nextRealIdx)} icon="chevR" />
+                )}
+                {loggerOpen ? (
+                  <Button size="xl" icon="check" style={{ flex: 1, fontSize: 16 }}
+                    disabled={saving || !draft.reps}
+                    onClick={logSet}
+                  >
+                    {saving ? "Guardando…" : `Guardar serie ${ex?.sets.length ? ex.sets.length + 1 : 1}`}
+                  </Button>
+                ) : (
+                  <Button size="xl" icon="book" style={{ flex: 1, fontSize: 16 }} onClick={() => setLoggerOpen(true)}>
+                    Registrar serie
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {warmupExists && !warmupDone && (
+        <WarmupOverlay
+          elapsedMs={warmupElapsedMs}
+          targetMs={warmupTargetMs}
+          notes={session.workoutTemplate?.warmupNotes}
+          running={warmupTimer.runningSince != null}
+          onToggle={toggleWarmup}
+          onReset={resetWarmup}
+          onDone={finishWarmup}
+        />
+      )}
 
       {/* Rest timer overlay */}
       {restSeconds != null && restSeconds > 0 && (

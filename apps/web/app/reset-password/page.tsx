@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
           <div style={{ width: 36, height: 36, borderRadius: 9, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Icon name="logo" size={20} color="#0B0B0C" />
           </div>
-          <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>REGEN</span>
+          <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>
 
         {done ? (

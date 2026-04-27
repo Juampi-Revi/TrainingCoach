@@ -103,7 +103,7 @@ export default function SessionCompletadaPage() {
         {/* Stats grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 16 }}>
           <StatCard label="VOLUMEN" value={Math.round(totalVol).toLocaleString("es")} unit="kg" />
-          <StatCard label="SETS" value={`${totalSets}${targetSets > 0 ? `/${targetSets}` : ""}`} />
+          <StatCard label="SERIES" value={`${totalSets}${targetSets > 0 ? `/${targetSets}` : ""}`} />
           <StatCard label="EJERCICIOS" value={String(session.exercises.length)} />
         </div>
       </div>

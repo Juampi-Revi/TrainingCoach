@@ -178,7 +178,7 @@ export default function HistorialPage() {
                       className="ta-mono"
                       style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}
                     >
-                      {s.setsCount} sets · {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
+                      {s.setsCount} series · {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
                       {s.energyRating ? ` · Energía ${s.energyRating}/10` : ""}
                     </div>
                   </div>

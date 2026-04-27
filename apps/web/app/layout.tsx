@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 
 export const metadata: Metadata = {
-  title: "Regen",
+  title: "YourCoach",
   description: "Training platform",
 };
 

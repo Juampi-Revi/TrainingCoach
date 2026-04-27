@@ -256,7 +256,7 @@ export default function CoachSessionDetailPage() {
                             fontWeight: 600,
                           }}
                         >
-                          SET {si + 1}
+                          SERIE {si + 1}
                         </div>
                         <div
                           style={{
@@ -301,7 +301,7 @@ export default function CoachSessionDetailPage() {
                 <div
                   style={{ fontSize: 12, color: "var(--text-mute)", fontStyle: "italic" }}
                 >
-                  Sin sets registrados
+                  Sin series registradas
                 </div>
               )}
             </div>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui";
 import type { IconName } from "@/components/ui";
 
-type TabId = "home" | "history" | "chart" | "me";
+type TabId = "home" | "history" | "messages" | "chart" | "me";
 
 interface MobileTabBarProps {
   active: TabId;
@@ -11,6 +11,7 @@ interface MobileTabBarProps {
 const ITEMS: Array<{ id: TabId; icon: IconName; label: string; href: string }> = [
   { id: "home",    icon: "home",    label: "Semana",   href: "/semana"   },
   { id: "history", icon: "history", label: "Historial", href: "/historial" },
+  { id: "messages", icon: "msg",    label: "Mensajes", href: "/mensajes" },
   { id: "chart",   icon: "chart",   label: "Progreso", href: "/progreso" },
   { id: "me",      icon: "user",    label: "Yo",       href: "/cuenta"   },
 ];

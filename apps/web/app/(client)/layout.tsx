@@ -7,10 +7,11 @@ import { useAuth } from "@/lib/auth";
 import { Avatar, Icon } from "@/components/ui";
 import type { IconName } from "@/components/ui";
 
-type NavId = "home" | "history" | "chart" | "me";
+type NavId = "home" | "history" | "messages" | "chart" | "me";
 const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
   { id: "home",    icon: "home",    label: "Semana",    href: "/semana"    },
   { id: "history", icon: "history", label: "Historial", href: "/historial" },
+  { id: "messages", icon: "msg",    label: "Mensajes",  href: "/mensajes"  },
   { id: "chart",   icon: "chart",   label: "Progreso",  href: "/progreso"  },
   { id: "me",      icon: "user",    label: "Cuenta",    href: "/cuenta"    },
 ];
@@ -18,6 +19,7 @@ const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
 function useActiveNav(): NavId {
   const p = usePathname() ?? "";
   if (p.startsWith("/historial")) return "history";
+  if (p.startsWith("/mensajes") || p.startsWith("/comentarios")) return "messages";
   if (p.startsWith("/progreso"))  return "chart";
   if (p.startsWith("/cuenta"))    return "me";
   return "home";
@@ -53,7 +55,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           >
             <Icon name="logo" size={18} color="#0B0B0C" />
           </div>
-          <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-.02em" }}>REGEN</span>
+          <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>
 
         <div

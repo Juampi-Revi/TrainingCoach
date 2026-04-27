@@ -4,9 +4,14 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Avatar, Icon, StateBlock, Tabs } from "@/components/ui";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import type { Comment, SessionDetail } from "@regen/types";
 
 type Tab = "Sesión" | "Por ejercicio";
+
+function readKey(sessionId: string) {
+  return `regen_msg_read_${sessionId}`;
+}
 
 export default function ComentariosPage() {
   const { api, user } = useAuth();
@@ -33,6 +38,13 @@ export default function ComentariosPage() {
   }, [api, sessionId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try { window.localStorage.setItem(readKey(sessionId), new Date().toISOString()); } catch {}
+    }, 0);
+    return () => clearTimeout(id);
+  }, [sessionId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -79,6 +91,7 @@ export default function ComentariosPage() {
         background: "var(--bg)",
         display: "flex",
         flexDirection: "column",
+        paddingBottom: 100,
       }}
     >
       {/* Header */}
@@ -592,6 +605,7 @@ export default function ComentariosPage() {
           </>
         );
       })()}
+      <MobileTabBar active="messages" />
     </div>
   );
 }

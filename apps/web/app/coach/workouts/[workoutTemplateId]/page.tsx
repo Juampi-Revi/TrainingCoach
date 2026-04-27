@@ -187,9 +187,9 @@ function ExercisePicker({ templateId, defaultWarmup, onAdd, onClose }: {
               <div style={{ padding: 24, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>Cargando…</div>
             ) : exercises.length === 0 ? (
               <div style={{ padding: 24, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>
-                <div style={{ marginBottom: 12 }}>Sin resultados para "{search}"</div>
+                <div style={{ marginBottom: 12 }}>Sin resultados para “{search}”</div>
                 <button onClick={() => { setCreating(true); setNewName(search); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line-2)", background: "var(--bg-2)", color: "var(--text)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  Crear "{search}"
+                  Crear “{search}”
                 </button>
               </div>
             ) : (

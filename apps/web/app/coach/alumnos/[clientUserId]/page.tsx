@@ -452,7 +452,7 @@ export default function AthleteDetailPage() {
                               marginTop: 2,
                             }}
                           >
-                            {s.setsCount} sets ·{" "}
+                            {s.setsCount} series ·{" "}
                             {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
                           </div>
                         )}

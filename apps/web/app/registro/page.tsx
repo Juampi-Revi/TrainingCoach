@@ -75,7 +75,7 @@ export default function RegistroPage() {
           >
             <Icon name="logo" size={20} color="#0B0B0C" />
           </div>
-          <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>REGEN</span>
+          <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>
 
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 6 }}>
