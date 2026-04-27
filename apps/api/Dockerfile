@@ -23,6 +23,7 @@ RUN cd apps/api && /repo/node_modules/.bin/next build
 
 # ── runner: only built output + deps ─────────────────────────────────────────
 FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl
 WORKDIR /repo
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -33,5 +34,4 @@ COPY --from=builder /repo/apps/api/package.json   ./apps/api/
 COPY --from=builder /repo/apps/api/next.config.ts ./apps/api/
 COPY --from=builder /repo/apps/api/prisma         ./apps/api/prisma
 EXPOSE 3003
-# Run pending migrations then start the server
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma && cd apps/api && PORT=3003 HOSTNAME=0.0.0.0 node ../node_modules/.bin/next start"]
+CMD ["sh", "-c", "cd apps/api && PORT=3003 HOSTNAME=0.0.0.0 /repo/node_modules/.bin/next start"]
