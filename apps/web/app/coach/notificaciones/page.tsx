@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { DesktopShell } from "@/components/layout/desktop-shell";
@@ -7,7 +8,7 @@ import { Icon } from "@/components/ui";
 import { useNotifications } from "@/lib/use-notifications";
 
 const TYPE_ICON: Record<string, { icon: string; color: string }> = {
-  new_message:       { icon: "msg",      color: "var(--lime)"   },
+  new_message:       { icon: "msg",      color: "var(--accent-text)"   },
   plan_assigned:     { icon: "calendar", color: "#7AB8FF"       },
   client_added:      { icon: "users",    color: "#FFB547"       },
   session_completed: { icon: "check",    color: "var(--success)" },
@@ -26,6 +27,10 @@ export default function CoachNotificacionesPage() {
   const router = useRouter();
   const { notifications, unreadCount, loading, markAllRead } = useNotifications();
 
+  useEffect(() => {
+    if (!loading && unreadCount > 0) markAllRead();
+  }, [loading, unreadCount, markAllRead]);
+
   return (
     <DesktopShell active="notifications" coachName={user?.name ?? "Coach"}>
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 20px" }}>
@@ -39,7 +44,7 @@ export default function CoachNotificacionesPage() {
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--lime)", fontWeight: 600 }}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--accent-text)", fontWeight: 600 }}
             >
               Marcar todas
             </button>
@@ -51,7 +56,7 @@ export default function CoachNotificacionesPage() {
             <div style={{ padding: 40, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>Cargando…</div>
           ) : notifications.length === 0 ? (
             <div style={{ padding: 60, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>
-              <Icon name="bell" size={32} color="var(--bg-3)" />
+              <Icon name="bell" size={32} color="var(--text-dim)" />
               <div style={{ marginTop: 12 }}>Sin notificaciones</div>
             </div>
           ) : notifications.map((n) => {

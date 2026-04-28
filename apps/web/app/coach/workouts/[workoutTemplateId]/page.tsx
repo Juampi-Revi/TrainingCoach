@@ -138,7 +138,7 @@ function ExercisePicker({ templateId, defaultWarmup, onAdd, onClose }: {
             </button>
             <button
               onClick={() => setAsWarmup(true)}
-              style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${asWarmup ? "var(--lime)" : "var(--line-2)"}`, background: asWarmup ? "rgba(132,204,22,.12)" : "transparent", color: asWarmup ? "var(--lime)" : "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${asWarmup ? "var(--lime)" : "var(--line-2)"}`, background: asWarmup ? "rgba(132,204,22,.12)" : "transparent", color: asWarmup ? "var(--accent-text)" : "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
             >
               Calentamiento
             </button>
@@ -417,7 +417,7 @@ function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDelete }:
         </div>
 
         {/* Intensity */}
-        <div className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--lime)", whiteSpace: "nowrap" }}>
+        <div className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--accent-text)", whiteSpace: "nowrap" }}>
           {we.intensityTarget ? `${we.intensityType?.toUpperCase() ?? ""} ${we.intensityTarget}`.trim() : "—"}
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
@@ -22,8 +22,9 @@ export default function CoachSessionDetailPage() {
   const [newMsg, setNewMsg] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     Promise.all([
       api.get<SessionDetail>(`/coach/clients/${clientUserId}/sessions/${sessionId}`),
       api.get<Comment[]>(`/sessions/${sessionId}/comments`),
@@ -37,12 +38,52 @@ export default function CoachSessionDetailPage() {
   }, [api, clientUserId, sessionId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [comments]);
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [comments, commentTab]);
+
+  useEffect(() => {
+    const isNearBottom = () =>
+      typeof window !== "undefined" &&
+      window.innerHeight + window.scrollY >= document.body.scrollHeight - 120;
+
+    let cancelled = false;
+
+    const tick = async () => {
+      if (document.visibilityState !== "visible") return;
+      stickToBottomRef.current = isNearBottom();
+      try {
+        const c = await api.get<Comment[]>(`/sessions/${sessionId}/comments`);
+        if (cancelled) return;
+        setComments((prev) => {
+          const prevLastId = prev[prev.length - 1]?.id;
+          const nextLastId = c[c.length - 1]?.id;
+          if (prev.length === c.length && prevLastId && prevLastId === nextLastId) return prev;
+          return c;
+        });
+      } catch {}
+    };
+
+    const interval = window.setInterval(tick, 5000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [api, sessionId]);
 
   async function sendComment() {
     if (!newMsg.trim()) return;
     setSending(true);
+    stickToBottomRef.current = true;
     try {
       const c = await api.post<Comment>(`/sessions/${sessionId}/comments`, {
         text: newMsg.trim(),

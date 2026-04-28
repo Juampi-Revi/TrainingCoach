@@ -26,6 +26,9 @@ model User {
   // Relaciones
   coachClientsAsCoach   CoachClient[]      @relation("CoachClients")
   coachClientsAsClient  CoachClient?       @relation("ClientCoach")
+  chatThreadsAsCoach    ChatThread[]       @relation("ChatCoach")
+  chatThreadsAsClient   ChatThread[]       @relation("ChatClient")
+  chatMessages          ChatMessage[]
   plansCreated          Plan[]             @relation("CoachPlans")
   planAssignments       PlanAssignment[]
   exercisesCreated      Exercise[]         @relation("CoachExercises")
@@ -302,6 +305,41 @@ model SessionComment {
   author  User           @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
 
   @@index([sessionId, createdAt])
+  @@index([authorUserId, createdAt(sort: Desc)])
+}
+
+model ChatThread {
+  id          String   @id @default(uuid())
+  coachUserId String
+  clientUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  coach  User @relation("ChatCoach", fields: [coachUserId], references: [id], onDelete: Restrict)
+  client User @relation("ChatClient", fields: [clientUserId], references: [id], onDelete: Restrict)
+  messages ChatMessage[]
+
+  @@unique([coachUserId, clientUserId])
+  @@index([coachUserId])
+  @@index([clientUserId])
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  threadId    String
+  authorUserId String
+  text        String
+  refKind     String?
+  refId       String?
+  refLabel    String?
+  refMeta     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([threadId, createdAt])
   @@index([authorUserId, createdAt(sort: Desc)])
 }
 

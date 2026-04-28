@@ -1,24 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Avatar, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 
-interface MessageItem {
-  id: string;
-  text: string;
-  createdAt: string;
-  author: { id: string; name: string | null; role: string };
-  session: {
+type ThreadItem = {
+  threadId: string | null;
+  client: { id: string; name: string };
+  lastMessage: null | {
     id: string;
-    clientUserId: string;
-    clientName: string;
-    workoutTitle: string;
-    performedAt: string;
+    text: string;
+    createdAt: string;
+    author: { id: string; name: string | null; role: string };
+    reference: null | { kind: string; id: string; label: string | null };
   };
-}
+};
 
 function timeAgo(iso: string): string {
   const diff = Math.floor((new Date().getTime() - new Date(iso).getTime()) / 1000);
@@ -33,43 +31,61 @@ const TONES = ["#FF5B5B", "#FFB547", "#7AB8FF", "var(--lime)", "#6EE7A8"];
 export default function MensajesPage() {
   const { api, user } = useAuth();
   const router = useRouter();
-  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [threads, setThreads] = useState<ThreadItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchThreads = useCallback(() => {
     api
-      .get<MessageItem[]>("/coach/messages")
-      .then(setMessages)
-      .catch(console.error)
+      .get<ThreadItem[]>("/coach/chat")
+      .then(setThreads)
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [api]);
 
-  // Group by session
-  const bySession = messages.reduce<Record<string, MessageItem[]>>((acc, m) => {
-    const key = m.session.id;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(m);
-    return acc;
-  }, {});
+  useEffect(() => {
+    fetchThreads();
 
-  const sessions = Object.entries(bySession).map(([sessionId, msgs]) => ({
-    sessionId,
-    session: msgs[0].session,
-    lastMsg: msgs[0],
-    unread: msgs.filter((m) => m.author.role === "client").length,
-  }));
+    const onVis = () => {
+      if (document.visibilityState === "visible") fetchThreads();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") fetchThreads();
+    }, 8000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.clearInterval(interval);
+    };
+  }, [fetchThreads]);
+
+  const items = useMemo(() => {
+    return threads.map((t) => {
+      const lastRead = (() => {
+        try {
+          const v = window.localStorage.getItem(`regen_chat_read_${t.client.id}`);
+          return v ? new Date(v).getTime() : 0;
+        } catch {
+          return 0;
+        }
+      })();
+      const unread = t.lastMessage?.author.role === "client" && new Date(t.lastMessage.createdAt).getTime() > lastRead;
+      return { ...t, unread };
+    });
+  }, [threads]);
 
   return (
     <DesktopShell
       active="messages"
       title="Mensajes"
-      subtitle={`${sessions.length} conversaciones`}
+      subtitle={`${items.length} conversaciones`}
       coachName={user?.name ?? "Coach"}
     >
       <div style={{ padding: 28 }}>
         {loading ? (
           <StateBlock kind="loading" title="Cargando mensajes…" />
-        ) : sessions.length === 0 ? (
+        ) : items.length === 0 ? (
           <StateBlock
             kind="empty"
             title="Sin mensajes"
@@ -77,13 +93,14 @@ export default function MensajesPage() {
           />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {sessions.map(({ sessionId, session, lastMsg, unread }, i) => {
-              const isFromClient = lastMsg.author.role === "client";
+            {items.map((t, i) => {
+              const lastMsg = t.lastMessage;
+              const isFromClient = lastMsg?.author.role === "client";
               return (
                 <div
-                  key={sessionId}
+                  key={t.client.id}
                   onClick={() =>
-                    router.push(`/coach/alumnos/${session.clientUserId}/sesiones/${sessionId}`)
+                    router.push(`/coach/mensajes/${t.client.id}`)
                   }
                   className="ta-row"
                   style={{
@@ -93,36 +110,25 @@ export default function MensajesPage() {
                     borderRadius: 12,
                     alignItems: "center",
                     cursor: "pointer",
-                    background: unread > 0 ? "var(--bg-1)" : "transparent",
+                    background: t.unread ? "var(--bg-1)" : "transparent",
                     border: "1px solid",
-                    borderColor: unread > 0 ? "var(--line)" : "transparent",
+                    borderColor: t.unread ? "var(--line)" : "transparent",
                     marginBottom: 4,
                   }}
                 >
                   <Avatar
-                    name={session.clientName}
+                    name={t.client.name}
                     size={44}
                     tone={TONES[i % TONES.length]}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
-                      <span style={{ fontSize: 14, fontWeight: unread > 0 ? 700 : 600 }}>
-                        {session.clientName}
+                      <span style={{ fontSize: 14, fontWeight: t.unread ? 700 : 600 }}>
+                        {t.client.name}
                       </span>
                       <span className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", flexShrink: 0 }}>
-                        {timeAgo(lastMsg.createdAt)}
+                        {lastMsg ? timeAgo(lastMsg.createdAt) : ""}
                       </span>
-                    </div>
-                    <div
-                      className="ta-ellipsis"
-                      style={{
-                        fontSize: 12,
-                        color: "var(--lime)",
-                        fontWeight: 500,
-                        marginBottom: 2,
-                      }}
-                    >
-                      {session.workoutTitle}
                     </div>
                     <div
                       className="ta-ellipsis"
@@ -132,10 +138,10 @@ export default function MensajesPage() {
                         fontWeight: isFromClient ? 500 : 400,
                       }}
                     >
-                      {isFromClient ? "" : "Vos: "}{lastMsg.text}
+                      {lastMsg ? `${isFromClient ? "" : "Vos: "}${lastMsg.text}` : "Sin mensajes todavía"}
                     </div>
                   </div>
-                  {unread > 0 && (
+                  {t.unread && (
                     <div
                       style={{
                         width: 20,
@@ -148,7 +154,7 @@ export default function MensajesPage() {
                         flexShrink: 0,
                       }}
                     >
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#0B0B0C" }}>{unread}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#0B0B0C" }}>•</span>
                     </div>
                   )}
                 </div>

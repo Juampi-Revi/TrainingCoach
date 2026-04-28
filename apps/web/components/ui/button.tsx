@@ -29,12 +29,12 @@ const SIZES: Record<ButtonSize, { h: number; px: number; fs: number; gap: number
   xl: { h: 64, px: 28, fs: 18, gap: 12, r: 14 },
 };
 
-const VARIANTS: Record<ButtonVariant, { bg: string; color: string; border: string; fw: number }> = {
-  primary:   { bg: "var(--lime)",    color: "#0B0B0C",       border: "none",                        fw: 600 },
-  secondary: { bg: "var(--bg-2)",    color: "var(--text)",   border: "1px solid var(--line-2)",     fw: 500 },
-  ghost:     { bg: "transparent",    color: "var(--text)",   border: "1px solid transparent",       fw: 500 },
-  outline:   { bg: "transparent",    color: "var(--text)",   border: "1px solid var(--line-2)",     fw: 500 },
-  danger:    { bg: "transparent",    color: "var(--danger)", border: "1px solid var(--line-2)",     fw: 500 },
+const VARIANTS: Record<ButtonVariant, { bg: string; color: string; borderColor: string; borderWidth: number; fw: number }> = {
+  primary:   { bg: "var(--lime)",    color: "#0B0B0C",       borderColor: "transparent",  borderWidth: 0, fw: 600 },
+  secondary: { bg: "var(--bg-2)",    color: "var(--text)",   borderColor: "var(--line-2)", borderWidth: 1, fw: 500 },
+  ghost:     { bg: "transparent",    color: "var(--text)",   borderColor: "transparent",  borderWidth: 1, fw: 500 },
+  outline:   { bg: "transparent",    color: "var(--text)",   borderColor: "var(--line-2)", borderWidth: 1, fw: 500 },
+  danger:    { bg: "transparent",    color: "var(--danger)", borderColor: "var(--line-2)", borderWidth: 1, fw: 500 },
 };
 
 export function Button({
@@ -54,6 +54,7 @@ export function Button({
 }: ButtonProps) {
   const sz = SIZES[size];
   const v = VARIANTS[variant];
+  const userBorder = style?.border;
 
   return (
     <Tag
@@ -74,7 +75,13 @@ export function Button({
         letterSpacing: "-0.01em",
         color: v.color,
         background: v.bg,
-        border: v.border,
+        ...(userBorder
+          ? null
+          : {
+              borderStyle: v.borderWidth > 0 ? "solid" : "none",
+              borderWidth: v.borderWidth,
+              borderColor: v.borderColor,
+            }),
         borderRadius: sz.r,
         cursor: disabled ? "not-allowed" : "pointer",
         width: block ? "100%" : undefined,

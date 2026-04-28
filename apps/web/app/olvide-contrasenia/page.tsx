@@ -100,7 +100,7 @@ export default function OlvideContraseniaPage() {
                 </div>
                 <Link
                   href={devUrl}
-                  style={{ fontSize: 12, color: "var(--lime)", wordBreak: "break-all", lineHeight: 1.5 }}
+                  style={{ fontSize: 12, color: "var(--accent-text)", wordBreak: "break-all", lineHeight: 1.5 }}
                 >
                   {devUrl}
                 </Link>

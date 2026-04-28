@@ -4,7 +4,7 @@ import path from "path";
 const nextConfig: NextConfig = {
   transpilePackages: ["@regen/types"],
   turbopack: {
-    root: path.resolve(__dirname, "../.."),
+    root: path.resolve(process.cwd(), "../.."),
   },
 };
 

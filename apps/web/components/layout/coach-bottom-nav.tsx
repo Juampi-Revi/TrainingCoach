@@ -51,14 +51,14 @@ export function CoachBottomNav({ active }: CoachBottomNavProps) {
               flexDirection: "column",
               alignItems: "center",
               gap: 3,
-              color: isActive ? "var(--lime)" : "var(--text-mute)",
+              color: isActive ? "var(--accent-text)" : "var(--text-mute)",
               textDecoration: "none",
               transition: "color .12s",
               position: "relative",
             }}
           >
             <div style={{ position: "relative" }}>
-              <Icon name={item.icon} size={22} color={isActive ? "var(--lime)" : "var(--text-mute)"} />
+              <Icon name={item.icon} size={22} color={isActive ? "var(--accent-text)" : "var(--text-mute)"} />
               {badge > 0 && (
                 <div style={{ position: "absolute", top: -4, right: -8, minWidth: 16, height: 16, borderRadius: 8, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
                   <span style={{ fontSize: 9, fontWeight: 800, color: "#0B0B0C" }}>{badge > 9 ? "9+" : badge}</span>
