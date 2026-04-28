@@ -36,7 +36,12 @@ model User {
   workoutSessions       WorkoutSession[]
   sessionComments       SessionComment[]
   bodyMetricEntries     BodyMetricEntry[]
+  dailyHealthEntries    DailyHealthEntry[]
+  healthCoachNotesAsCoach HealthCoachNote[] @relation("HealthNotesCoach")
+  healthCoachNotesAsClient HealthCoachNote[] @relation("HealthNotesClient")
   foodLogEntries        FoodLogEntry[]
+  foodCoachCommentsAsCoach FoodCoachComment[] @relation("FoodCoachCommentCoach")
+  healthGoals           HealthGoal[]
   notifications         Notification[]
 }
 
@@ -362,6 +367,39 @@ model BodyMetricEntry {
   @@index([clientUserId, measuredAt(sort: Desc)])
 }
 
+model DailyHealthEntry {
+  id           String   @id @default(uuid())
+  clientUserId String
+  day          DateTime @db.Date
+  steps        Int?
+  sleepMinutes Int?
+  sportType    String?
+  sportMinutes Int?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
+
+  @@unique([clientUserId, day])
+  @@index([clientUserId, day(sort: Desc)])
+}
+
+model HealthCoachNote {
+  id           String   @id @default(uuid())
+  coachUserId  String
+  clientUserId String
+  day          DateTime @db.Date
+  text         String
+  createdAt    DateTime @default(now())
+
+  coach  User @relation("HealthNotesCoach", fields: [coachUserId], references: [id], onDelete: Restrict)
+  client User @relation("HealthNotesClient", fields: [clientUserId], references: [id], onDelete: Restrict)
+
+  @@index([coachUserId, createdAt(sort: Desc)])
+  @@index([clientUserId, day(sort: Desc)])
+}
+
 model ExerciseMedia {
   id          String   @id @default(uuid())
   exerciseId  String
@@ -395,8 +433,45 @@ model FoodLogEntry {
   loggedAt     DateTime @db.Timestamptz
   text         String?
   photoUrl     String?
+  source       String   @default("manual")
+  sourceRef    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
+
+  coachComments FoodCoachComment[]
+}
+
+model FoodCoachComment {
+  id        String   @id @default(uuid())
+  foodId    String
+  coachUserId String
+  text      String
+  createdAt DateTime @default(now())
+
+  food  FoodLogEntry @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  coach User         @relation("FoodCoachCommentCoach", fields: [coachUserId], references: [id], onDelete: Restrict)
+
+  @@index([foodId, createdAt(sort: Desc)])
+  @@index([coachUserId, createdAt(sort: Desc)])
+}
+
+model HealthGoal {
+  id           String   @id @default(uuid())
+  clientUserId String
+  kind         String
+  targetNumber Decimal?
+  targetInt    Int?
+  unit         String
+  period       String
+  startDate    DateTime @db.Date
+  endDate      DateTime? @db.Date
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
+
+  @@index([clientUserId, startDate(sort: Desc)])
+  @@index([clientUserId, kind])
 }

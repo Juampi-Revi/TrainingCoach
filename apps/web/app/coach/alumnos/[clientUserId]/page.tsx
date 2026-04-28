@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Avatar, Badge, Button, Card, ConfirmModal, Icon, Progress, StateBlock, Tabs } from "@/components/ui";
@@ -135,6 +136,13 @@ function daysSince(iso: string): number {
   return Math.floor((new Date().getTime() - new Date(iso).getTime()) / 86400000);
 }
 
+function fmtSleep(min: number | null): string {
+  if (min == null) return "—";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h}h${m ? ` ${m}m` : ""}`;
+}
+
 export default function AthleteDetailPage() {
   const { api, user } = useAuth();
   const toast = useToast();
@@ -143,7 +151,264 @@ export default function AthleteDetailPage() {
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("Historial");
+  const [health, setHealth] = useState<{
+    entries: Array<{
+      id: string;
+      day: string;
+      steps: number | null;
+      sleepMinutes: number | null;
+      sportType: string | null;
+      sportMinutes: number | null;
+      notes: string | null;
+    }>;
+    metrics: Array<{
+      id: string;
+      measuredAt: string;
+      weightKg: string | null;
+      waistCm: string | null;
+      chestCm: string | null;
+      hipsCm: string | null;
+      armCm: string | null;
+      thighCm: string | null;
+      notes: string | null;
+    }>;
+    coachNotes: Array<{
+      id: string;
+      day: string;
+      text: string;
+      createdAt: string;
+      coach: { id: string; name: string };
+    }>;
+  } | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [food, setFood] = useState<
+    Array<{
+      id: string;
+      loggedAt: string;
+      text: string | null;
+      photoUrl: string | null;
+      source: string;
+      coachComments: Array<{ id: string; text: string; createdAt: string; coach: { id: string; name: string | null } }>;
+    }> | null
+  >(null);
+  const [foodLoading, setFoodLoading] = useState(false);
+  const [foodCommentDrafts, setFoodCommentDrafts] = useState<Record<string, string>>({});
+
+  const [goals, setGoals] = useState<
+    Array<{
+      id: string;
+      kind: string;
+      targetInt: number | null;
+      targetNumber: string | null;
+      unit: string;
+      period: string;
+      startDate: string;
+      endDate: string | null;
+      createdAt: string;
+    }> | null
+  >(null);
+  const [goalsLoading, setGoalsLoading] = useState(false);
+  const [goalKind, setGoalKind] = useState("steps_daily");
+  const [goalTarget, setGoalTarget] = useState("");
+
+  const [summary, setSummary] = useState<{
+    range: { start: string; end: string; days: number };
+    health: { daysWithEntry: number; stepsTotal: number; sleepAvgMinutes: number | null; sportMinutesTotal: number };
+    food: { count: number };
+    workouts: { total: number; completed: number };
+    latestWeight: { measuredAt: string; weightKg: string } | null;
+  } | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [noteDay, setNoteDay] = useState(new Date().toISOString().slice(0, 10));
+  const [noteText, setNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const notesForDay = useMemo(() => {
+    const all = health?.coachNotes ?? [];
+    return all.filter((n) => n.day === noteDay).slice(0, 5);
+  }, [health?.coachNotes, noteDay]);
+
+  async function loadHealthData(force?: boolean) {
+    if (!force && (healthLoading || health)) return;
+    setHealthLoading(true);
+    try {
+      const r = await api.get<{ entries: any[]; metrics: any[]; coachNotes: any[] }>(
+        `/coach/clients/${clientUserId}/health?take=30`,
+      );
+      setHealth({
+        entries: (r.entries ?? []).map((e) => ({
+          id: e.id,
+          day: String(e.day).slice(0, 10),
+          steps: e.steps ?? null,
+          sleepMinutes: e.sleepMinutes ?? null,
+          sportType: e.sportType ?? null,
+          sportMinutes: e.sportMinutes ?? null,
+          notes: e.notes ?? null,
+        })),
+        metrics: (r.metrics ?? []).map((m) => ({
+          id: m.id,
+          measuredAt: String(m.measuredAt),
+          weightKg: m.weightKg ?? null,
+          waistCm: m.waistCm ?? null,
+          chestCm: m.chestCm ?? null,
+          hipsCm: m.hipsCm ?? null,
+          armCm: m.armCm ?? null,
+          thighCm: m.thighCm ?? null,
+          notes: m.notes ?? null,
+        })),
+        coachNotes: (r.coachNotes ?? []).map((n) => ({
+          id: n.id,
+          day: String(n.day).slice(0, 10),
+          text: n.text,
+          createdAt: String(n.createdAt),
+          coach: n.coach,
+        })),
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setHealthLoading(false);
+    }
+  }
+
+  async function loadFoodData(force?: boolean) {
+    if (!force && (foodLoading || food)) return;
+    setFoodLoading(true);
+    try {
+      const r = await api.get<{
+        items: Array<{
+          id: string;
+          loggedAt: string;
+          text: string | null;
+          photoUrl: string | null;
+          source: string;
+          coachComments: Array<{ id: string; text: string; createdAt: string; coach: { id: string; name: string | null } }>;
+        }>;
+      }>(`/coach/clients/${clientUserId}/food?take=30`);
+      setFood(r.items ?? []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFoodLoading(false);
+    }
+  }
+
+  async function loadGoalsData(force?: boolean) {
+    if (!force && (goalsLoading || goals)) return;
+    setGoalsLoading(true);
+    try {
+      const r = await api.get<{
+        goals: Array<{
+          id: string;
+          kind: string;
+          targetInt: number | null;
+          targetNumber: string | null;
+          unit: string;
+          period: string;
+          startDate: string;
+          endDate: string | null;
+          createdAt: string;
+        }>;
+      }>(`/coach/clients/${clientUserId}/goals`);
+      setGoals(r.goals ?? []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGoalsLoading(false);
+    }
+  }
+
+  async function loadSummaryData(force?: boolean) {
+    if (!force && (summaryLoading || summary)) return;
+    setSummaryLoading(true);
+    try {
+      const r = await api.get<{
+        range: { start: string; end: string; days: number };
+        health: { daysWithEntry: number; stepsTotal: number; sleepAvgMinutes: number | null; sportMinutesTotal: number };
+        food: { count: number };
+        workouts: { total: number; completed: number };
+        latestWeight: { measuredAt: string; weightKg: string } | null;
+      }>(`/coach/clients/${clientUserId}/summary/week?days=7`);
+      setSummary(r);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
+  function goalMeta(kind: string) {
+    if (kind === "steps_daily") return { unit: "steps", period: "daily", placeholder: "8000" };
+    if (kind === "sleep_daily") return { unit: "minutes", period: "daily", placeholder: "7.5" };
+    if (kind === "workouts_weekly") return { unit: "sessions", period: "weekly", placeholder: "3" };
+    return { unit: "count", period: "daily", placeholder: "0" };
+  }
+
+  async function addGoal() {
+    const raw = goalTarget.trim();
+    if (!raw) return;
+    const meta = goalMeta(goalKind);
+    let targetInt: number | null = null;
+    if (goalKind === "sleep_daily") {
+      const hrs = Number(raw);
+      if (!Number.isFinite(hrs) || hrs <= 0) return;
+      targetInt = Math.round(hrs * 60);
+    } else {
+      const n = Math.trunc(Number(raw));
+      if (!Number.isFinite(n) || n <= 0) return;
+      targetInt = n;
+    }
+
+    try {
+      await api.post(`/coach/clients/${clientUserId}/goals`, {
+        kind: goalKind,
+        targetInt,
+        unit: meta.unit,
+        period: meta.period,
+        startDate: new Date().toISOString().slice(0, 10),
+      });
+      setGoalTarget("");
+      await loadGoalsData(true);
+      toast.success("Meta guardada");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error guardando meta");
+    }
+  }
+
+  async function deleteGoal(goalId: string) {
+    try {
+      await api.del(`/coach/clients/${clientUserId}/goals/${goalId}`);
+      await loadGoalsData(true);
+      toast.success("Meta eliminada");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error eliminando meta");
+    }
+  }
+
+  async function postFoodComment(foodId: string) {
+    const text = (foodCommentDrafts[foodId] ?? "").trim();
+    if (!text) return;
+    try {
+      await api.post(`/coach/clients/${clientUserId}/food/${foodId}/comments`, { text });
+      setFoodCommentDrafts((prev) => ({ ...prev, [foodId]: "" }));
+      await loadFoodData(true);
+      toast.success("Comentario enviado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error enviando comentario");
+    }
+  }
+
+  function handleTabChange(next: string) {
+    setTab(next);
+    if (next === "Salud" || next === "Métricas") {
+      loadHealthData(false);
+    }
+    if (next === "Salud") {
+      loadFoodData(false);
+      loadGoalsData(false);
+      loadSummaryData(false);
+    }
+  }
   const [showAssign, setShowAssign] = useState(false);
   const [removingPlan, setRemovingPlan] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
@@ -351,9 +616,9 @@ export default function AthleteDetailPage() {
 
         <div style={{ display: "flex", gap: 20, padding: "18px 0 0" }}>
           <Tabs
-            tabs={["Historial", "Métricas"]}
+            tabs={["Historial", "Salud", "Métricas"]}
             active={tab}
-            onChange={setTab}
+            onChange={handleTabChange}
           />
         </div>
 
@@ -361,112 +626,386 @@ export default function AthleteDetailPage() {
           className="coach-two-col"
           style={{ padding: "18px 0 28px" }}
         >
-          {/* Left: sessions timeline */}
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Sesiones recientes</div>
-            </div>
+          {tab === "Historial" ? (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Sesiones recientes</div>
+              </div>
 
-            {sessions.length === 0 ? (
-              <StateBlock kind="empty" title="Sin sesiones" body="Este alumno aún no completó ninguna sesión." />
-            ) : (
-              <div style={{ position: "relative", paddingLeft: 24 }}>
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 8,
-                    top: 8,
-                    bottom: 8,
-                    width: 1,
-                    background: "var(--line)",
-                  }}
-                />
-                {sessions.map((s, i) => (
+              {sessions.length === 0 ? (
+                <StateBlock kind="empty" title="Sin sesiones" body="Este alumno aún no completó ninguna sesión." />
+              ) : (
+                <div style={{ position: "relative", paddingLeft: 24 }}>
                   <div
-                    key={s.id}
                     style={{
-                      display: "flex",
-                      gap: 14,
-                      marginBottom: 10,
-                      position: "relative",
+                      position: "absolute",
+                      left: 8,
+                      top: 8,
+                      bottom: 8,
+                      width: 1,
+                      background: "var(--line)",
                     }}
-                  >
+                  />
+                  {sessions.map((s) => (
                     <div
+                      key={s.id}
                       style={{
-                        position: "absolute",
-                        left: -20,
-                        top: 14,
-                        width: 12,
-                        height: 12,
-                        borderRadius: 6,
-                        background:
-                          s.status === "completed" ? "var(--lime)" : "var(--bg-2)",
-                        border: `2px solid ${s.status === "completed" ? "var(--lime)" : "var(--line-2)"}`,
-                      }}
-                    />
-                    <div
-                      onClick={() =>
-                        router.push(
-                          `/coach/alumnos/${clientUserId}/sesiones/${s.id}`
-                        )
-                      }
-                      style={{
-                        flex: 1,
-                        padding: 12,
-                        background: "var(--bg-1)",
-                        border: "1px solid var(--line)",
-                        borderRadius: 10,
                         display: "flex",
                         gap: 14,
-                        alignItems: "center",
-                        cursor: "pointer",
+                        marginBottom: 10,
+                        position: "relative",
                       }}
-                      className="ta-row"
                     >
                       <div
-                        className="ta-mono"
-                        style={{ fontSize: 11, color: "var(--text-mute)", width: 64 }}
+                        style={{
+                          position: "absolute",
+                          left: -20,
+                          top: 14,
+                          width: 12,
+                          height: 12,
+                          borderRadius: 6,
+                          background:
+                            s.status === "completed" ? "var(--lime)" : "var(--bg-2)",
+                          border: `2px solid ${s.status === "completed" ? "var(--lime)" : "var(--line-2)"}`,
+                        }}
+                      />
+                      <div
+                        onClick={() =>
+                          router.push(
+                            `/coach/alumnos/${clientUserId}/sesiones/${s.id}`
+                          )
+                        }
+                        style={{
+                          flex: 1,
+                          padding: 12,
+                          background: "var(--bg-1)",
+                          border: "1px solid var(--line)",
+                          borderRadius: 10,
+                          display: "flex",
+                          gap: 14,
+                          alignItems: "center",
+                          cursor: "pointer",
+                        }}
+                        className="ta-row"
                       >
-                        {new Date(s.performedAt).toLocaleDateString("es", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>
-                          {s.workoutTemplate?.title ?? "Sesión libre"}
+                        <div
+                          className="ta-mono"
+                          style={{ fontSize: 11, color: "var(--text-mute)", width: 64 }}
+                        >
+                          {new Date(s.performedAt).toLocaleDateString("es", {
+                            day: "numeric",
+                            month: "short",
+                          })}
                         </div>
-                        {s.status === "completed" && (
-                          <div
-                            className="ta-mono"
-                            style={{
-                              fontSize: 11,
-                              color: "var(--text-mute)",
-                              marginTop: 2,
-                            }}
-                          >
-                            {s.setsCount} series ·{" "}
-                            {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>
+                            {s.workoutTemplate?.title ?? "Sesión libre"}
                           </div>
+                          {s.status === "completed" && (
+                            <div
+                              className="ta-mono"
+                              style={{
+                                fontSize: 11,
+                                color: "var(--text-mute)",
+                                marginTop: 2,
+                              }}
+                            >
+                              {s.setsCount} series ·{" "}
+                              {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
+                            </div>
+                          )}
+                        </div>
+                        <Icon name="chevR" size={14} color="var(--text-mute)" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : tab === "Salud" ? (
+            <div>
+              <Card style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Icon name="chart" size={16} color="var(--text-mute)" />
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>Resumen (7 días)</div>
+                  </div>
+                  <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                    {summary?.range ? `${summary.range.start} → ${summary.range.end}` : summaryLoading ? "…" : "—"}
+                  </div>
+                </div>
+                {summaryLoading || !summary ? (
+                  <div style={{ marginTop: 8 }}>
+                    <StateBlock kind="loading" title="Cargando resumen…" />
+                  </div>
+                ) : (
+                  <div className="ta-mono" style={{ marginTop: 10, fontSize: 12, color: "var(--text-mute)" }}>
+                    Pasos: {summary.health.stepsTotal.toLocaleString("es")} {" · "} Sueño prom: {fmtSleep(summary.health.sleepAvgMinutes)} {" · "} Deporte: {summary.health.sportMinutesTotal}m
+                    {" · "} Comidas: {summary.food.count} {" · "} Entrenos: {summary.workouts.completed}/{summary.workouts.total}
+                    {summary.latestWeight ? ` · Peso: ${parseFloat(summary.latestWeight.weightKg).toFixed(1)}kg (${summary.latestWeight.measuredAt})` : ""}
+                  </div>
+                )}
+              </Card>
+
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Salud diaria</div>
+              {healthLoading || !health ? (
+                <StateBlock kind="loading" title="Cargando salud…" />
+              ) : health.entries.length === 0 ? (
+                <StateBlock kind="empty" title="Sin registros" body="El alumno aún no cargó salud diaria." />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {health.entries.slice(0, 14).map((e) => (
+                    <div
+                      key={e.id}
+                      onClick={() => setNoteDay(e.day)}
+                      style={{ padding: 12, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, cursor: "pointer" }}
+                      className="ta-row"
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                          {new Date(e.day).toLocaleDateString("es", { weekday: "short", day: "2-digit", month: "short" })}
+                        </div>
+                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                          {e.steps != null ? `${e.steps.toLocaleString("es")} pasos` : "—"} {" · "} {fmtSleep(e.sleepMinutes)}
+                        </div>
+                      </div>
+                      {e.sportType || e.sportMinutes ? (
+                        <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 6 }}>
+                          {e.sportType ?? "Deporte"}{e.sportMinutes ? ` · ${e.sportMinutes}m` : ""}
+                        </div>
+                      ) : null}
+                      {e.notes ? (
+                        <div style={{ fontSize: 13, color: "var(--text)", marginTop: 6, whiteSpace: "pre-wrap" }}>
+                          {e.notes}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ fontSize: 13, fontWeight: 600, margin: "18px 0 10px" }}>Comidas</div>
+              {foodLoading || food === null ? (
+                <StateBlock kind="loading" title="Cargando comidas…" />
+              ) : food.length === 0 ? (
+                <StateBlock kind="empty" title="Sin comidas" body="El alumno aún no registró comidas." />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {food.slice(0, 20).map((f) => (
+                    <div key={f.id} style={{ padding: 12, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                          {new Date(f.loggedAt).toLocaleString("es", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {f.source && f.source !== "manual" ? <Badge tone="info">EXTERNAL</Badge> : <Badge tone="neutral">MANUAL</Badge>}
+                          {f.photoUrl ? (
+                            <a href={f.photoUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--lime-high)", fontWeight: 700 }}>
+                              Ver foto
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "flex-start" }}>
+                        {f.photoUrl ? (
+                          <Image
+                            src={f.photoUrl}
+                            alt=""
+                            width={54}
+                            height={54}
+                            style={{ width: 54, height: 54, borderRadius: 10, objectFit: "cover", border: "1px solid var(--line)" }}
+                          />
+                        ) : null}
+                        {f.text ? (
+                          <div style={{ fontSize: 13, color: "var(--text)", whiteSpace: "pre-wrap" }}>{f.text}</div>
+                        ) : (
+                          <div style={{ fontSize: 13, color: "var(--text-mute)" }}>—</div>
                         )}
                       </div>
-                      <Icon name="chevR" size={14} color="var(--text-mute)" />
+
+                      {f.coachComments?.length ? (
+                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
+                          <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700, marginBottom: 8 }}>
+                            Comentarios
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {f.coachComments.slice(0, 3).map((c) => (
+                              <div key={c.id} style={{ padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>{c.coach.name ?? "Coach"}</div>
+                                <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2, whiteSpace: "pre-wrap" }}>{c.text}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
+                        <input
+                          value={foodCommentDrafts[f.id] ?? ""}
+                          onChange={(e) => setFoodCommentDrafts((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                          placeholder="Comentario del coach…"
+                          style={{ flex: 1, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 12px", fontSize: 14, color: "var(--text)", outline: "none" }}
+                        />
+                        <Button size="sm" icon="send" disabled={!String(foodCommentDrafts[f.id] ?? "").trim()} onClick={() => postFoodComment(f.id)}>
+                          Enviar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ fontSize: 13, fontWeight: 600, margin: "18px 0 10px" }}>Metas</div>
+              {goalsLoading || goals === null ? (
+                <StateBlock kind="loading" title="Cargando metas…" />
+              ) : (
+                <>
+                  {goals.length === 0 ? (
+                    <StateBlock kind="empty" title="Sin metas" body="Todavía no definiste metas para este alumno." />
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                      {goals.slice(0, 8).map((g) => (
+                        <div key={g.id} style={{ padding: 10, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <Badge tone="neutral" icon="star">{g.kind}</Badge>
+                              <div className="ta-mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
+                                {g.targetInt != null ? String(g.targetInt) : g.targetNumber ?? "—"} {g.unit}
+                              </div>
+                            </div>
+                            <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
+                              {g.period} {" · "} desde {String(g.startDate).slice(0, 10)}
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost" icon="trash" onClick={() => deleteGoal(g.id)}>Borrar</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600, marginBottom: 6 }}>Tipo</div>
+                      <select
+                        value={goalKind}
+                        onChange={(e) => setGoalKind(e.target.value)}
+                        style={{ width: "100%", background: "transparent", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px", fontSize: 14, color: "var(--text)", outline: "none" }}
+                      >
+                        <option value="steps_daily">Pasos diarios</option>
+                        <option value="sleep_daily">Sueño diario</option>
+                        <option value="workouts_weekly">Entrenos semanales</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600, marginBottom: 6 }}>Objetivo</div>
+                      <input
+                        value={goalTarget}
+                        onChange={(e) => setGoalTarget(e.target.value)}
+                        placeholder={goalMeta(goalKind).placeholder}
+                        style={{ width: "100%", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", outline: "none" }}
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                    <Button disabled={!goalTarget.trim()} icon="plus" onClick={addGoal}>Agregar meta</Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Métricas</div>
+              {healthLoading || !health ? (
+                <StateBlock kind="loading" title="Cargando métricas…" />
+              ) : health.metrics.length === 0 ? (
+                <StateBlock kind="empty" title="Sin mediciones" body="El alumno aún no registró métricas." />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {health.metrics.slice(0, 20).map((m) => (
+                    <div key={m.id} style={{ padding: 12, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                          {new Date(m.measuredAt).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" })}
+                        </div>
+                        <div className="ta-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                          {m.weightKg ? `${parseFloat(m.weightKg).toFixed(1)}kg` : "—"}
+                        </div>
+                      </div>
+                      <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 6 }}>
+                        {m.waistCm ? `Cintura ${m.waistCm}cm` : "Cintura —"} {" · "} {m.hipsCm ? `Cadera ${m.hipsCm}cm` : "Cadera —"}
+                      </div>
+                      {m.notes ? (
+                        <div style={{ fontSize: 13, color: "var(--text)", marginTop: 6, whiteSpace: "pre-wrap" }}>{m.notes}</div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Right column */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {tab === "Salud" && (
+              <Card pad={16}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Nota del coach</div>
+                <div style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "center" }}>
+                  <input
+                    type="date"
+                    value={noteDay}
+                    onChange={(e) => setNoteDay(e.target.value)}
+                    style={{ background: "transparent", border: "1px solid var(--line)", borderRadius: 10, padding: "8px 10px", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text)", width: 160 }}
+                  />
+                  <Button
+                    size="sm"
+                    disabled={savingNote || !noteText.trim()}
+                    onClick={async () => {
+                      setSavingNote(true);
+                      try {
+                        await api.post(`/coach/clients/${clientUserId}/health`, { day: noteDay, text: noteText.trim() });
+                        setNoteText("");
+                        await loadHealthData(true);
+                      } finally {
+                        setSavingNote(false);
+                      }
+                    }}
+                  >
+                    {savingNote ? "Guardando…" : "Guardar"}
+                  </Button>
+                </div>
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  rows={4}
+                  placeholder="Feedback, ajustes, observaciones…"
+                  style={{ width: "100%", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 12, padding: "10px 12px", fontSize: 14, color: "var(--text)", outline: "none", resize: "none" }}
+                />
+
+                {notesForDay.length ? (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700, marginBottom: 8 }}>
+                      Notas ({notesForDay.length})
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {notesForDay.map((n) => (
+                        <div key={n.id} style={{ padding: "10px 12px", borderRadius: 12, background: "var(--bg)", border: "1px solid var(--line)" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700 }}>{n.coach.name}</div>
+                          <div style={{ fontSize: 13, marginTop: 2, whiteSpace: "pre-wrap" }}>{n.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </Card>
+            )}
             {client.assignment?.plan && (
               <Card pad={16}>
                 <div
