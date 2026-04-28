@@ -141,7 +141,7 @@ export default function RegistroPage() {
 
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--text-mute)" }}>
           ¿Ya tenés cuenta?{" "}
-          <Link href="/login" style={{ color: "var(--lime)", fontWeight: 600, textDecoration: "none" }}>
+          <Link href="/login" style={{ color: "var(--accent-text)", fontWeight: 600, textDecoration: "none" }}>
             Ingresá
           </Link>
         </div>

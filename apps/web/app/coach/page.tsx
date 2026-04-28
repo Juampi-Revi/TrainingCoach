@@ -265,7 +265,7 @@ export default function CoachDashboardPage() {
                           justifyContent: "center",
                         }}
                       >
-                        <Icon name={it.icon} size={14} color="var(--lime)" />
+                        <Icon name={it.icon} size={14} color="var(--accent-text)" />
                       </div>
                       <div style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{it.t}</div>
                       <Icon name="chevR" size={14} color="var(--text-mute)" />

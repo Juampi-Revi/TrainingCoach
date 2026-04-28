@@ -41,7 +41,7 @@ export default function ResetPasswordForm() {
       <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 16, color: "var(--danger)", marginBottom: 12 }}>Link inválido</div>
-          <Link href="/login" style={{ color: "var(--lime)", textDecoration: "none", fontSize: 14 }}>Volver al login</Link>
+          <Link href="/login" style={{ color: "var(--accent-text)", textDecoration: "none", fontSize: 14 }}>Volver al login</Link>
         </div>
       </div>
     );

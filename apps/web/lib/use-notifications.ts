@@ -30,7 +30,28 @@ export function useNotifications() {
       .finally(() => setLoading(false));
   }, [api]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    fetch();
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") fetch();
+    };
+
+    const onFocus = () => fetch();
+
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") fetch();
+    }, 15000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(interval);
+    };
+  }, [fetch]);
 
   const markAllRead = useCallback(async () => {
     await api.patch("/notifications/read-all", {});

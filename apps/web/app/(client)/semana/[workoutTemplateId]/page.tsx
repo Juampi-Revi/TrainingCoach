@@ -62,7 +62,7 @@ function ExRow({ ex, compact }: { ex: WorkoutEx; compact?: boolean }) {
           {ex.intensityTarget && (
             <>
               <span style={{ fontSize: 10, color: "var(--text-dim)" }}>·</span>
-              <span className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", fontWeight: 600 }}>
+              <span className="ta-mono" style={{ fontSize: 10, color: "var(--accent-text)", fontWeight: 600 }}>
                 {ex.intensityType?.toUpperCase() ?? ""} {ex.intensityTarget}
               </span>
             </>
@@ -77,7 +77,7 @@ function ExRow({ ex, compact }: { ex: WorkoutEx; compact?: boolean }) {
           )}
         </div>
         {ex.notes && (
-          <div style={{ fontSize: 11, color: "var(--lime)", marginTop: 3, lineHeight: 1.4 }}>{ex.notes}</div>
+          <div style={{ fontSize: 11, color: "var(--accent-text)", marginTop: 3, lineHeight: 1.4 }}>{ex.notes}</div>
         )}
       </div>
       <Icon name="chevR" size={14} color="var(--text-dim)" />
@@ -166,7 +166,7 @@ export default function WorkoutDetailPage() {
 
         <div style={{ marginTop: 28 }}>
           {data.tags.length > 0 && (
-            <div className="ta-mono" style={{ fontSize: 9, color: "var(--lime)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 4 }}>
+            <div className="ta-mono" style={{ fontSize: 9, color: "var(--accent-text)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 4 }}>
               {data.tags[0].toUpperCase()}
             </div>
           )}
