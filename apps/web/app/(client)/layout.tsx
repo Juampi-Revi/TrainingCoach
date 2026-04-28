@@ -84,6 +84,8 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   }, []);
 
   if (!ready) return null;
+  if (!token) return null;
+  if (user && user.role === "coach") return null;
 
   const name = user?.name ?? user?.email ?? "Cliente";
 

@@ -14,12 +14,19 @@ export interface AppNotification {
 }
 
 export function useNotifications() {
-  const { api } = useAuth();
+  const { api, token, ready } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(() => {
+    if (!ready) return;
+    if (!token) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
     api
       .get<{ notifications: AppNotification[]; unreadCount: number }>("/notifications")
       .then((res) => {
@@ -28,10 +35,13 @@ export function useNotifications() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [api]);
+  }, [api, ready, token]);
 
   useEffect(() => {
-    fetch();
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      if (!cancelled) fetch();
+    }, 0);
 
     const onVis = () => {
       if (document.visibilityState === "visible") fetch();
@@ -47,6 +57,8 @@ export function useNotifications() {
     }, 15000);
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(t);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", onFocus);
       window.clearInterval(interval);
@@ -54,10 +66,11 @@ export function useNotifications() {
   }, [fetch]);
 
   const markAllRead = useCallback(async () => {
+    if (!token) return;
     await api.patch("/notifications/read-all", {});
     setNotifications((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString() })));
     setUnreadCount(0);
-  }, [api]);
+  }, [api, token]);
 
   return { notifications, unreadCount, loading, markAllRead, refresh: fetch };
 }

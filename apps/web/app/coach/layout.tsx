@@ -15,6 +15,8 @@ export default function CoachLayout({ children }: { children: ReactNode }) {
   }, [ready, token, user, router]);
 
   if (!ready) return null;
+  if (!token) return null;
+  if (user && user.role !== "coach") return null;
 
   return <>{children}</>;
 }
