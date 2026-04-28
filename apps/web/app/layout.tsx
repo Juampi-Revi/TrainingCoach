@@ -6,8 +6,9 @@ import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 
 export const metadata: Metadata = {
-  title: "YourCoach",
-  description: "Training platform",
+  title: "YourCoachFit",
+  description: "Tu plataforma de entrenamiento personalizado",
+  icons: { icon: "/icon.svg" },
 };
 
 export const viewport: Viewport = {

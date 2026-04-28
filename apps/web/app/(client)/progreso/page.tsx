@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button, KPI, StateBlock } from "@/components/ui";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 
 interface Metric {
   id: string;
@@ -266,7 +265,6 @@ export default function ProgresoPage() {
         </>
       )}
 
-      <MobileTabBar active="chart" />
     </div>
   );
 }

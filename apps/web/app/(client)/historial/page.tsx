@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { Badge, Icon, StateBlock, Tabs } from "@/components/ui";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import type { SessionSummary } from "@regen/types";
 
 type Filter = "Mes" | "Todo";
@@ -194,7 +193,6 @@ export default function HistorialPage() {
         </div>
       )}
 
-      <MobileTabBar active="history" />
     </div>
   );
 }

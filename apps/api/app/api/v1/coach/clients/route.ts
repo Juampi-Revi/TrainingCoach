@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notify";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, notFound, withHandler } from "@/lib/api-response";
 
@@ -97,6 +98,14 @@ export async function POST(req: NextRequest) {
         data: { coachUserId: auth.user.sub, clientUserId: target.id, status: "active" },
       });
     }
+
+    await notify({
+      userId: target.id,
+      type: "client_added",
+      title: "Un coach te agregó",
+      body: "Ya podés ver tu plan y empezar a entrenar.",
+      linkUrl: "/semana",
+    });
 
     return ok(
       { id: target.id, email: target.email, name: target.displayName, assignment: null, lastSession: null },

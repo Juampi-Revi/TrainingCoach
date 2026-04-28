@@ -509,6 +509,7 @@ function WarmupOverlay({
   elapsedMs,
   targetMs,
   notes,
+  exercises,
   running,
   onToggle,
   onReset,
@@ -517,6 +518,7 @@ function WarmupOverlay({
   elapsedMs: number;
   targetMs: number | null;
   notes: string | null | undefined;
+  exercises: SessionExercise[];
   running: boolean;
   onToggle: () => void;
   onReset: () => void;
@@ -580,6 +582,31 @@ function WarmupOverlay({
           </div>
         )}
 
+        {exercises.length > 0 && (
+          <div style={{ width: "100%", maxWidth: 340 }}>
+            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 8, textAlign: "center" }}>
+              EJERCICIOS
+            </div>
+            {exercises.map((e) => (
+              <div key={e.id} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 12px", background: "var(--bg-1)", border: "1px solid var(--line)",
+                borderRadius: 10, marginBottom: 6,
+              }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--warn)", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{e.exercise.name}</div>
+                  {(e.target?.sets || e.target?.reps) && (
+                    <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 1 }}>
+                      {[e.target?.sets ? `${e.target.sets} series` : null, e.target?.reps ? e.target.reps : null].filter(Boolean).join(" × ")}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8 }}>
           <Button size="md" variant="secondary" icon={running ? "pause" : "play"} onClick={onToggle}>
             {running ? "Pausa" : "Play"}
@@ -612,6 +639,9 @@ export default function SessionInProgressPage() {
   const [completing, setCompleting] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [preSelectExIdx, setPreSelectExIdx] = useState<number | null>(null);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(90);
   const [mediaOpen, setMediaOpen] = useState(false);
@@ -963,11 +993,44 @@ export default function SessionInProgressPage() {
   }
 
   function goToEx(i: number) {
+    const target = session?.exercises[i];
+    const hasAlternatives = (target?.alternatives?.length ?? 0) > 0;
+    const hasNoSets = (target?.sets?.length ?? 0) === 0;
+    if (target && hasAlternatives && hasNoSets) {
+      setPreSelectExIdx(i);
+      return;
+    }
     setCurrentExIdx(i);
     setDraft({ reps: "", kg: "", effort: "" });
     setEditingSet(null);
     setMediaOpen(false);
     setSwapOpen(false);
+  }
+
+  function confirmGoToEx(i: number) {
+    setPreSelectExIdx(null);
+    setCurrentExIdx(i);
+    setDraft({ reps: "", kg: "", effort: "" });
+    setEditingSet(null);
+    setMediaOpen(false);
+    setSwapOpen(false);
+  }
+
+  async function resetSession() {
+    if (!session?.workoutTemplate) return;
+    setResetting(true);
+    try {
+      await api.patch(`/client/sessions/${sessionId}`, { status: "discarded" });
+      const res = await api.post<{ id: string }>("/client/sessions", { workoutTemplateId: session.workoutTemplate.id });
+      try { localStorage.removeItem(timerKey); } catch {}
+      try { localStorage.removeItem(warmupDoneKey); } catch {}
+      try { localStorage.removeItem(warmupTimerKey); } catch {}
+      try { localStorage.removeItem(queueKey); } catch {}
+      router.replace(`/sesion/${res.id}`);
+    } catch (e) {
+      console.error(e);
+      setResetting(false);
+    }
   }
 
   async function deleteSet(setNumber: number) {
@@ -1106,6 +1169,17 @@ export default function SessionInProgressPage() {
             >
               Técnica
             </button>
+            {ex?.exercise.youtubeUrl && (
+              <a
+                href={ex.exercise.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", background: "rgba(255,0,0,.8)", border: "none", borderRadius: 5, color: "#fff", fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}
+              >
+                ▶ YouTube
+              </a>
+            )}
             {(ex?.alternatives?.length ?? 0) > 0 && (
               <button
                 onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
@@ -1135,6 +1209,16 @@ export default function SessionInProgressPage() {
                 <Icon name="repeat" size={12} color="var(--text-mute)" />
                 Cambiar
               </button>
+            )}
+            {ex.exercise.youtubeUrl && (
+              <a
+                href={ex.exercise.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(255,0,0,.4)", background: "transparent", color: "#ff4444", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}
+              >
+                ▶ YouTube
+              </a>
             )}
           </div>
           {lastSaved && <span style={{ fontSize: 11, color: "var(--success)" }}>✓ {lastSaved}</span>}
@@ -1390,15 +1474,23 @@ export default function SessionInProgressPage() {
           background: "linear-gradient(to top, var(--bg) 70%, transparent)",
           display: "flex", flexDirection: "column", gap: 6,
         }}>
-          {completedExs < workExercises.length && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
+            {completedExs < workExercises.length && (
+              <button
+                onClick={completeSession}
+                disabled={completing}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 0", color: "var(--text-dim)", fontSize: 12, fontWeight: 600 }}
+              >
+                Terminar entrenamiento
+              </button>
+            )}
             <button
-              onClick={completeSession}
-              disabled={completing}
-              style={{ alignSelf: "center", background: "none", border: "none", cursor: "pointer", padding: "4px 0", color: "var(--text-dim)", fontSize: 12, fontWeight: 600, letterSpacing: ".02em" }}
+              onClick={() => setShowReset(true)}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 0", color: "var(--danger)", fontSize: 12, fontWeight: 600 }}
             >
-              Terminar entrenamiento
+              Reiniciar
             </button>
-          )}
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             {prevRealIdx != null && prevRealIdx >= 0 && (
               <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(prevRealIdx)} icon="chevL" />
@@ -1436,6 +1528,7 @@ export default function SessionInProgressPage() {
           elapsedMs={warmupElapsedMs}
           targetMs={warmupTargetMs}
           notes={session.workoutTemplate?.warmupNotes}
+          exercises={warmupExercises}
           running={warmupTimer.runningSince != null}
           onToggle={toggleWarmup}
           onReset={resetWarmup}
@@ -1472,6 +1565,89 @@ export default function SessionInProgressPage() {
       {swapOpen && ex && (
         <SwapSheet ex={ex} sessionId={sessionId} onSwapped={() => load()} onClose={() => setSwapOpen(false)} />
       )}
+
+      {/* ── Confirm reset modal ── */}
+      {showReset && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1200 }}
+          onClick={() => setShowReset(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 540, background: "var(--bg-1)", borderRadius: "16px 16px 0 0", padding: "24px 20px 36px" }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Reiniciar entrenamiento</div>
+            <div style={{ fontSize: 13, color: "var(--text-mute)", marginBottom: 20, lineHeight: 1.5 }}>
+              Se descartará el progreso actual y empezarás desde cero. Esta acción no se puede deshacer.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Button size="lg" variant="secondary" style={{ flex: 1 }} onClick={() => setShowReset(false)}>
+                Cancelar
+              </Button>
+              <button
+                onClick={() => { setShowReset(false); resetSession(); }}
+                disabled={resetting}
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: "none", background: "var(--danger)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}
+              >
+                {resetting ? "Reiniciando…" : "Sí, reiniciar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Pre-exercise alternative picker ── */}
+      {preSelectExIdx !== null && session?.exercises[preSelectExIdx] && (() => {
+        const target = session.exercises[preSelectExIdx]!;
+        return (
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1100 }}
+            onClick={() => { setPreSelectExIdx(null); confirmGoToEx(preSelectExIdx); }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 540, background: "var(--bg-1)", borderRadius: "16px 16px 0 0", padding: "20px 16px 36px" }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>¿Cuál vas a hacer?</div>
+              <div style={{ fontSize: 12, color: "var(--text-mute)", marginBottom: 16 }}>Elegí el ejercicio para esta serie</div>
+
+              {/* Current exercise */}
+              <button
+                onClick={() => confirmGoToEx(preSelectExIdx)}
+                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 0", border: "none", borderBottom: "1px solid var(--line)", background: "none", cursor: "pointer", textAlign: "left" }}
+              >
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--lime)", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{target.exercise.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--lime)", marginTop: 1 }}>Principal</div>
+                </div>
+                <Icon name="chevR" size={14} color="var(--text-mute)" />
+              </button>
+
+              {/* Alternatives */}
+              {target.alternatives.map((alt) => (
+                <button
+                  key={alt.exerciseId}
+                  onClick={async () => {
+                    setPreSelectExIdx(null);
+                    await api.patch(`/client/sessions/${sessionId}/exercises/${target.id}`, { swapExerciseId: alt.exerciseId });
+                    await load();
+                    confirmGoToEx(preSelectExIdx!);
+                  }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 0", border: "none", borderBottom: "1px solid var(--line)", background: "none", cursor: "pointer", textAlign: "left" }}
+                >
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--bg-3)", flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{alt.name}</div>
+                    {alt.primaryMuscle && <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 1 }}>{MUSCLE_LABEL[alt.primaryMuscle] ?? alt.primaryMuscle}</div>}
+                  </div>
+                  <Icon name="chevR" size={14} color="var(--text-mute)" />
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

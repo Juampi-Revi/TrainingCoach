@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, err, withHandler } from "@/lib/api-response";
+import { notify } from "@/lib/notify";
 
 // GET /api/v1/client/sessions/:sessionId
 export async function GET(
@@ -125,7 +126,10 @@ export async function PATCH(
 
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, clientUserId: auth.user.sub },
-      select: { id: true, status: true },
+      select: {
+        id: true, status: true,
+        workoutTemplate: { select: { title: true } },
+      },
     });
     if (!session) return notFound("Session not found");
 
@@ -146,6 +150,27 @@ export async function PATCH(
       },
       select: { id: true, status: true, energyRating: true, sessionNotes: true, completedAt: true },
     });
+
+    // Notify coach when client completes session
+    if (status === "completed") {
+      const rel = await prisma.coachClient.findFirst({
+        where: { clientUserId: auth.user.sub, status: "active" },
+        select: { coachUserId: true },
+      });
+      const client = await prisma.user.findUnique({
+        where: { id: auth.user.sub },
+        select: { displayName: true, email: true },
+      });
+      if (rel) {
+        await notify({
+          userId: rel.coachUserId,
+          type: "session_completed",
+          title: `${client?.displayName ?? client?.email ?? "Tu alumno"} completó un entrenamiento`,
+          body: session.workoutTemplate?.title ?? "Sesión libre",
+          linkUrl: `/coach/alumnos/${auth.user.sub}`,
+        });
+      }
+    }
 
     return ok(updated);
   });

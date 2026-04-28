@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Avatar, Icon, StateBlock, Tabs } from "@/components/ui";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import type { Comment, SessionDetail } from "@regen/types";
 
 type Tab = "Sesión" | "Por ejercicio";
@@ -605,7 +604,6 @@ export default function ComentariosPage() {
           </>
         );
       })()}
-      <MobileTabBar active="messages" />
     </div>
   );
 }

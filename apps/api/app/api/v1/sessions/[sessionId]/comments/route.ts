@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractBearer } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, err, withHandler } from "@/lib/api-response";
+import { notify } from "@/lib/notify";
 
 type Ctx = { params: Promise<{ sessionId: string }> };
 
@@ -68,6 +69,25 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       data: { sessionId, authorUserId: auth.user.sub, text: text.trim() },
       include: { author: { select: { id: true, displayName: true, role: true } } },
     });
+
+    // Notify the other party
+    const recipientId = auth.user.role === "coach" ? session.clientUserId : await (async () => {
+      const rel = await prisma.coachClient.findFirst({
+        where: { clientUserId: session.clientUserId, status: "active" },
+        select: { coachUserId: true },
+      });
+      return rel?.coachUserId ?? null;
+    })();
+    if (recipientId) {
+      const authorName = comment.author.displayName ?? (auth.user.role === "coach" ? "Tu coach" : "Tu alumno");
+      await notify({
+        userId: recipientId,
+        type: "new_message",
+        title: auth.user.role === "coach" ? "Nuevo mensaje de tu coach" : `Nuevo mensaje de ${authorName}`,
+        body: text.trim().slice(0, 120),
+        linkUrl: auth.user.role === "coach" ? `/comentarios/${sessionId}` : `/coach/alumnos/${session.clientUserId}/sesiones/${sessionId}`,
+      });
+    }
 
     return ok(
       {

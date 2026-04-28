@@ -34,6 +34,7 @@ model User {
   sessionComments       SessionComment[]
   bodyMetricEntries     BodyMetricEntry[]
   foodLogEntries        FoodLogEntry[]
+  notifications         Notification[]
 }
 
 model CoachClient {
@@ -332,6 +333,22 @@ model ExerciseMedia {
   updatedAt   DateTime @updatedAt
 
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String    // 'new_message' | 'plan_assigned' | 'client_added' | 'session_completed'
+  title     String
+  body      String?
+  linkUrl   String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
 }
 
 model FoodLogEntry {

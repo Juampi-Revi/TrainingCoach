@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { Avatar, Badge, Button, Icon, StateBlock } from "@/components/ui";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import type { ClientWeekResponse } from "@regen/types";
 
 const DAY_LABELS = ["D", "L", "M", "X", "J", "V", "S"];
@@ -80,7 +79,6 @@ export default function SemanaPage() {
             body="Tu coach está armando tu programa. Te avisamos cuando esté activo."
           />
         </div>
-        <MobileTabBar active="home" />
       </div>
     );
   }
@@ -400,7 +398,6 @@ export default function SemanaPage() {
         )}
       </div>
 
-      <MobileTabBar active="home" />
     </div>
   );
 }

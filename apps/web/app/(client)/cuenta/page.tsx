@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
 import { Avatar, Button, Icon } from "@/components/ui";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 
 export default function CuentaPage() {
   const { user, logout, refreshUser, api } = useAuth();
@@ -152,7 +151,6 @@ export default function CuentaPage() {
         </Button>
       </div>
 
-      <MobileTabBar active="me" />
     </div>
   );
 }

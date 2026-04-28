@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notify";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, err, withHandler } from "@/lib/api-response";
 
@@ -166,6 +167,14 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         status: "active",
         startDate: startDate ? new Date(startDate) : new Date(),
       },
+    });
+
+    await notify({
+      userId: clientUserId,
+      type: "plan_assigned",
+      title: "Tu coach te asignó un plan",
+      body: `Plan: ${plan.title} · ${plan.weeksCount} semanas`,
+      linkUrl: "/semana",
     });
 
     return ok({ id: assignment.id, planId, plan, status: "active", startDate: assignment.startDate }, 201);

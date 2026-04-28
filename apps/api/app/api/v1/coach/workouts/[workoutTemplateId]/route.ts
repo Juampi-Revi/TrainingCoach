@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, withHandler } from "@/lib/api-response";
+import { notify } from "@/lib/notify";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string }> };
 
@@ -99,6 +100,36 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       },
       select: { id: true, title: true, description: true, warmupNotes: true, warmupMinutes: true, tags: true, type: true, updatedAt: true },
     });
+
+    const recipients = await prisma.planAssignment.findMany({
+      where: {
+        status: { in: ["active", "paused"] },
+        plan: {
+          coachUserId: auth.user.sub,
+          weeks: {
+            some: {
+              workouts: {
+                some: { workoutTemplateId },
+              },
+            },
+          },
+        },
+      },
+      select: { clientUserId: true },
+    });
+
+    const uniqueClientIds = Array.from(new Set(recipients.map((r) => r.clientUserId)));
+    await Promise.all(
+      uniqueClientIds.map((clientUserId) =>
+        notify({
+          userId: clientUserId,
+          type: "workout_modified",
+          title: "Tu coach actualizó un entrenamiento",
+          body: updated.title,
+          linkUrl: "/semana",
+        }),
+      ),
+    );
 
     return ok(updated);
   });

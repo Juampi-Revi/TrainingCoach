@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Icon, StateBlock } from "@/components/ui";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 
 interface MessageItem {
   id: string;
@@ -160,7 +159,6 @@ export default function MensajesAlumnoPage() {
         )}
       </div>
 
-      <MobileTabBar active="messages" />
     </div>
   );
 }
