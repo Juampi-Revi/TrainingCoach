@@ -9,6 +9,12 @@ export default function CoachLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
     if (user?.role !== "coach") { router.replace("/semana"); }

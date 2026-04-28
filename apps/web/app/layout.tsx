@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "YourCoachFit",
   description: "Tu plataforma de entrenamiento personalizado",
   icons: { icon: "/icon.svg" },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
