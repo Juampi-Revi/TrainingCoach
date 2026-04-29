@@ -13,6 +13,14 @@ function toLocalInputValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function normalizeEnergyRating(energyRating: number | null): number | null {
+  if (energyRating == null) return null;
+  if (!Number.isFinite(energyRating)) return null;
+  if (energyRating <= 0) return null;
+  const v = energyRating <= 5 ? Math.round(energyRating) : Math.ceil(energyRating / 2);
+  return Math.min(5, Math.max(1, v));
+}
+
 export default function HistorialPage() {
   const { api } = useAuth();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -244,10 +252,13 @@ export default function HistorialPage() {
                       style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}
                     >
                       {s.setsCount} series · {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
-                      {s.energyRating ? ` · Energía ${s.energyRating}/10` : ""}
+                      {(() => {
+                        const e = normalizeEnergyRating(s.energyRating);
+                        return e ? ` · Energía ${e}/5` : "";
+                      })()}
                     </div>
                   </div>
-                  {s.energyRating && s.energyRating >= 9 && (
+                  {normalizeEnergyRating(s.energyRating) === 5 && (
                     <Badge tone="limeSoft" size="sm">
                       <Icon name="star" size={11} /> Top
                     </Badge>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Badge, Button, Card, Icon, KPI, StateBlock, Tabs } from "@/components/ui";
+import type { ActivitySummary, ExerciseListSummary, ExerciseProgression, ExerciseSummary, MuscleStats } from "@regen/types";
 
 type HealthEntry = {
   id: string;
@@ -75,6 +76,31 @@ function fmtSleep(min: number | null): string {
   return `${h}h${m ? ` ${m}m` : ""}`;
 }
 
+function addDaysUTC(isoDay: string, deltaDays: number) {
+  const d = new Date(`${isoDay}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  return d.toISOString().slice(0, 10);
+}
+
+const MUSCLE_LABEL: Record<string, string> = {
+  chest: "Pecho",
+  back: "Espalda",
+  shoulders: "Hombros",
+  biceps: "Bíceps",
+  triceps: "Tríceps",
+  legs: "Piernas",
+  glutes: "Glúteos",
+  core: "Core",
+  calves: "Pantorrillas",
+  forearms: "Antebrazos",
+  full_body: "Cuerpo completo",
+  other: "Otros",
+};
+
+function muscleLabel(m: string) {
+  return MUSCLE_LABEL[m] ?? m;
+}
+
 function goalLabel(kind: string) {
   if (kind === "steps_daily") return "Pasos diarios";
   if (kind === "sleep_daily") return "Sueño diario";
@@ -135,6 +161,11 @@ export default function ProgresoPage() {
   const [summary, setSummary] = useState<WeeklySummary | null>(null);
 
   const [sessions, setSessions] = useState<SessionItem[] | null>(null);
+  const [activity30, setActivity30] = useState<ActivitySummary | null>(null);
+  const [muscles30, setMuscles30] = useState<MuscleStats | null>(null);
+  const [exerciseList, setExerciseList] = useState<ExerciseListSummary | null>(null);
+  const [selectedExerciseId, setSelectedExerciseId] = useState("");
+  const [progression, setProgression] = useState<ExerciseProgression | null>(null);
 
   const didHydrateDailyFormRef = useRef(false);
   const healthDayRef = useRef(healthDay);
@@ -204,6 +235,26 @@ export default function ProgresoPage() {
     api.get<WeeklySummary>("/client/summary/week?days=7").then(setSummary).catch(console.error);
   }, [api]);
 
+  const loadActivity30 = useCallback(() => {
+    api.get<ActivitySummary>("/client/summary/activity?days=30").then(setActivity30).catch(console.error);
+  }, [api]);
+
+  const loadMuscles30 = useCallback(() => {
+    api.get<MuscleStats>("/client/summary/muscles?days=30").then(setMuscles30).catch(console.error);
+  }, [api]);
+
+  const loadExerciseList = useCallback(() => {
+    api.get<ExerciseListSummary>("/client/summary/exercises?days=180").then(setExerciseList).catch(console.error);
+  }, [api]);
+
+  const loadProgression = useCallback(
+    (exerciseId: string) => {
+      if (!exerciseId) return;
+      api.get<ExerciseProgression>(`/client/summary/exercises/${exerciseId}/progression?days=180`).then(setProgression).catch(console.error);
+    },
+    [api]
+  );
+
   useEffect(() => {
     loadHealth();
     loadMetrics();
@@ -211,7 +262,20 @@ export default function ProgresoPage() {
     loadSessions();
     loadGoals();
     loadSummary();
-  }, [loadHealth, loadMetrics, loadFood, loadSessions, loadGoals, loadSummary]);
+    loadActivity30();
+    loadMuscles30();
+    loadExerciseList();
+  }, [loadHealth, loadMetrics, loadFood, loadSessions, loadGoals, loadSummary, loadActivity30, loadMuscles30, loadExerciseList]);
+
+  const effectiveExerciseId = useMemo(
+    () => selectedExerciseId || exerciseList?.items?.[0]?.id || "",
+    [exerciseList, selectedExerciseId]
+  );
+
+  useEffect(() => {
+    if (!effectiveExerciseId) return;
+    loadProgression(effectiveExerciseId);
+  }, [effectiveExerciseId, loadProgression]);
 
   const selectedDaily = useMemo(() => {
     const list = health ?? [];
@@ -453,6 +517,44 @@ export default function ProgresoPage() {
     return list.filter((s) => new Date(s.performedAt) >= from && s.status !== "discarded").length;
   }, [sessions]);
 
+  const activityGrid = useMemo(() => {
+    if (!activity30?.range) return null;
+    const start = activity30.range.start;
+    const end = activity30.range.end;
+    const days = activity30.range.days;
+    const from = days >= 30 ? addDaysUTC(end, -29) : start;
+    const set = new Set(activity30.activeDays ?? []);
+    const items: Array<{ day: string; active: boolean }> = [];
+    const count = Math.min(30, days);
+    const startIdx = count === 30 ? days - 30 : 0;
+    for (let i = 0; i < count; i++) {
+      const day = addDaysUTC(start, startIdx + i);
+      items.push({ day, active: set.has(day) });
+    }
+    return { from, to: end, items };
+  }, [activity30]);
+
+  const muscleTop = useMemo(() => {
+    const items = muscles30?.items ?? [];
+    const max = Math.max(...items.map((x) => x.sets), 1);
+    return { max, items: items.slice(0, 10) };
+  }, [muscles30]);
+
+  const progressionSeries = useMemo(() => {
+    const points = (progression?.points ?? []).slice(-30);
+    if (points.length === 0) return null;
+    const vals = points.map((p) => p.bestEst1rm);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    return { points, min, max };
+  }, [progression]);
+
+  const selectedExercise = useMemo(() => {
+    const items = exerciseList?.items ?? [];
+    const id = effectiveExerciseId;
+    return items.find((x) => x.id === id) ?? null;
+  }, [effectiveExerciseId, exerciseList]);
+
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 100 }}>
       <div style={{ padding: "48px 20px 14px" }}>
@@ -506,6 +608,53 @@ export default function ProgresoPage() {
                     </div>
                   </div>
                 </div>
+              )}
+            </Card>
+          </div>
+
+          <div style={{ padding: "0 20px 12px" }}>
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Icon name="calendar" size={16} color="var(--text-mute)" />
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Actividad (30 días)</div>
+                </div>
+                <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                  {activityGrid ? `${activityGrid.from} → ${activityGrid.to}` : activity30 ? "—" : "…"}
+                </div>
+              </div>
+              {!activity30 ? (
+                <StateBlock kind="loading" title="Cargando actividad…" />
+              ) : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <KPI label="Días activos" value={String(activity30.activeDaysCount)} unit="días" />
+                    <KPI label="Deporte" value={activity30.sportMinutesTotal.toLocaleString("es")} unit="min" />
+                    <KPI label="Entrenos" value={String(activity30.sessionsCompleted)} unit="sesiones" />
+                    <KPI label="Energía prom." value={activity30.energyAvg != null ? String(activity30.energyAvg) : "—"} unit="/5" />
+                  </div>
+                  {activityGrid && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 6 }}>
+                        {activityGrid.items.map((d) => (
+                          <div
+                            key={d.day}
+                            title={d.day}
+                            style={{
+                              height: 14,
+                              borderRadius: 4,
+                              background: d.active ? "var(--lime)" : "var(--bg-2)",
+                              border: `1px solid ${d.active ? "var(--lime)" : "var(--line)"}`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 8 }}>
+                        {activityGrid.from} {" · "} {activityGrid.to}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </Card>
           </div>
@@ -1147,32 +1296,151 @@ export default function ProgresoPage() {
           {sessions === null ? (
             <StateBlock kind="loading" title="Cargando entrenamientos…" />
           ) : (
-            <div style={{ padding: "0 20px" }}>
-              <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, marginBottom: 10 }}>
-                Últimas sesiones
-              </div>
-              {sessions.length === 0 ? (
-                <StateBlock kind="empty" title="Sin sesiones" body="Cuando completes entrenamientos van a aparecer acá." />
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {sessions.slice(0, 30).map((s) => (
-                    <div key={s.id} style={{ padding: "12px 12px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
-                          {s.workoutTemplate?.title ?? "Sesión libre"}
-                        </div>
-                        <div className="ta-mono" style={{ fontSize: 12, color: "var(--text-mute)" }}>
-                          {new Date(s.performedAt).toLocaleDateString("es", { day: "2-digit", month: "short" })}
-                        </div>
-                      </div>
-                      <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 6 }}>
-                        {s.status} {" · "} {s.setsCount} sets {" · "} {s.totalVolumeKg.toLocaleString("es")} kg
-                      </div>
+            <>
+              <div style={{ padding: "0 20px 12px" }}>
+                <Card>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Icon name="chart" size={16} color="var(--text-mute)" />
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>Grupos musculares (30 días)</div>
                     </div>
-                  ))}
+                    <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                      {muscles30?.range ? `${muscles30.range.start} → ${muscles30.range.end}` : muscles30 ? "—" : "…"}
+                    </div>
+                  </div>
+                  {!muscles30 ? (
+                    <StateBlock kind="loading" title="Cargando grupos musculares…" />
+                  ) : muscles30.items.length === 0 ? (
+                    <StateBlock kind="empty" title="Sin datos" body="Completá entrenamientos para ver los grupos musculares." />
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {muscleTop.items.map((m) => (
+                        <div key={m.muscle} style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", gap: 10, alignItems: "center" }}>
+                          <div className="ta-mono" style={{ fontSize: 11, color: "var(--text)" }}>{muscleLabel(m.muscle)}</div>
+                          <div style={{ height: 10, borderRadius: 999, background: "var(--bg-2)", border: "1px solid var(--line)", overflow: "hidden" }}>
+                            <div style={{ width: `${Math.round((m.sets / muscleTop.max) * 100)}%`, height: "100%", background: "var(--lime)" }} />
+                          </div>
+                          <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>{m.sets} sets</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </div>
+
+              <div style={{ padding: "0 20px 12px" }}>
+                <Card>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Icon name="dumbbell" size={16} color="var(--text-mute)" />
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>Progresión por ejercicio</div>
+                    </div>
+                    <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                      {progression?.range ? `${progression.range.start} → ${progression.range.end}` : progression ? "—" : "…"}
+                    </div>
+                  </div>
+
+                  {!exerciseList ? (
+                    <StateBlock kind="loading" title="Cargando ejercicios…" />
+                  ) : exerciseList.items.length === 0 ? (
+                    <StateBlock kind="empty" title="Sin ejercicios" body="Completá sesiones para ver progresión por ejercicio." />
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+                        <select
+                          value={selectedExerciseId || effectiveExerciseId}
+                          onChange={(e) => setSelectedExerciseId(e.target.value)}
+                          style={{ width: "100%", background: "transparent", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px", fontSize: 14, color: "var(--text)", outline: "none" }}
+                        >
+                          {exerciseList.items.slice(0, 300).map((ex) => (
+                            <option key={ex.id} value={ex.id}>
+                              {ex.name}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedExercise?.primaryMuscle ? (
+                          <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                            {muscleLabel(selectedExercise.primaryMuscle)}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {!progression ? (
+                        <div style={{ marginTop: 10 }}>
+                          <StateBlock kind="loading" title="Cargando progresión…" />
+                        </div>
+                      ) : !progressionSeries || progressionSeries.points.length === 0 ? (
+                        <div style={{ marginTop: 10 }}>
+                          <StateBlock kind="empty" title="Sin datos" body="Registrá series con peso y reps para ver la progresión." />
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: 10 }}>
+                          {progressionSeries.points.length > 1 && (
+                            <div style={{ padding: 12, background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                              <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
+                                {progressionSeries.points.map((p, i, arr) => {
+                                  if (arr.length < 2 || i === 0) return null;
+                                  const x = (i / (arr.length - 1)) * 300;
+                                  const y = 80 - (((p.bestEst1rm - progressionSeries.min) / ((progressionSeries.max - progressionSeries.min) || 1)) * 60 + 10);
+                                  const px = ((i - 1) / (arr.length - 1)) * 300;
+                                  const py = 80 - (((arr[i - 1].bestEst1rm - progressionSeries.min) / ((progressionSeries.max - progressionSeries.min) || 1)) * 60 + 10);
+                                  return <line key={`${p.day}-l`} x1={px} y1={py} x2={x} y2={y} stroke="var(--lime)" strokeWidth="1.5" strokeLinecap="round" />;
+                                })}
+                                {progressionSeries.points.map((p, i, arr) => {
+                                  const x = (i / (arr.length - 1)) * 300;
+                                  const y = 80 - (((p.bestEst1rm - progressionSeries.min) / ((progressionSeries.max - progressionSeries.min) || 1)) * 60 + 10);
+                                  return <circle key={`${p.day}-c`} cx={x} cy={y} r={i === arr.length - 1 ? 4 : 2} fill="var(--lime)" />;
+                                })}
+                              </svg>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--text-mute)", fontFamily: "var(--font-mono)", marginTop: 4 }}>
+                                <span>{progressionSeries.min.toFixed(1)}</span>
+                                <span>{progressionSeries.max.toFixed(1)}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {(() => {
+                            const last = progressionSeries.points[progressionSeries.points.length - 1];
+                            return (
+                              <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 10 }}>
+                                Último ({last.day}): {last.bestWeight}kg x {last.bestReps} {" · "} e1RM {last.bestEst1rm.toFixed(1)}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </Card>
+              </div>
+
+              <div style={{ padding: "0 20px" }}>
+                <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, marginBottom: 10 }}>
+                  Últimas sesiones
                 </div>
-              )}
-            </div>
+                {sessions.length === 0 ? (
+                  <StateBlock kind="empty" title="Sin sesiones" body="Cuando completes entrenamientos van a aparecer acá." />
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {sessions.slice(0, 30).map((s) => (
+                      <div key={s.id} style={{ padding: "12px 12px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                            {s.workoutTemplate?.title ?? "Sesión libre"}
+                          </div>
+                          <div className="ta-mono" style={{ fontSize: 12, color: "var(--text-mute)" }}>
+                            {new Date(s.performedAt).toLocaleDateString("es", { day: "2-digit", month: "short" })}
+                          </div>
+                        </div>
+                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 6 }}>
+                          {s.status} {" · "} {s.setsCount} sets {" · "} {s.totalVolumeKg.toLocaleString("es")} kg
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </>
       ) : null}

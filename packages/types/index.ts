@@ -174,6 +174,45 @@ export interface PatchSessionRequest {
   completedAt?: string | null;
 }
 
+export interface ActivitySummary {
+  range: { start: string; end: string; days: number };
+  activeDaysCount: number;
+  activeDays: string[];
+  sportMinutesTotal: number;
+  sessionsCompleted: number;
+  energyAvg: number | null;
+  energyScale: 5;
+}
+
+export interface MuscleStats {
+  range: { start: string; end: string; days: number };
+  items: Array<{ muscle: string; sets: number; exercises: number }>;
+}
+
+export interface ExerciseSummary {
+  id: string;
+  name: string;
+  primaryMuscle: string | null;
+}
+
+export interface ExerciseListSummary {
+  range: { start: string; end: string; days: number };
+  items: ExerciseSummary[];
+}
+
+export interface ExerciseProgressionPoint {
+  day: string;
+  bestWeight: number;
+  bestReps: number;
+  bestEst1rm: number;
+}
+
+export interface ExerciseProgression {
+  range: { start: string; end: string; days: number };
+  exercise: ExerciseSummary;
+  points: ExerciseProgressionPoint[];
+}
+
 // ─────────────────────────────────────────────────────────────
 // Comments
 // ─────────────────────────────────────────────────────────────

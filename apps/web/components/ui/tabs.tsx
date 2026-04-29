@@ -15,34 +15,45 @@ export function Tabs({ tabs, active, onChange, variant = "underline", style }: T
     return (
       <div
         style={{
-          display: "inline-flex",
-          padding: 4,
-          background: "var(--bg-2)",
-          borderRadius: 10,
-          border: "1px solid var(--line)",
+          maxWidth: "100%",
+          overflowX: "auto",
+          overflowY: "hidden",
+          WebkitOverflowScrolling: "touch",
           ...style,
         }}
       >
-        {tabs.map((t) => (
-          <button
-            key={t}
-            onClick={() => onChange?.(t)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 7,
-              border: "none",
-              cursor: "pointer",
-              background: t === active ? "var(--bg-3)" : "transparent",
-              color: t === active ? "var(--text)" : "var(--text-mute)",
-              fontFamily: "var(--font-sans)",
-              fontSize: 13,
-              fontWeight: 500,
-              transition: "background .12s, color .12s",
-            }}
-          >
-            {t}
-          </button>
-        ))}
+        <div
+          style={{
+            display: "inline-flex",
+            padding: 4,
+            background: "var(--bg-2)",
+            borderRadius: 10,
+            border: "1px solid var(--line)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {tabs.map((t) => (
+            <button
+              key={t}
+              onClick={() => onChange?.(t)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 7,
+                border: "none",
+                cursor: "pointer",
+                background: t === active ? "var(--bg-3)" : "transparent",
+                color: t === active ? "var(--text)" : "var(--text-mute)",
+                fontFamily: "var(--font-sans)",
+                fontSize: 13,
+                fontWeight: 500,
+                transition: "background .12s, color .12s",
+                flex: "0 0 auto",
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }

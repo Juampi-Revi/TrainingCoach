@@ -172,9 +172,14 @@ export default function CoachSessionDetailPage() {
             {session.status === "completed" && (
               <Badge tone="success" icon="check">Completa</Badge>
             )}
-            {session.energyRating && (
-              <Badge tone="limeSoft">Energía {session.energyRating}/10</Badge>
-            )}
+            {(() => {
+              if (!session.energyRating) return null;
+              const normalized =
+                session.energyRating <= 5
+                  ? session.energyRating
+                  : Math.min(5, Math.max(1, Math.ceil(session.energyRating / 2)));
+              return <Badge tone="limeSoft">Energía {normalized}/5</Badge>;
+            })()}
           </div>
 
           {session.sessionNotes && (
