@@ -12,6 +12,19 @@ function readKey(sessionId: string) {
   return `regen_msg_read_${sessionId}`;
 }
 
+function parseManualMeta(sessionNotes: string | null) {
+  if (!sessionNotes) return { title: null as string | null, type: null as string | null };
+  const lines = sessionNotes.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  let title: string | null = null;
+  let type: string | null = null;
+  for (const line of lines) {
+    const low = line.toLowerCase();
+    if (low.startsWith("actividad:")) title = line.slice("actividad:".length).trim() || null;
+    if (low.startsWith("tipo:")) type = line.slice("tipo:".length).trim() || null;
+  }
+  return { title, type };
+}
+
 export default function ComentariosPage() {
   const { api, user } = useAuth();
   const router = useRouter();
@@ -110,7 +123,8 @@ export default function ComentariosPage() {
     );
   }
 
-  const sessionTitle = session.workoutTemplate?.title ?? "Sesión";
+  const manualMeta = parseManualMeta(session.sessionNotes);
+  const sessionTitle = session.workoutTemplate?.title ?? manualMeta.title ?? "Sesión";
   const sessionDate = new Date(session.performedAt).toLocaleDateString("es", {
     weekday: "short",
     day: "numeric",

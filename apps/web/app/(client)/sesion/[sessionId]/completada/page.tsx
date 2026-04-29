@@ -23,6 +23,19 @@ function toLocalInputValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function parseManualMeta(sessionNotes: string | null) {
+  if (!sessionNotes) return { title: null as string | null, type: null as string | null };
+  const lines = sessionNotes.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  let title: string | null = null;
+  let type: string | null = null;
+  for (const line of lines) {
+    const low = line.toLowerCase();
+    if (low.startsWith("actividad:")) title = line.slice("actividad:".length).trim() || null;
+    if (low.startsWith("tipo:")) type = line.slice("tipo:".length).trim() || null;
+  }
+  return { title, type };
+}
+
 export default function SessionCompletadaPage() {
   const { api } = useAuth();
   const router = useRouter();
@@ -89,6 +102,9 @@ export default function SessionCompletadaPage() {
 
   const durationMs = session.completedAt ? new Date(session.completedAt).getTime() - perfAt.getTime() : null;
   const durationStr = durationMs != null ? fmtDuration(durationMs) : null;
+  const manualMeta = parseManualMeta(session.sessionNotes);
+  const titleStr = session.workoutTemplate?.title ?? manualMeta.title ?? "Sesión";
+  const kindStr = session.workoutTemplate ? null : manualMeta.type;
 
   // Find top sets for highlights (heaviest weight per exercise)
   const highlights = session.exercises
@@ -118,10 +134,10 @@ export default function SessionCompletadaPage() {
           SESIÓN COMPLETADA
         </div>
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-.02em", marginTop: 4, lineHeight: 1.1 }}>
-          {session.workoutTemplate?.title ?? "Sesión"}
+          {titleStr}
         </div>
         <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4, textTransform: "uppercase" }}>
-          {dateStr} · {timeStr}{durationStr ? ` · ${durationStr}` : ""}
+          {kindStr ? `${kindStr} · ` : ""}{dateStr} · {timeStr}{durationStr ? ` · ${durationStr}` : ""}
         </div>
         <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button

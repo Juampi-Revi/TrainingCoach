@@ -159,6 +159,7 @@ export interface SessionSummary {
   id: string;
   status: SessionStatus;
   performedAt: string;
+  completedAt: string | null;
   energyRating: number | null;
   sessionNotes: string | null;
   workoutTemplate: { id: string; title: string; tags: string[] } | null;

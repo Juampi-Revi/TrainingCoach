@@ -21,6 +21,35 @@ function normalizeEnergyRating(energyRating: number | null): number | null {
   return Math.min(5, Math.max(1, v));
 }
 
+function parseManualMeta(sessionNotes: string | null) {
+  if (!sessionNotes) return { title: null as string | null, type: null as string | null, notes: null as string | null };
+  const lines = sessionNotes.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  let title: string | null = null;
+  let type: string | null = null;
+  const rest: string[] = [];
+  for (const line of lines) {
+    const low = line.toLowerCase();
+    if (low.startsWith("actividad:")) {
+      title = line.slice("actividad:".length).trim() || null;
+      continue;
+    }
+    if (low.startsWith("tipo:")) {
+      type = line.slice("tipo:".length).trim() || null;
+      continue;
+    }
+    rest.push(line);
+  }
+  return { title, type, notes: rest.length ? rest.join("\n") : null };
+}
+
+function fmtMinutes(totalMinutes: number) {
+  const m = Math.max(0, Math.round(totalMinutes));
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  if (h > 0) return `${h}h${mm ? ` ${mm}m` : ""}`;
+  return `${m}m`;
+}
+
 export default function HistorialPage() {
   const { api } = useAuth();
   const router = useRouter();
@@ -28,6 +57,7 @@ export default function HistorialPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("Mes");
   const [manualOpen, setManualOpen] = useState(false);
+  const [manualType, setManualType] = useState("Deporte");
   const [manualTitle, setManualTitle] = useState("");
   const [manualNotes, setManualNotes] = useState("");
   const [manualStart, setManualStart] = useState("");
@@ -52,6 +82,7 @@ export default function HistorialPage() {
   const openManual = () => {
     const now = new Date();
     const end = new Date(now.getTime() + 60 * 60_000);
+    setManualType("Deporte");
     setManualTitle("");
     setManualNotes("");
     setManualStart(toLocalInputValue(now));
@@ -72,8 +103,12 @@ export default function HistorialPage() {
 
       const title = manualTitle.trim();
       const notes = manualNotes.trim();
-      const sessionNotes =
-        title && notes ? `Actividad: ${title}\n${notes}` : title ? `Actividad: ${title}` : notes ? notes : null;
+      const type = manualType.trim();
+      const parts: string[] = [];
+      if (title) parts.push(`Actividad: ${title}`);
+      if (type) parts.push(`Tipo: ${type}`);
+      if (notes) parts.push(notes);
+      const sessionNotes = parts.length ? parts.join("\n") : null;
 
       const res = await api.post<{ id: string }>("/client/sessions", {
         status: "completed",
@@ -154,8 +189,21 @@ export default function HistorialPage() {
               day: "numeric",
               month: "short",
             });
-            const title = s.workoutTemplate?.title ?? "Sesión libre";
+            const manualMeta = parseManualMeta(s.sessionNotes);
+            const title = s.workoutTemplate?.title ?? manualMeta.title ?? "Sesión libre";
             const isDeleting = deletingId === s.id;
+            const durationMinutes =
+              s.completedAt
+                ? (() => {
+                    const ms = new Date(s.completedAt).getTime() - new Date(s.performedAt).getTime();
+                    return Number.isFinite(ms) && ms >= 0 ? ms / 60000 : null;
+                  })()
+                : null;
+            const durationStr = durationMinutes != null ? fmtMinutes(durationMinutes) : null;
+            const isManual = !s.workoutTemplate && (manualMeta.title || manualMeta.type);
+            const metaStr = isManual
+              ? `${manualMeta.type ?? "Actividad"}${durationStr ? ` · ${durationStr}` : ""}`
+              : `${s.setsCount} series · ${Math.round(s.totalVolumeKg).toLocaleString("es")}kg${durationStr ? ` · ${durationStr}` : ""}`;
             return (
               <div
                 key={s.id}
@@ -204,7 +252,7 @@ export default function HistorialPage() {
                     className="ta-mono"
                     style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}
                   >
-                    {s.setsCount} series · {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
+                    {metaStr}
                     {(() => {
                       const e = normalizeEnergyRating(s.energyRating);
                       return e ? ` · Energía ${e}/5` : "";
@@ -302,6 +350,32 @@ export default function HistorialPage() {
                   onChange={(e) => setManualEnd(e.target.value)}
                   style={{ height: 40, borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)", color: "var(--text)", padding: "0 12px", outline: "none", fontFamily: "var(--font-mono)", fontSize: 12 }}
                 />
+              </div>
+
+              <div>
+                <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".08em", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>
+                  Tipo
+                </div>
+                <select
+                  value={manualType}
+                  onChange={(e) => setManualType(e.target.value)}
+                  style={{
+                    width: "100%",
+                    height: 42,
+                    borderRadius: 10,
+                    border: "1px solid var(--line-2)",
+                    background: "var(--bg-1)",
+                    color: "var(--text)",
+                    padding: "0 12px",
+                    outline: "none",
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="Deporte">Deporte</option>
+                  <option value="Gimnasio">Gimnasio</option>
+                  <option value="Cardio">Cardio</option>
+                  <option value="Otro">Otro</option>
+                </select>
               </div>
 
               <div>
