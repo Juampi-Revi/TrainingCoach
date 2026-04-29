@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Icon, StateBlock, Tabs } from "@/components/ui";
+import { Badge, Button, ConfirmModal, Icon, StateBlock, Tabs } from "@/components/ui";
 import type { SessionSummary } from "@regen/types";
 
 type Filter = "Mes" | "Todo";
@@ -23,6 +23,7 @@ function normalizeEnergyRating(energyRating: number | null): number | null {
 
 export default function HistorialPage() {
   const { api } = useAuth();
+  const router = useRouter();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("Mes");
@@ -33,6 +34,8 @@ export default function HistorialPage() {
   const [manualEnd, setManualEnd] = useState("");
   const [manualSaving, setManualSaving] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api
@@ -100,7 +103,18 @@ export default function HistorialPage() {
         })
       : completed;
 
-  const totalVol = filtered.reduce((acc, s) => acc + s.totalVolumeKg, 0);
+  const deleteSession = async (sessionId: string) => {
+    if (deletingId) return;
+    setDeletingId(sessionId);
+    try {
+      await api.patch(`/client/sessions/${sessionId}`, { status: "discarded" });
+      setSessions((prev) => prev.filter((x) => x.id !== sessionId));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 100 }}>
@@ -127,67 +141,6 @@ export default function HistorialPage() {
         />
       </div>
 
-      {/* Summary card */}
-      {filtered.length > 0 && (
-        <div style={{ padding: "0 20px 12px" }}>
-          <div
-            style={{
-              padding: 14,
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              borderRadius: 12,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-                marginBottom: 10,
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: "var(--text-mute)",
-                    textTransform: "uppercase",
-                    letterSpacing: ".08em",
-                    fontWeight: 600,
-                  }}
-                >
-                  Volumen total · kg
-                </div>
-                <div className="ta-mono" style={{ fontSize: 20, fontWeight: 600, marginTop: 2 }}>
-                  {Math.round(totalVol).toLocaleString("es")}
-                </div>
-              </div>
-              <span style={{ fontSize: 11, color: "var(--text-mute)" }}>
-                {filter === "Mes" ? "30 días" : "Total"}
-              </span>
-            </div>
-            {/* Simple bar chart */}
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 54 }}>
-              {filtered.slice(-8).map((s, i) => {
-                const max = Math.max(...filtered.slice(-8).map((x) => x.totalVolumeKg), 1);
-                const h = (s.totalVolumeKg / max) * 100;
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      flex: 1,
-                      height: `${h}%`,
-                      background: i === filtered.slice(-8).length - 1 ? "var(--lime)" : "var(--bg-3)",
-                      borderRadius: 3,
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {loading ? (
         <StateBlock kind="loading" title="Cargando historial…" />
       ) : filtered.length === 0 ? (
@@ -201,73 +154,111 @@ export default function HistorialPage() {
               day: "numeric",
               month: "short",
             });
+            const title = s.workoutTemplate?.title ?? "Sesión libre";
+            const isDeleting = deletingId === s.id;
             return (
-              <Link
+              <div
                 key={s.id}
-                href={`/comentarios/${s.id}`}
-                style={{ textDecoration: "none", display: "block" }}
+                onClick={() => router.push(`/comentarios/${s.id}`)}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  padding: "14px 0",
+                  borderBottom: i < filtered.length - 1 ? "1px solid var(--line)" : "none",
+                  alignItems: "center",
+                  cursor: "pointer",
+                }}
               >
                 <div
                   style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 11,
+                    background: i === 0 ? "var(--lime)" : "var(--bg-2)",
+                    border: `1px solid ${i === 0 ? "var(--lime)" : "var(--line)"}`,
                     display: "flex",
-                    gap: 12,
-                    padding: "14px 0",
-                    borderBottom: i < filtered.length - 1 ? "1px solid var(--line)" : "none",
                     alignItems: "center",
+                    justifyContent: "center",
+                    color: i === 0 ? "#0B0B0C" : "var(--lime)",
+                    flexShrink: 0,
                   }}
                 >
+                  <Icon name="check" size={20} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div
+                    className="ta-mono"
                     style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 11,
-                      background: i === 0 ? "var(--lime)" : "var(--bg-2)",
-                      border: `1px solid ${i === 0 ? "var(--lime)" : "var(--line)"}`,
+                      fontSize: 10,
+                      color: "var(--text-mute)",
+                      textTransform: "uppercase",
+                      letterSpacing: ".08em",
+                    }}
+                  >
+                    {dateStr}
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginTop: 1 }}>
+                    {title}
+                  </div>
+                  <div
+                    className="ta-mono"
+                    style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}
+                  >
+                    {s.setsCount} series · {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
+                    {(() => {
+                      const e = normalizeEnergyRating(s.energyRating);
+                      return e ? ` · Energía ${e}/5` : "";
+                    })()}
+                  </div>
+                </div>
+
+                {normalizeEnergyRating(s.energyRating) === 5 && (
+                  <Badge tone="limeSoft" size="sm">
+                    <Icon name="star" size={11} /> Top
+                  </Badge>
+                )}
+
+                <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <button
+                    disabled={isDeleting}
+                    onClick={() => setConfirmDelete({ id: s.id, title })}
+                    title="Eliminar del historial"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      background: "transparent",
+                      border: "1px solid var(--line-2)",
+                      color: "var(--text-mute)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: i === 0 ? "#0B0B0C" : "var(--lime)",
-                      flexShrink: 0,
+                      cursor: isDeleting ? "not-allowed" : "pointer",
+                      opacity: isDeleting ? 0.5 : 1,
                     }}
                   >
-                    <Icon name="check" size={20} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      className="ta-mono"
-                      style={{
-                        fontSize: 10,
-                        color: "var(--text-mute)",
-                        textTransform: "uppercase",
-                        letterSpacing: ".08em",
-                      }}
-                    >
-                      {dateStr}
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 600, marginTop: 1 }}>
-                      {s.workoutTemplate?.title ?? "Sesión libre"}
-                    </div>
-                    <div
-                      className="ta-mono"
-                      style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}
-                    >
-                      {s.setsCount} series · {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
-                      {(() => {
-                        const e = normalizeEnergyRating(s.energyRating);
-                        return e ? ` · Energía ${e}/5` : "";
-                      })()}
-                    </div>
-                  </div>
-                  {normalizeEnergyRating(s.energyRating) === 5 && (
-                    <Badge tone="limeSoft" size="sm">
-                      <Icon name="star" size={11} /> Top
-                    </Badge>
-                  )}
+                    <Icon name="trash" size={14} color="var(--text-mute)" />
+                  </button>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          message={`¿Eliminar "${confirmDelete.title}" del historial?`}
+          confirmLabel="Eliminar"
+          cancelLabel="Cancelar"
+          destructive
+          onConfirm={() => {
+            const id = confirmDelete.id;
+            setConfirmDelete(null);
+            deleteSession(id);
+          }}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
 
       {manualOpen && (
