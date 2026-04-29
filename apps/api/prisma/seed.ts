@@ -34,7 +34,7 @@ async function main() {
 
   // 3. Link Coach and Client
   await prisma.coachClient.upsert({
-    where: { clientUserId: client.id },
+    where: { coachUserId_clientUserId: { coachUserId: coach.id, clientUserId: client.id } },
     update: {},
     create: {
       coachUserId: coach.id,

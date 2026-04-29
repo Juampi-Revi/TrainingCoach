@@ -54,5 +54,18 @@ services:
     depends_on:
       - api
 
+  # ── Docker cleanup (cron semanal) ────────────────────────────────────────────
+  cleanup:
+    image: docker:27-cli
+    restart: always
+    mem_limit: 64m
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: >
+      sh -c "
+        echo '0 3 * * 0 docker builder prune -a -f && docker container prune -f && docker image prune -f' > /etc/crontabs/root &&
+        crond -f -l 2
+      "
+
 volumes:
   postgres_data:

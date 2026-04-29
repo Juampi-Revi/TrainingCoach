@@ -76,28 +76,19 @@ export async function POST(req: NextRequest) {
     if (target.role !== "client") return err("El usuario no es un cliente", 422);
     if (target.id === auth.user.sub) return err("No podés agregarte a vos mismo", 422);
 
-    const existing = await prisma.coachClient.findFirst({
-      where: { clientUserId: target.id },
-      select: { coachUserId: true, status: true },
+    // Look up this specific coach↔client relation (composite unique)
+    const existing = await prisma.coachClient.findUnique({
+      where: { coachUserId_clientUserId: { coachUserId: auth.user.sub, clientUserId: target.id } },
+      select: { status: true },
     });
-    if (existing?.status === "active" && existing.coachUserId === auth.user.sub) {
-      return err("El alumno ya está en tu lista", 409);
-    }
-    if (existing?.status === "active" && existing.coachUserId !== auth.user.sub) {
-      return err("El alumno ya tiene otro coach asignado", 409);
-    }
+    if (existing?.status === "active") return err("El alumno ya está en tu lista", 409);
 
-    // Reactivate if previously inactive (same coach), otherwise create
-    if (existing && existing.coachUserId === auth.user.sub) {
-      await prisma.coachClient.updateMany({
-        where: { coachUserId: auth.user.sub, clientUserId: target.id },
-        data: { status: "active" },
-      });
-    } else {
-      await prisma.coachClient.create({
-        data: { coachUserId: auth.user.sub, clientUserId: target.id, status: "active" },
-      });
-    }
+    // Reactivate existing inactive relation or create new one
+    await prisma.coachClient.upsert({
+      where: { coachUserId_clientUserId: { coachUserId: auth.user.sub, clientUserId: target.id } },
+      create: { coachUserId: auth.user.sub, clientUserId: target.id, status: "active" },
+      update: { status: "active" },
+    });
 
     await notify({
       userId: target.id,

@@ -29,19 +29,30 @@ export async function GET(req: NextRequest) {
     });
 
     const { searchParams } = req.nextUrl;
-    const take = Math.min(200, parseInt(searchParams.get("take") ?? "80"));
+    const take = Math.min(80, parseInt(searchParams.get("take") ?? "60"));
+    const before = searchParams.get("before") ?? undefined; // cursor: load messages older than this id
 
+    // Fetch one extra to detect if there's a previous page
     const messages = await prisma.chatMessage.findMany({
-      where: { threadId: thread.id },
-      orderBy: { createdAt: "asc" },
-      take,
+      where: {
+        threadId: thread.id,
+        ...(before ? { createdAt: { lt: (await prisma.chatMessage.findUnique({ where: { id: before }, select: { createdAt: true } }))?.createdAt } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: take + 1,
       include: { author: { select: { id: true, displayName: true, role: true } } },
     });
+
+    const hasMore = messages.length > take;
+    const page = hasMore ? messages.slice(0, take) : messages;
+    const ordered = page.reverse(); // restore chronological order
 
     return ok({
       thread: { id: thread.id },
       coach: { id: rel.coach.id, name: rel.coach.displayName ?? rel.coach.email },
-      messages: messages.map((m) => ({
+      hasMore,
+      oldestCursor: ordered[0]?.id ?? null,
+      messages: ordered.map((m) => ({
         id: m.id,
         text: m.text,
         createdAt: m.createdAt,

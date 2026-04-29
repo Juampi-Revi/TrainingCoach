@@ -37,24 +37,37 @@ function useUnreadMessages(token: string | null) {
 
   useEffect(() => {
     if (!token) return;
-    const url = `${API_BASE}/client/messages/stream?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(url);
-    esRef.current = es;
+    let cancelled = false;
 
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data) as { type: string; count?: number };
-        if (data.type === "new_messages" && data.count) {
-          setUnread((prev) => prev + data.count!);
-          if (typeof window !== "undefined" && document.visibilityState === "hidden" && Notification.permission === "granted") {
-            new Notification("YourCoach", { body: `Tienes ${data.count} mensaje${data.count! > 1 ? "s" : ""} nuevo${data.count! > 1 ? "s" : ""}` });
-          }
-        }
-      } catch {}
-    };
+    // Exchange the JWT for a short-lived SSE token so the JWT never appears in URLs/logs
+    fetch(`${API_BASE}/client/messages/stream-token`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled || !j?.data?.token) return;
+        const url = `${API_BASE}/client/messages/stream?token=${encodeURIComponent(j.data.token)}`;
+        const es = new EventSource(url);
+        esRef.current = es;
+
+        es.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data) as { type: string; count?: number };
+            if (data.type === "new_messages" && data.count) {
+              setUnread((prev) => prev + data.count!);
+              if (typeof window !== "undefined" && document.visibilityState === "hidden" && Notification.permission === "granted") {
+                new Notification("YourCoach", { body: `Tienes ${data.count} mensaje${data.count! > 1 ? "s" : ""} nuevo${data.count! > 1 ? "s" : ""}` });
+              }
+            }
+          } catch {}
+        };
+      })
+      .catch(() => {});
 
     return () => {
-      es.close();
+      cancelled = true;
+      esRef.current?.close();
       esRef.current = null;
     };
   }, [token]);

@@ -24,8 +24,8 @@ async function main() {
 
   // 3. Relación coach-cliente
   await prisma.coachClient.upsert({
-    where: { clientUserId: client.id },
-    update: { coachUserId: coach.id, status: "active" },
+    where: { coachUserId_clientUserId: { coachUserId: coach.id, clientUserId: client.id } },
+    update: { status: "active" },
     create: { coachUserId: coach.id, clientUserId: client.id, status: "active" },
   });
   console.log("✅ Relación coach-cliente creada");

@@ -11,19 +11,22 @@ export async function POST(req: NextRequest) {
     const { email, password, name } = body ?? {};
 
     if (!email || !password) return err("email and password required", 400);
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes("@")) return err("email inválido", 400);
+    if (String(password).length < 6) return err("La contraseña debe tener al menos 6 caracteres", 400);
 
     const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
     if (!rateLimit(`register:${ip}`, 5, 3_600_000)) return err("Demasiados registros, intentá más tarde", 429);
 
-    const exists = await prisma.user.findUnique({ where: { email } });
+    const exists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (exists) return err("Email already registered", 409);
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         passwordHash,
-        displayName: name ?? email.split("@")[0],
+        displayName: name ?? normalizedEmail.split("@")[0],
         role: "client",
         billingStatus: "good",
       },
