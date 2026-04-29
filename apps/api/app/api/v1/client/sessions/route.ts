@@ -66,8 +66,74 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return unauthorized(auth.message);
 
     const body = await req.json().catch(() => null);
-    const { workoutTemplateId } = body ?? {};
-    if (!workoutTemplateId) return err("workoutTemplateId required", 400);
+    const {
+      workoutTemplateId,
+      performedAt,
+      completedAt,
+      status,
+      sessionNotes,
+    } = (body ?? {}) as {
+      workoutTemplateId?: unknown;
+      performedAt?: unknown;
+      completedAt?: unknown;
+      status?: unknown;
+      sessionNotes?: unknown;
+    };
+
+    const workoutTemplateIdStr = typeof workoutTemplateId === "string" ? workoutTemplateId : null;
+    const statusStr = typeof status === "string" ? status : null;
+    const sessionNotesStr = typeof sessionNotes === "string" ? sessionNotes : null;
+
+    const performedAtDate =
+      performedAt === undefined
+        ? null
+        : typeof performedAt === "string"
+          ? (() => {
+              const d = new Date(performedAt);
+              return Number.isFinite(d.getTime()) ? d : null;
+            })()
+          : null;
+
+    const completedAtDate =
+      completedAt === undefined
+        ? undefined
+        : completedAt === null
+          ? null
+          : typeof completedAt === "string"
+            ? (() => {
+                const d = new Date(completedAt);
+                return Number.isFinite(d.getTime()) ? d : null;
+              })()
+            : null;
+
+    if (!workoutTemplateIdStr) {
+      if (performedAtDate === null) return err("performedAt inválido", 400);
+      if (completedAt !== undefined && completedAtDate === null) return err("completedAt inválido", 400);
+      if (performedAtDate && completedAtDate && completedAtDate.getTime() < performedAtDate.getTime()) {
+        return err("completedAt no puede ser anterior a performedAt", 400);
+      }
+
+      const statusVal =
+        statusStr === "in_progress" || statusStr === "completed" || statusStr === "discarded"
+          ? statusStr
+          : completedAtDate
+            ? "completed"
+            : "completed";
+
+      const session = await prisma.workoutSession.create({
+        data: {
+          clientUserId: auth.user.sub,
+          workoutTemplateId: null,
+          performedAt: performedAtDate ?? new Date(),
+          completedAt: completedAtDate === undefined ? null : completedAtDate,
+          status: statusVal,
+          sessionNotes: sessionNotesStr,
+        },
+        select: { id: true },
+      });
+
+      return ok({ id: session.id, created: true }, 201);
+    }
 
     const authorized = await prisma.planAssignment.findFirst({
       where: {
@@ -75,9 +141,9 @@ export async function POST(req: NextRequest) {
         status: "active",
         plan: {
           OR: [
-            { weeks: { some: { workoutTemplates: { some: { id: workoutTemplateId } } } } },
-            { weeks: { some: { workouts: { some: { workoutTemplateId } } } } },
-            { workouts: { some: { workoutTemplateId } } },
+            { weeks: { some: { workoutTemplates: { some: { id: workoutTemplateIdStr } } } } },
+            { weeks: { some: { workouts: { some: { workoutTemplateId: workoutTemplateIdStr } } } } },
+            { workouts: { some: { workoutTemplateId: workoutTemplateIdStr } } },
           ],
         },
       },
@@ -86,7 +152,7 @@ export async function POST(req: NextRequest) {
     if (!authorized) return forbidden("Workout not in your plan");
 
     const template = await prisma.workoutTemplate.findUnique({
-      where: { id: workoutTemplateId },
+      where: { id: workoutTemplateIdStr },
       include: { workoutExercises: { orderBy: { sortOrder: "asc" } } },
     });
     if (!template) return err("Workout template not found", 404);
@@ -95,7 +161,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.workoutSession.findFirst({
       where: {
         clientUserId: auth.user.sub,
-        workoutTemplateId,
+        workoutTemplateId: workoutTemplateIdStr,
         status: "in_progress",
       },
       select: { id: true },
@@ -105,7 +171,7 @@ export async function POST(req: NextRequest) {
     const session = await prisma.workoutSession.create({
       data: {
         clientUserId: auth.user.sub,
-        workoutTemplateId,
+        workoutTemplateId: workoutTemplateIdStr,
         performedAt: new Date(),
         status: "in_progress",
         exercises: {
