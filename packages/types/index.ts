@@ -170,6 +170,8 @@ export interface PatchSessionRequest {
   status?: SessionStatus;
   energyRating?: number | null;
   sessionNotes?: string | null;
+  performedAt?: string;
+  completedAt?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────

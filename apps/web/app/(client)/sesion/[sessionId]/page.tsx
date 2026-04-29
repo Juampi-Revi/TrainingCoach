@@ -652,20 +652,23 @@ export default function SessionInProgressPage() {
   const queueKey = `regen_offline_${sessionId}`;
   const [offlineCount, setOfflineCount] = useState(0);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const timerKey = `regen_session_timer_${sessionId}`;
   const warmupDoneKey = `regen_warmup_done_${sessionId}`;
   const warmupTimerKey = `regen_warmup_timer_${sessionId}`;
-  const [workoutTimer, setWorkoutTimer] = useState<{ accMs: number; runningSince: number | null }>({ accMs: 0, runningSince: null });
-  const [workoutTick, setWorkoutTick] = useState(0);
+  const [workoutStartedAtMs, setWorkoutStartedAtMs] = useState<number | null>(null);
   const [warmupDone, setWarmupDone] = useState(true);
   const [warmupTimer, setWarmupTimer] = useState<{ accMs: number; runningSince: number | null }>({ accMs: 0, runningSince: null });
-  const [warmupTick, setWarmupTick] = useState(0);
   const [loggerOpen, setLoggerOpen] = useState(false);
-  const apiRef = useRef(api);
-  const prefillExIdRef = useRef<string | null>(null);
-  const initIdxRef = useRef(false);
+  const [sheetSaving, setSheetSaving] = useState(false);
+  const [sheetRows, setSheetRows] = useState<Array<{ setNumber: number; reps: string; kg: string; effort: string; existingId?: string }>>([]);
+  const [prefillExId, setPrefillExId] = useState<string | null>(null);
+  const [didInitIdx, setDidInitIdx] = useState(false);
+  const [nowMs, setNowMs] = useState(0);
 
-  useEffect(() => { apiRef.current = api; }, [api]);
+  useEffect(() => {
+    const id0 = setTimeout(() => setNowMs(Date.now()), 0);
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => { clearTimeout(id0); clearInterval(id); };
+  }, []);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -681,65 +684,15 @@ export default function SessionInProgressPage() {
     return () => clearTimeout(id);
   }, [queueKey]);
 
-  useEffect(() => {
-    const id = setTimeout(() => {
-      try {
-        const raw = window.localStorage.getItem(timerKey);
-        if (!raw) {
-          setWorkoutTimer({ accMs: 0, runningSince: Date.now() });
-          return;
-        }
-        const parsed = JSON.parse(raw) as { accMs?: unknown; runningSince?: unknown };
-        const accMs = typeof parsed.accMs === "number" ? parsed.accMs : 0;
-        setWorkoutTimer({ accMs, runningSince: Date.now() });
-      } catch {
-        setWorkoutTimer({ accMs: 0, runningSince: Date.now() });
-      }
-    }, 0);
-
-    const persistPause = () => {
-      setWorkoutTimer((prev) => {
-        const now = Date.now();
-        const next = { accMs: prev.accMs + (prev.runningSince ? now - prev.runningSince : 0), runningSince: null as number | null };
-        try { window.localStorage.setItem(timerKey, JSON.stringify(next)); } catch {}
-        return next;
-      });
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") persistPause();
-      else {
-        setWorkoutTimer((prev) => {
-          if (prev.runningSince != null) return prev;
-          const next = { ...prev, runningSince: Date.now() };
-          try { window.localStorage.setItem(timerKey, JSON.stringify(next)); } catch {}
-          return next;
-        });
-      }
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      clearTimeout(id);
-      document.removeEventListener("visibilitychange", onVisibility);
-      persistPause();
-    };
-  }, [timerKey]);
-
-  useEffect(() => {
-    if (workoutTimer.runningSince == null) return;
-    const id = setInterval(() => setWorkoutTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [workoutTimer.runningSince]);
-
   const load = useCallback(() => {
-    apiRef.current
+    api
       .get<SessionDetail>(`/client/sessions/${sessionId}`)
       .then((s) => {
         setSession(s);
         setSessionNotes(s.sessionNotes ?? "");
-        if (!initIdxRef.current) {
-          initIdxRef.current = true;
+        setWorkoutStartedAtMs(new Date(s.performedAt).getTime());
+        if (!didInitIdx) {
+          setDidInitIdx(true);
           const firstWorkIdx = s.exercises.findIndex((e) => !e.isWarmup);
           if (firstWorkIdx >= 0) setCurrentExIdx(firstWorkIdx);
         }
@@ -747,7 +700,7 @@ export default function SessionInProgressPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [sessionId, router]);
+  }, [api, didInitIdx, sessionId, router]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -784,28 +737,17 @@ export default function SessionInProgressPage() {
 
   useEffect(() => {
     if (warmupTimer.runningSince == null) return;
-    const id = setInterval(() => setWarmupTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [warmupTimer.runningSince]);
-
-  useEffect(() => {
-    if (warmupTimer.runningSince == null) return;
-    const pause = () => {
+    const persist = () => {
       setWarmupTimer((prev) => {
-        const now = Date.now();
         if (prev.runningSince == null) return prev;
-        const next = { accMs: prev.accMs + (now - prev.runningSince), runningSince: null as number | null };
+        const now = Date.now();
+        const next = { accMs: prev.accMs + (now - prev.runningSince), runningSince: now };
         try { window.localStorage.setItem(warmupTimerKey, JSON.stringify(next)); } catch {}
         return next;
       });
     };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") pause();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      pause();
+      persist();
     };
   }, [warmupTimer.runningSince, warmupTimerKey]);
 
@@ -858,7 +800,7 @@ export default function SessionInProgressPage() {
       const remaining: OfflineItem[] = [];
       for (const item of queue) {
         try {
-          await apiRef.current.put(
+          await api.put(
             `/client/sessions/${sessionId}/exercises/${item.wseId}/sets/${item.setNumber}`,
             item.body,
           );
@@ -901,7 +843,7 @@ export default function SessionInProgressPage() {
     if (!session) return;
     const ex = session.exercises[currentExIdx];
     if (!ex) return;
-    if (prefillExIdRef.current === ex.id) return;
+    if (prefillExId === ex.id) return;
     const intensityType = ex.target?.intensityType?.toUpperCase();
     const nextMode: EffortMode = intensityType === "RIR" ? "RIR" : "RPE";
 
@@ -914,13 +856,38 @@ export default function SessionInProgressPage() {
     const targetEffort = isNumeric(ex.target?.intensityTarget) ? ex.target!.intensityTarget!.trim().replace(",", ".") : "";
 
     const id = setTimeout(() => {
-      prefillExIdRef.current = ex.id;
+      setPrefillExId(ex.id);
       setEffortMode(nextMode);
       setDraft({ reps: targetReps, kg: "", effort: targetEffort });
       setEditingSet(null);
     }, 0);
     return () => clearTimeout(id);
-  }, [session, currentExIdx]);
+  }, [session, currentExIdx, prefillExId]);
+
+  useEffect(() => {
+    if (!loggerOpen || !session) return;
+    const target = session.exercises[currentExIdx];
+    if (!target || target.isWarmup) return;
+    const id = setTimeout(() => {
+      const existing = target.sets ?? [];
+      const baseCount = Math.max(existing.length, target.target?.sets ?? 0, 1);
+      setSheetRows(
+        Array.from({ length: baseCount }).map((_, idx) => {
+          const setNumber = idx + 1;
+          const s = existing.find((x) => x.setNumber === setNumber);
+          const effort = effortMode === "RPE" ? s?.rpe : s?.rir;
+          return {
+            setNumber,
+            reps: s?.reps != null ? String(s.reps) : "",
+            kg: s?.weight != null ? String(s.weight) : "",
+            effort: effort != null ? String(effort) : "",
+            existingId: s?.id,
+          };
+        }),
+      );
+    }, 0);
+    return () => clearTimeout(id);
+  }, [loggerOpen, session, currentExIdx, effortMode]);
 
   async function logSet() {
     if (!session) return;
@@ -992,6 +959,28 @@ export default function SessionInProgressPage() {
     }
   }
 
+  function buildSheetRowsFor(target: SessionExercise) {
+    const existing = target.sets ?? [];
+    const baseCount = Math.max(existing.length, target.target?.sets ?? 0, 1);
+    return Array.from({ length: baseCount }).map((_, idx) => {
+      const setNumber = idx + 1;
+      const s = existing.find((x) => x.setNumber === setNumber);
+      const effort = effortMode === "RPE" ? s?.rpe : s?.rir;
+      return {
+        setNumber,
+        reps: s?.reps != null ? String(s.reps) : "",
+        kg: s?.weight != null ? String(s.weight) : "",
+        effort: effort != null ? String(effort) : "",
+        existingId: s?.id,
+      };
+    });
+  }
+
+  function openLogger(target: SessionExercise) {
+    setSheetRows(buildSheetRowsFor(target));
+    setLoggerOpen(true);
+  }
+
   function goToEx(i: number) {
     const target = session?.exercises[i];
     const hasAlternatives = (target?.alternatives?.length ?? 0) > 0;
@@ -1005,6 +994,8 @@ export default function SessionInProgressPage() {
     setEditingSet(null);
     setMediaOpen(false);
     setSwapOpen(false);
+    if (target && !target.isWarmup) openLogger(target);
+    else setLoggerOpen(false);
   }
 
   function confirmGoToEx(i: number) {
@@ -1014,6 +1005,9 @@ export default function SessionInProgressPage() {
     setEditingSet(null);
     setMediaOpen(false);
     setSwapOpen(false);
+    const target = session?.exercises[i];
+    if (target && !target.isWarmup) openLogger(target);
+    else setLoggerOpen(false);
   }
 
   async function resetSession() {
@@ -1022,7 +1016,6 @@ export default function SessionInProgressPage() {
     try {
       await api.patch(`/client/sessions/${sessionId}`, { status: "discarded" });
       const res = await api.post<{ id: string }>("/client/sessions", { workoutTemplateId: session.workoutTemplate.id });
-      try { localStorage.removeItem(timerKey); } catch {}
       try { localStorage.removeItem(warmupDoneKey); } catch {}
       try { localStorage.removeItem(warmupTimerKey); } catch {}
       try { localStorage.removeItem(queueKey); } catch {}
@@ -1075,11 +1068,8 @@ export default function SessionInProgressPage() {
     !!session.workoutTemplate?.warmupNotes;
   const warmupTargetMs =
     session.workoutTemplate?.warmupMinutes != null ? session.workoutTemplate.warmupMinutes * 60_000 : null;
-  const now = Date.now();
-  const workoutNow = now + workoutTick * 0;
-  const warmupNow = now + warmupTick * 0;
-  const workoutElapsedMs = workoutTimer.accMs + (workoutTimer.runningSince ? workoutNow - workoutTimer.runningSince : 0);
-  const warmupElapsedMs = warmupTimer.accMs + (warmupTimer.runningSince ? warmupNow - warmupTimer.runningSince : 0);
+  const workoutElapsedMs = workoutStartedAtMs != null ? Math.max(0, nowMs - workoutStartedAtMs) : 0;
+  const warmupElapsedMs = warmupTimer.accMs + (warmupTimer.runningSince ? nowMs - warmupTimer.runningSince : 0);
   const headerExIdx = ex ? workExercises.findIndex((e) => e.id === ex.id) : -1;
   const headerExTotal = workExercises.length || session.exercises.length;
   const headerExNum = headerExIdx >= 0 ? headerExIdx + 1 : currentExIdx + 1;
@@ -1088,6 +1078,35 @@ export default function SessionInProgressPage() {
   workExercises.forEach((e) => {
     if (e.supersetGroup) groupSizes[e.supersetGroup] = (groupSizes[e.supersetGroup] ?? 0) + 1;
   });
+
+  async function saveSheet() {
+    if (!ex) return;
+    setSheetSaving(true);
+    try {
+      for (const row of sheetRows) {
+        const body: Record<string, string> = { reps: row.reps, weight: row.kg };
+        if (effortMode === "RPE") body.rpe = row.effort;
+        else body.rir = row.effort;
+        const hasAny = !!(row.reps || row.kg || row.effort);
+        if (!hasAny) continue;
+        try {
+          await api.put(`/client/sessions/${sessionId}/exercises/${ex.id}/sets/${row.setNumber}`, body);
+        } catch {
+          try {
+            const queue: OfflineItem[] = JSON.parse(localStorage.getItem(queueKey) ?? "[]");
+            queue.push({ wseId: ex.id, setNumber: row.setNumber, body });
+            localStorage.setItem(queueKey, JSON.stringify(queue));
+            setOfflineCount(queue.length);
+            setLastSaved("guardado offline");
+          } catch {}
+        }
+      }
+      setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
+      load();
+    } finally {
+      setSheetSaving(false);
+    }
+  }
 
   // Build subtitle for session header
   let exSubtitle: string | undefined;
@@ -1233,105 +1252,31 @@ export default function SessionInProgressPage() {
         </div>
       )}
 
-      {/* ── Sets log ── */}
-      {ex && (
-        <>
-          <div style={{ padding: "10px 16px 0" }}>
-            <button
-              onClick={() => setLoggerOpen((o) => !o)}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-                padding: "10px 12px",
-                borderRadius: 12,
-                border: "1px solid var(--line)",
-                background: "var(--bg-1)",
-                cursor: "pointer",
-                color: "var(--text)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Icon name="book" size={14} color="var(--text-mute)" />
-                <span style={{ fontSize: 13, fontWeight: 700 }}>Registro de series</span>
-              </div>
-              <Icon name={loggerOpen ? "chevUp" : "chevD"} size={14} color="var(--text-mute)" />
-            </button>
-          </div>
-
-          {loggerOpen && (
-            <div style={{ padding: "14px 16px 4px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, padding: "0 8px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>
-                <div />
-                <div style={{ textAlign: "center" }}>kg</div>
-                <div style={{ textAlign: "center" }}>reps</div>
-                <div style={{ textAlign: "center" }}>{effortMode}</div>
-                <div />
-              </div>
-
-              {ex.sets.map((s: WorkoutSet) => {
-                const isEditing = editingSet?.setNumber === s.setNumber;
-                if (isEditing) {
-                  return (
-                    <div key={s.id} style={{ marginBottom: 6 }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 56px 22px", gap: 6, alignItems: "center", padding: "8px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderRadius: "10px 10px 0 0" }}>
-                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 700 }}>SERIE {s.setNumber}</div>
-                        {(["kg", "reps", "effort"] as const).map((field) => (
-                          <input key={field} type="number" inputMode="decimal"
-                            value={field === "kg" ? editingSet!.kg : field === "reps" ? editingSet!.reps : editingSet!.effort}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setEditingSet((d) => d ? { ...d, [field === "kg" ? "kg" : field === "reps" ? "reps" : "effort"]: val } : d);
-                            }}
-                            placeholder="—"
-                            style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "8px 0", fontSize: 15, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                          />
-                        ))}
-                        <div />
-                      </div>
-                      <div style={{ display: "flex", gap: 6, padding: "6px 8px", background: "var(--bg-1)", border: "1px solid var(--line-2)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
-                        <button onClick={() => deleteSet(s.setNumber)}
-                          style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                          Eliminar
-                        </button>
-                        <button onClick={() => setEditingSet(null)}
-                          style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                          Cancelar
-                        </button>
-                        <button onClick={saveEditedSet}
-                          style={{ flex: 1, padding: "5px 10px", borderRadius: 8, border: "none", background: "var(--lime)", color: "#0B0B0C", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                          Guardar
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <SetRowDisplay
-                    key={s.id}
-                    s={s}
-                    effortMode={effortMode}
-                    onClick={() => setEditingSet({ setNumber: s.setNumber, reps: String(s.reps ?? ""), kg: String(s.weight ?? ""), effort: String((effortMode === "RPE" ? s.rpe : s.rir) ?? "") })}
-                  />
-                );
-              })}
-
-              <ActiveSetRow
-                setNum={ex.sets.length + 1}
-                draft={draft}
-                effortMode={effortMode}
-                onChange={(d) => setDraft((prev) => ({ ...prev, ...d }))}
-              />
-
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-                <span style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600 }}>Esfuerzo</span>
-                <Tabs variant="pills" tabs={["RPE", "RIR"]} active={effortMode} onChange={(t) => setEffortMode(t as EffortMode)} />
-              </div>
+      {ex && !loggerOpen && (
+        <div style={{ padding: "10px 16px 0" }}>
+          <button
+            onClick={() => openLogger(ex)}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "1px solid var(--line)",
+              background: "var(--bg-1)",
+              cursor: "pointer",
+              color: "var(--text)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Icon name="book" size={14} color="var(--text-mute)" />
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Series de este ejercicio</span>
             </div>
-          )}
-        </>
+            <span style={{ fontSize: 12, color: "var(--text-mute)", fontWeight: 700 }}>Abrir</span>
+          </button>
+        </div>
       )}
 
       {/* ── Exercise list ── */}
@@ -1467,7 +1412,7 @@ export default function SessionInProgressPage() {
       </div>
 
       {/* ── Bottom CTAs ── */}
-      {!(warmupExists && !warmupDone) && (
+      {!(warmupExists && !warmupDone) && !loggerOpen && (
         <div style={{
           position: "fixed", left: 0, right: 0, bottom: keyboardOffset,
           padding: "4px 16px 28px",
@@ -1505,20 +1450,140 @@ export default function SessionInProgressPage() {
                 {nextRealIdx != null && nextRealIdx >= 0 && (
                   <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(nextRealIdx)} icon="chevR" />
                 )}
-                {loggerOpen ? (
-                  <Button size="xl" icon="check" style={{ flex: 1, fontSize: 16 }}
-                    disabled={saving || !draft.reps}
-                    onClick={logSet}
-                  >
-                    {saving ? "Guardando…" : `Guardar serie ${ex?.sets.length ? ex.sets.length + 1 : 1}`}
-                  </Button>
-                ) : (
-                  <Button size="xl" icon="book" style={{ flex: 1, fontSize: 16 }} onClick={() => setLoggerOpen(true)}>
-                    Registrar serie
-                  </Button>
-                )}
+                <Button size="xl" icon="book" style={{ flex: 1, fontSize: 16 }} disabled={!ex} onClick={() => ex && openLogger(ex)}>
+                  Registrar series
+                </Button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {loggerOpen && ex && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1300 }}
+          onClick={() => setLoggerOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 540,
+              background: "var(--bg-1)",
+              borderRadius: "16px 16px 0 0",
+              padding: "14px 14px 18px",
+              paddingBottom: "calc(18px + env(safe-area-inset-bottom))",
+              maxHeight: "calc(100dvh - 40px)",
+              overflow: "auto",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <button
+                onClick={() => setLoggerOpen(false)}
+                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
+              >
+                <Icon name="x" size={14} color="var(--text)" />
+              </button>
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {ex.exercise.name}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
+                  {ex.sets.length}/{ex.target?.sets ?? "—"} series
+                </div>
+              </div>
+              <button
+                onClick={() => setSheetRows((prev) => prev.length < 1 ? [{ setNumber: 1, reps: "", kg: "", effort: "" }] : prev)}
+                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
+                aria-label="Reset"
+              >
+                <Icon name="repeat" size={14} color="var(--text-mute)" />
+              </button>
+              <button
+                onClick={() => setSheetRows((prev) => [...prev, { setNumber: prev.length + 1, reps: "", kg: "", effort: "" }])}
+                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
+                aria-label="Agregar serie"
+              >
+                <Icon name="plus" size={14} color="var(--text)" />
+              </button>
+              <button
+                onClick={() => setSheetRows((prev) => {
+                  if (prev.length <= 1) return prev;
+                  const last = prev[prev.length - 1]!;
+                  if (last.existingId) return prev;
+                  if (last.reps || last.kg || last.effort) return prev;
+                  return prev.slice(0, -1);
+                })}
+                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
+                aria-label="Quitar serie"
+              >
+                <Icon name="x" size={14} color="var(--text)" />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>Esfuerzo</span>
+              <Tabs variant="pills" tabs={["RPE", "RIR"]} active={effortMode} onChange={(t) => setEffortMode(t as EffortMode)} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, padding: "0 2px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>
+              <div>Serie</div>
+              <div style={{ textAlign: "center" }}>kg</div>
+              <div style={{ textAlign: "center" }}>reps</div>
+              <div style={{ textAlign: "center" }}>{effortMode}</div>
+              <div />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {sheetRows.map((row) => (
+                <div key={row.setNumber} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
+                  <div className="ta-mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--text-mute)" }}>{row.setNumber}</div>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={row.kg}
+                    onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
+                    placeholder="—"
+                    style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={row.reps}
+                    onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, reps: e.target.value } : r))}
+                    placeholder={ex.target?.reps ?? "—"}
+                    style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={row.effort}
+                    onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
+                    placeholder={ex.target?.intensityTarget ?? "—"}
+                    style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                  />
+                  {row.existingId ? (
+                    <button
+                      onClick={() => deleteSet(row.setNumber)}
+                      style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                    >
+                      Borrar
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <Button size="lg" variant="secondary" style={{ flex: 1 }} onClick={() => setLoggerOpen(false)}>
+                Volver
+              </Button>
+              <Button size="lg" style={{ flex: 2 }} disabled={sheetSaving} onClick={saveSheet} icon="check">
+                {sheetSaving ? "Guardando…" : "Guardar"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -8,6 +8,21 @@ import type { SessionDetail } from "@regen/types";
 
 const ENERGY_LABELS: Record<number, string> = { 1: "BAJA", 3: "MEDIA", 5: "ALTA" };
 
+function fmtDuration(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function toLocalInputValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function SessionCompletadaPage() {
   const { api } = useAuth();
   const router = useRouter();
@@ -17,6 +32,9 @@ export default function SessionCompletadaPage() {
   const [energy, setEnergy] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingTime, setEditingTime] = useState(false);
+  const [performedAtInput, setPerformedAtInput] = useState<string>("");
+  const [completedAtInput, setCompletedAtInput] = useState<string>("");
 
   useEffect(() => {
     api
@@ -26,6 +44,8 @@ export default function SessionCompletadaPage() {
         // Map legacy 1-10 values to 1-5 range
         setEnergy(s.energyRating != null ? Math.ceil(s.energyRating / 2) : null);
         setNotes(s.sessionNotes ?? "");
+        setPerformedAtInput(toLocalInputValue(new Date(s.performedAt)));
+        setCompletedAtInput(s.completedAt ? toLocalInputValue(new Date(s.completedAt)) : "");
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -34,9 +54,17 @@ export default function SessionCompletadaPage() {
   async function save() {
     setSaving(true);
     try {
+      const perf = performedAtInput ? new Date(performedAtInput) : null;
+      const comp = completedAtInput ? new Date(completedAtInput) : null;
+      if (!perf || !Number.isFinite(perf.getTime())) throw new Error("performedAt inválido");
+      if (comp && !Number.isFinite(comp.getTime())) throw new Error("completedAt inválido");
+      if (comp && comp.getTime() < perf.getTime()) throw new Error("La hora de fin no puede ser anterior al inicio");
+
       await api.patch(`/client/sessions/${sessionId}`, {
         energyRating: energy,
         sessionNotes: notes || null,
+        performedAt: perf.toISOString(),
+        completedAt: comp ? comp.toISOString() : null,
       });
       router.replace("/semana");
     } catch (e) {
@@ -59,12 +87,8 @@ export default function SessionCompletadaPage() {
   const timeStr = perfAt.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
   const dateStr = perfAt.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
 
-  const durationMin = session.completedAt
-    ? Math.round((new Date(session.completedAt).getTime() - perfAt.getTime()) / 60000)
-    : null;
-  const durationStr = durationMin != null
-    ? durationMin >= 60 ? `${Math.floor(durationMin / 60)}h ${durationMin % 60}min` : `${durationMin}min`
-    : null;
+  const durationMs = session.completedAt ? new Date(session.completedAt).getTime() - perfAt.getTime() : null;
+  const durationStr = durationMs != null ? fmtDuration(durationMs) : null;
 
   // Find top sets for highlights (heaviest weight per exercise)
   const highlights = session.exercises
@@ -99,6 +123,78 @@ export default function SessionCompletadaPage() {
         <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4, textTransform: "uppercase" }}>
           {dateStr} · {timeStr}{durationStr ? ` · ${durationStr}` : ""}
         </div>
+        <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setEditingTime((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 10px",
+              borderRadius: 10,
+              border: "1px solid var(--line-2)",
+              background: "var(--bg-1)",
+              color: "var(--text-mute)",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <Icon name="edit" size={13} color="var(--text-mute)" />
+            Editar fecha y hora
+          </button>
+        </div>
+        {editingTime && (
+          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr", gap: 8, maxWidth: 420 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", alignItems: "center", gap: 10 }}>
+              <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".08em", fontWeight: 700, textTransform: "uppercase" }}>
+                Inicio
+              </div>
+              <input
+                type="datetime-local"
+                value={performedAtInput}
+                onChange={(e) => setPerformedAtInput(e.target.value)}
+                style={{
+                  height: 40,
+                  borderRadius: 10,
+                  border: "1px solid var(--line-2)",
+                  background: "var(--bg-1)",
+                  color: "var(--text)",
+                  padding: "0 12px",
+                  outline: "none",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                }}
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", alignItems: "center", gap: 10 }}>
+              <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".08em", fontWeight: 700, textTransform: "uppercase" }}>
+                Fin
+              </div>
+              <input
+                type="datetime-local"
+                value={completedAtInput}
+                onChange={(e) => setCompletedAtInput(e.target.value)}
+                style={{
+                  height: 40,
+                  borderRadius: 10,
+                  border: "1px solid var(--line-2)",
+                  background: "var(--bg-1)",
+                  color: "var(--text)",
+                  padding: "0 12px",
+                  outline: "none",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                }}
+              />
+            </div>
+            {performedAtInput && completedAtInput && (
+              <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
+                Duración: {fmtDuration(new Date(completedAtInput).getTime() - new Date(performedAtInput).getTime())}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stats grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 16 }}>

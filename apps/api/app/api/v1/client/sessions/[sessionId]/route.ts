@@ -133,26 +133,83 @@ export async function PATCH(
     });
     if (!session) return notFound("Session not found");
 
-    const { status, energyRating, sessionNotes } = body;
+    const { status, energyRating, sessionNotes, performedAt, completedAt } = body as {
+      status?: unknown;
+      energyRating?: unknown;
+      sessionNotes?: unknown;
+      performedAt?: unknown;
+      completedAt?: unknown;
+    };
 
-    if (status && !["in_progress", "completed", "discarded"].includes(status)) {
-      return err("Invalid status", 400);
-    }
+    const statusStr = typeof status === "string" ? status : undefined;
+    if (statusStr && !["in_progress", "completed", "discarded"].includes(statusStr)) return err("Invalid status", 400);
+
+    const energyRatingVal =
+      energyRating === undefined
+        ? undefined
+        : energyRating === null
+          ? null
+          : typeof energyRating === "number" && Number.isFinite(energyRating)
+            ? Math.trunc(energyRating)
+            : undefined;
+    if (energyRating !== undefined && energyRatingVal === undefined) return err("Invalid energyRating", 400);
+
+    const sessionNotesVal =
+      sessionNotes === undefined ? undefined : sessionNotes === null ? null : typeof sessionNotes === "string" ? sessionNotes : undefined;
+    if (sessionNotes !== undefined && sessionNotesVal === undefined) return err("Invalid sessionNotes", 400);
+
+    const performedAtDate =
+      performedAt === undefined
+        ? undefined
+        : typeof performedAt === "string"
+          ? (() => {
+              const d = new Date(performedAt);
+              return Number.isFinite(d.getTime()) ? d : null;
+            })()
+          : null;
+    if (performedAt !== undefined && performedAtDate === null) return err("Invalid performedAt", 400);
+
+    const completedAtDate =
+      completedAt === undefined
+        ? undefined
+        : completedAt === null
+          ? null
+          : typeof completedAt === "string"
+            ? (() => {
+                const d = new Date(completedAt);
+                return Number.isFinite(d.getTime()) ? d : null;
+              })()
+            : null;
+    if (completedAt !== undefined && completedAtDate === null) return err("Invalid completedAt", 400);
 
     const now = new Date();
+    const finalCompletedAt =
+      statusStr === "completed"
+        ? completedAtDate === undefined
+          ? now
+          : completedAtDate
+        : completedAtDate;
+
+    const effectivePerformedAt = performedAtDate instanceof Date ? performedAtDate : undefined;
+
+    if (effectivePerformedAt && finalCompletedAt && finalCompletedAt.getTime() < effectivePerformedAt.getTime()) {
+      return err("completedAt must be after performedAt", 400);
+    }
+
     const updated = await prisma.workoutSession.update({
       where: { id: sessionId },
       data: {
-        ...(status !== undefined && { status }),
-        ...(energyRating !== undefined && { energyRating }),
-        ...(sessionNotes !== undefined && { sessionNotes }),
-        ...(status === "completed" && { completedAt: now }),
+        ...(statusStr !== undefined && { status: statusStr }),
+        ...(energyRatingVal !== undefined && { energyRating: energyRatingVal }),
+        ...(sessionNotesVal !== undefined && { sessionNotes: sessionNotesVal }),
+        ...(effectivePerformedAt !== undefined && { performedAt: effectivePerformedAt }),
+        ...(finalCompletedAt !== undefined && { completedAt: finalCompletedAt }),
       },
       select: { id: true, status: true, energyRating: true, sessionNotes: true, completedAt: true },
     });
 
     // Notify coach when client completes session
-    if (status === "completed") {
+    if (statusStr === "completed") {
       const rel = await prisma.coachClient.findFirst({
         where: { clientUserId: auth.user.sub, status: "active" },
         select: { coachUserId: true },

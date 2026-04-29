@@ -66,6 +66,7 @@ function useUnreadMessages(token: string | null) {
 export default function ClientLayout({ children }: { children: ReactNode }) {
   const { ready, token, user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname() ?? "";
   const active = useActiveNav();
   const unread = useUnreadMessages(token);
   const { unreadCount: notifCount } = useNotifications();
@@ -94,6 +95,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   if (user && user.role === "coach") return null;
 
   const name = user?.name ?? user?.email ?? "Cliente";
+  const hideMobileNav = pathname.startsWith("/sesion/");
 
   return (
     <div className="client-layout">
@@ -156,11 +158,19 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
       <div className="client-main">{children}</div>
 
       {/* Mobile bottom nav */}
-      <nav className="client-tab-bar" style={{
-        position: "fixed", left: 0, right: 0, bottom: 0, height: 84,
-        background: "var(--bg-1)", borderTop: "1px solid var(--line)",
-        display: "flex", padding: "8px 8px 28px", zIndex: 50,
-      }}>
+      {!hideMobileNav && (
+        <nav className="client-tab-bar" style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: "calc(84px + env(safe-area-inset-bottom))",
+          background: "var(--bg-1)",
+          borderTop: "1px solid var(--line)",
+          display: "flex",
+          padding: "8px 8px calc(28px + env(safe-area-inset-bottom))",
+          zIndex: 50,
+        }}>
         {NAV.map((item) => {
           const isActive = item.id === active;
           const badge =
@@ -187,7 +197,8 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
             </Link>
           );
         })}
-      </nav>
+        </nav>
+      )}
     </div>
   );
 }
