@@ -142,7 +142,7 @@ export default function WorkoutDetailPage() {
   const supersetCount = groups.filter((g) => g.items.length > 1).length;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 120 }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: "calc(120px + 84px + env(safe-area-inset-bottom))" }}>
 
       {/* Gradient header */}
       <div style={{
@@ -256,8 +256,8 @@ export default function WorkoutDetailPage() {
 
       {/* Sticky CTA */}
       <div style={{
-        position: "fixed", left: 0, right: 0, bottom: 0,
-        padding: "14px 20px 28px",
+        position: "fixed", left: 0, right: 0, bottom: "calc(84px + env(safe-area-inset-bottom))",
+        padding: "14px 20px 14px",
         background: "linear-gradient(to top, var(--bg) 70%, transparent)",
       }}>
         {error && (
