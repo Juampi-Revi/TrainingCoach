@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, ConfirmModal, Icon, StateBlock, Tabs } from "@/components/ui";
-import type { SessionSummary } from "@regen/types";
+import type { SessionDetail, SessionSummary } from "@regen/types";
 
 type Filter = "Mes" | "Todo";
 
@@ -29,14 +29,8 @@ function parseManualMeta(sessionNotes: string | null) {
   const rest: string[] = [];
   for (const line of lines) {
     const low = line.toLowerCase();
-    if (low.startsWith("actividad:")) {
-      title = line.slice("actividad:".length).trim() || null;
-      continue;
-    }
-    if (low.startsWith("tipo:")) {
-      type = line.slice("tipo:".length).trim() || null;
-      continue;
-    }
+    if (low.startsWith("actividad:")) { title = line.slice("actividad:".length).trim() || null; continue; }
+    if (low.startsWith("tipo:")) { type = line.slice("tipo:".length).trim() || null; continue; }
     rest.push(line);
   }
   return { title, type, notes: rest.length ? rest.join("\n") : null };
@@ -50,12 +44,167 @@ function fmtMinutes(totalMinutes: number) {
   return `${m}m`;
 }
 
+function equipLabel(notes: string | null): string | null {
+  if (notes === "barra") return "Barra";
+  if (notes === "mancuernas") return "Mancu.";
+  if (notes === "maquina") return "Máq.";
+  return null;
+}
+
+function getWeekStart(d: Date): string {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday.toISOString().slice(0, 10);
+}
+
+function weekLabel(weekStart: string): string {
+  const d = new Date(weekStart + "T00:00:00");
+  const end = new Date(d);
+  end.setDate(d.getDate() + 6);
+  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  const from = d.toLocaleDateString("es", opts);
+  const to = end.toLocaleDateString("es", opts);
+  return `${from} – ${to}`;
+}
+
+function groupByWeek(sessions: SessionSummary[]) {
+  const map = new Map<string, SessionSummary[]>();
+  const order: string[] = [];
+  for (const s of sessions) {
+    const ws = getWeekStart(new Date(s.performedAt));
+    if (!map.has(ws)) { map.set(ws, []); order.push(ws); }
+    map.get(ws)!.push(s);
+  }
+  return order.map((ws) => ({ weekStart: ws, label: weekLabel(ws), sessions: map.get(ws)! }));
+}
+
+// ─── Inline detail ────────────────────────────────────────────────────────────
+
+function SessionDetailInline({ detail, loading, onMessages }: {
+  detail: SessionDetail | null;
+  loading: boolean;
+  onMessages: () => void;
+}) {
+  if (loading) {
+    return (
+      <div style={{ padding: "14px 0", color: "var(--text-mute)", fontSize: 12 }}>
+        Cargando…
+      </div>
+    );
+  }
+  if (!detail) return null;
+
+  const workExercises = detail.exercises.filter((e) => !e.isWarmup);
+
+  return (
+    <div style={{ paddingBottom: 12 }}>
+      {workExercises.length === 0 ? (
+        <div style={{ padding: "8px 0 4px", color: "var(--text-mute)", fontSize: 12 }}>
+          Sin ejercicios registrados
+        </div>
+      ) : (
+        workExercises.map((ex, i) => (
+          <div key={ex.id} style={{ marginBottom: 12 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, color: "var(--text-dim)",
+              textTransform: "uppercase", letterSpacing: ".06em",
+              marginBottom: 5,
+              display: "flex", alignItems: "baseline", gap: 6,
+            }}>
+              <span className="ta-mono" style={{ color: "var(--text-mute)", fontSize: 10 }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span>{ex.exercise.name}</span>
+              {ex.exercise.primaryMuscle && (
+                <span className="ta-mono" style={{ color: "var(--text-mute)", fontWeight: 400, fontSize: 10 }}>
+                  {ex.exercise.primaryMuscle}
+                </span>
+              )}
+            </div>
+
+            {ex.sets.length === 0 ? (
+              <div style={{ fontSize: 11, color: "var(--text-mute)", paddingLeft: 18 }}>Sin series</div>
+            ) : (
+              <div style={{ display: "grid", gap: 3 }}>
+                {ex.sets.map((set) => {
+                  const equip = equipLabel(set.notes);
+                  const effort = set.rpe != null
+                    ? `RPE ${set.rpe}`
+                    : set.rir != null
+                    ? `RIR ${set.rir}`
+                    : null;
+                  return (
+                    <div key={set.id} style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 10px", background: "var(--bg-2)", borderRadius: 8,
+                    }}>
+                      <span className="ta-mono" style={{
+                        fontSize: 10, color: "var(--text-mute)", width: 14, textAlign: "center", flexShrink: 0,
+                      }}>
+                        {set.setNumber}
+                      </span>
+                      <span className="ta-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", minWidth: 52 }}>
+                        {set.weight != null ? `${set.weight} kg` : "— kg"}
+                      </span>
+                      <span style={{ fontSize: 11, color: "var(--text-mute)" }}>×</span>
+                      <span className="ta-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                        {set.reps != null ? `${set.reps}` : "—"}
+                        <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-mute)" }}> rep</span>
+                      </span>
+                      <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+                        {equip && (
+                          <span className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)" }}>
+                            {equip}
+                          </span>
+                        )}
+                        {effort && (
+                          <span className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", fontWeight: 700 }}>
+                            {effort}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+
+      <button
+        onClick={onMessages}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          width: "100%", padding: "9px 12px", marginTop: 4,
+          borderRadius: 10, border: "1px solid var(--line-2)",
+          background: "transparent", color: "var(--text-mute)",
+          fontSize: 12, fontWeight: 600, cursor: "pointer",
+        }}
+      >
+        <Icon name="msg" size={14} />
+        Mensajes con el coach
+      </button>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function HistorialPage() {
   const { api } = useAuth();
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("Mes");
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [details, setDetails] = useState<Record<string, SessionDetail>>({});
+  const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
+
   const [manualOpen, setManualOpen] = useState(false);
   const [manualType, setManualType] = useState("Deporte");
   const [manualTitle, setManualTitle] = useState("");
@@ -75,9 +224,20 @@ export default function HistorialPage() {
       .finally(() => setLoading(false));
   }, [api]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
+
+  const toggleExpand = useCallback(async (id: string) => {
+    if (expandedId === id) { setExpandedId(null); return; }
+    setExpandedId(id);
+    if (details[id]) return;
+    setLoadingDetailId(id);
+    try {
+      const d = await api.get<SessionDetail>(`/client/sessions/${id}`);
+      setDetails((prev) => ({ ...prev, [id]: d }));
+    } catch { /* ignore */ } finally {
+      setLoadingDetailId(null);
+    }
+  }, [expandedId, details, api]);
 
   const openManual = () => {
     const now = new Date();
@@ -131,12 +291,12 @@ export default function HistorialPage() {
   const filtered =
     filter === "Mes"
       ? completed.filter((s) => {
-          const d = new Date(s.performedAt);
-          const now = new Date();
-          const diff = (now.getTime() - d.getTime()) / 86400000;
+          const diff = (Date.now() - new Date(s.performedAt).getTime()) / 86400000;
           return diff <= 30;
         })
       : completed;
+
+  const weeks = groupByWeek(filtered);
 
   const deleteSession = async (sessionId: string) => {
     if (deletingId) return;
@@ -144,6 +304,7 @@ export default function HistorialPage() {
     try {
       await api.patch(`/client/sessions/${sessionId}`, { status: "discarded" });
       setSessions((prev) => prev.filter((x) => x.id !== sessionId));
+      if (expandedId === sessionId) setExpandedId(null);
     } catch (e) {
       console.error(e);
     } finally {
@@ -182,128 +343,141 @@ export default function HistorialPage() {
         <StateBlock kind="empty" title="Sin sesiones" body="Completá tu primera sesión para verla acá." />
       ) : (
         <div style={{ padding: "0 20px" }}>
-          {filtered.map((s, i) => {
-            const d = new Date(s.performedAt);
-            const dateStr = d.toLocaleDateString("es", {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-            });
-            const manualMeta = parseManualMeta(s.sessionNotes);
-            const title = s.workoutTemplate?.title ?? manualMeta.title ?? "Sesión libre";
-            const isDeleting = deletingId === s.id;
-            const durationMinutes =
-              s.completedAt
-                ? (() => {
-                    const ms = new Date(s.completedAt).getTime() - new Date(s.performedAt).getTime();
-                    return Number.isFinite(ms) && ms >= 0 ? ms / 60000 : null;
-                  })()
-                : null;
-            const durationStr = durationMinutes != null ? fmtMinutes(durationMinutes) : null;
-            const isManual = !s.workoutTemplate && (manualMeta.title || manualMeta.type);
-            const energy = normalizeEnergyRating(s.energyRating);
-            const isComplete = s.targetSetsCount > 0 && s.setsCount >= s.targetSetsCount;
-            const isPartial = s.targetSetsCount > 0 && s.setsCount < s.targetSetsCount;
-            const metaParts: string[] = [];
-            if (isManual) {
-              if (manualMeta.type) metaParts.push(manualMeta.type);
-            } else {
-              metaParts.push(`${s.setsCount}${s.targetSetsCount > 0 ? `/${s.targetSetsCount}` : ""} series`);
-            }
-            if (durationStr) metaParts.push(durationStr);
-            if (energy) metaParts.push(`Energía ${energy}/5`);
-
-            return (
-              <div
-                key={s.id}
-                onClick={() => router.push(`/comentarios/${s.id}`)}
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  padding: "14px 0",
-                  borderBottom: i < filtered.length - 1 ? "1px solid var(--line)" : "none",
-                  alignItems: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 11,
-                    background: i === 0 ? "var(--lime)" : "var(--bg-2)",
-                    border: `1px solid ${i === 0 ? "var(--lime)" : "var(--line)"}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: i === 0 ? "#0B0B0C" : "var(--lime)",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon name="check" size={20} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    className="ta-mono"
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-mute)",
-                      textTransform: "uppercase",
-                      letterSpacing: ".08em",
-                    }}
-                  >
-                    {dateStr}
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, marginTop: 1 }}>
-                    {title}
-                  </div>
-                  <div
-                    className="ta-mono"
-                    style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}
-                  >
-                    {metaParts.join(" · ")}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-                  {energy === 5 && (
-                    <Badge tone="limeSoft" size="sm">
-                      <Icon name="star" size={11} /> Top
-                    </Badge>
-                  )}
-                  {isComplete && (
-                    <Badge tone="limeSoft" size="sm">Completado</Badge>
-                  )}
-                  {isPartial && (
-                    <Badge tone="neutral" size="sm">Parcial {s.setsCount}/{s.targetSetsCount}</Badge>
-                  )}
-                </div>
-
-                <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <button
-                    disabled={isDeleting}
-                    onClick={() => setConfirmDelete({ id: s.id, title })}
-                    title="Eliminar del historial"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 10,
-                      background: "transparent",
-                      border: "1px solid var(--line-2)",
-                      color: "var(--text-mute)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: isDeleting ? "not-allowed" : "pointer",
-                      opacity: isDeleting ? 0.5 : 1,
-                    }}
-                  >
-                    <Icon name="trash" size={14} color="var(--text-mute)" />
-                  </button>
-                </div>
+          {weeks.map(({ weekStart, label, sessions: ws }) => (
+            <div key={weekStart} style={{ marginBottom: 24 }}>
+              {/* Week header */}
+              <div className="ta-mono" style={{
+                fontSize: 10, fontWeight: 700, color: "var(--text-mute)",
+                textTransform: "uppercase", letterSpacing: ".1em",
+                padding: "6px 0 8px",
+                borderBottom: "1px solid var(--line)",
+                marginBottom: 4,
+              }}>
+                {label}
               </div>
-            );
-          })}
+
+              {ws.map((s) => {
+                const d = new Date(s.performedAt);
+                const dateStr = d.toLocaleDateString("es", { weekday: "short", day: "numeric", month: "short" });
+                const manualMeta = parseManualMeta(s.sessionNotes);
+                const title = s.workoutTemplate?.title ?? manualMeta.title ?? "Sesión libre";
+                const isDeleting = deletingId === s.id;
+                const durationMinutes = s.completedAt
+                  ? (() => { const ms = new Date(s.completedAt).getTime() - new Date(s.performedAt).getTime(); return Number.isFinite(ms) && ms >= 0 ? ms / 60000 : null; })()
+                  : null;
+                const durationStr = durationMinutes != null ? fmtMinutes(durationMinutes) : null;
+                const isManual = !s.workoutTemplate && (manualMeta.title || manualMeta.type);
+                const energy = normalizeEnergyRating(s.energyRating);
+                const isComplete = s.targetSetsCount > 0 && s.setsCount >= s.targetSetsCount;
+                const isPartial = s.targetSetsCount > 0 && s.setsCount < s.targetSetsCount;
+                const metaParts: string[] = [];
+                if (isManual) {
+                  if (manualMeta.type) metaParts.push(manualMeta.type);
+                } else {
+                  metaParts.push(`${s.setsCount}${s.targetSetsCount > 0 ? `/${s.targetSetsCount}` : ""} series`);
+                }
+                if (durationStr) metaParts.push(durationStr);
+                if (energy) metaParts.push(`Energía ${energy}/5`);
+
+                const isExpanded = expandedId === s.id;
+                const isLoadingThis = loadingDetailId === s.id;
+
+                return (
+                  <div key={s.id}>
+                    {/* Session row */}
+                    <div
+                      onClick={() => toggleExpand(s.id)}
+                      style={{
+                        display: "flex", gap: 12, padding: "12px 0",
+                        alignItems: "center", cursor: "pointer",
+                      }}
+                    >
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                        background: isExpanded ? "var(--lime)" : "var(--bg-2)",
+                        border: `1px solid ${isExpanded ? "var(--lime)" : "var(--line)"}`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: isExpanded ? "#0B0B0C" : "var(--lime)",
+                        transition: "background .15s, border-color .15s",
+                      }}>
+                        <Icon name="check" size={18} />
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="ta-mono" style={{
+                          fontSize: 10, color: "var(--text-mute)",
+                          textTransform: "uppercase", letterSpacing: ".08em",
+                        }}>
+                          {dateStr}
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 1 }}>
+                          {title}
+                        </div>
+                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
+                          {metaParts.join(" · ")}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                        {energy === 5 && (
+                          <Badge tone="limeSoft" size="sm"><Icon name="star" size={11} /> Top</Badge>
+                        )}
+                        {isComplete && <Badge tone="limeSoft" size="sm">Completado</Badge>}
+                        {isPartial && <Badge tone="neutral" size="sm">Parcial {s.setsCount}/{s.targetSetsCount}</Badge>}
+                      </div>
+
+                      {/* Chevron */}
+                      <div style={{
+                        width: 20, height: 20, flexShrink: 0,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform .2s",
+                        color: "var(--text-mute)",
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+
+                      {/* Delete button */}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <button
+                          disabled={isDeleting}
+                          onClick={() => setConfirmDelete({ id: s.id, title })}
+                          title="Eliminar del historial"
+                          style={{
+                            width: 32, height: 32, borderRadius: 10,
+                            background: "transparent", border: "1px solid var(--line-2)",
+                            color: "var(--text-mute)", display: "flex",
+                            alignItems: "center", justifyContent: "center",
+                            cursor: isDeleting ? "not-allowed" : "pointer",
+                            opacity: isDeleting ? 0.5 : 1,
+                          }}
+                        >
+                          <Icon name="trash" size={14} color="var(--text-mute)" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded detail */}
+                    {isExpanded && (
+                      <div style={{
+                        marginLeft: 52, paddingLeft: 12,
+                        borderLeft: "2px solid var(--line)",
+                        marginBottom: 8,
+                      }}>
+                        <SessionDetailInline
+                          detail={details[s.id] ?? null}
+                          loading={isLoadingThis}
+                          onMessages={() => router.push(`/comentarios/${s.id}`)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       )}
 
@@ -330,10 +504,8 @@ export default function HistorialPage() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: "100%",
-              maxWidth: 540,
-              background: "var(--bg-1)",
-              borderRadius: "16px 16px 0 0",
+              width: "100%", maxWidth: 540,
+              background: "var(--bg-1)", borderRadius: "16px 16px 0 0",
               padding: "18px 16px",
               paddingBottom: "calc(18px + env(safe-area-inset-bottom))",
             }}
@@ -372,17 +544,7 @@ export default function HistorialPage() {
                 <select
                   value={manualType}
                   onChange={(e) => setManualType(e.target.value)}
-                  style={{
-                    width: "100%",
-                    height: 42,
-                    borderRadius: 10,
-                    border: "1px solid var(--line-2)",
-                    background: "var(--bg-1)",
-                    color: "var(--text)",
-                    padding: "0 12px",
-                    outline: "none",
-                    fontSize: 14,
-                  }}
+                  style={{ width: "100%", height: 42, borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)", color: "var(--text)", padding: "0 12px", outline: "none", fontSize: 14 }}
                 >
                   <option value="Deporte">Deporte</option>
                   <option value="Gimnasio">Gimnasio</option>
@@ -417,9 +579,7 @@ export default function HistorialPage() {
               </div>
 
               {manualError && (
-                <div style={{ fontSize: 12, color: "var(--danger)" }}>
-                  {manualError}
-                </div>
+                <div style={{ fontSize: 12, color: "var(--danger)" }}>{manualError}</div>
               )}
             </div>
 
@@ -434,7 +594,6 @@ export default function HistorialPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
