@@ -662,6 +662,7 @@ export default function SessionInProgressPage() {
   const [sheetRows, setSheetRows] = useState<Array<{ setNumber: number; reps: string; kg: string; effort: string; existingId?: string }>>([]);
   const [equipmentType, setEquipmentType] = useState<"barra" | "mancuernas" | "maquina" | null>(null);
   const [restFromLogger, setRestFromLogger] = useState(false);
+  const [lastRef, setLastRef] = useState<{ weight: string | null; reps: number | null; rpe: string | null; rir: string | null; notes: string | null } | null>(null);
   const [prefillExId, setPrefillExId] = useState<string | null>(null);
   const [didInitIdx, setDidInitIdx] = useState(false);
   const [nowMs, setNowMs] = useState(0);
@@ -897,6 +898,16 @@ export default function SessionInProgressPage() {
     }, 0);
     return () => clearTimeout(id);
   }, [loggerOpen, session, currentExIdx, effortMode]);
+
+  useEffect(() => {
+    if (!loggerOpen || !session) return;
+    const target = session.exercises[currentExIdx];
+    if (!target || target.isWarmup) return;
+    setLastRef(null);
+    api.get<{ weight: string | null; reps: number | null; rpe: string | null; rir: string | null; notes: string | null } | null>(
+      `/client/exercises/${target.exercise.id}/last-set`,
+    ).then((r) => setLastRef(r)).catch(() => {});
+  }, [loggerOpen, session, currentExIdx, api]);
 
   async function logSet() {
     if (!session) return;
@@ -1521,6 +1532,19 @@ export default function SessionInProgressPage() {
                 <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
                   {ex.sets.length}/{ex.target?.sets ?? "—"} series
                 </div>
+                {lastRef && (
+                  <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 3, display: "flex", flexWrap: "wrap", gap: "0 6px" }}>
+                    <span>Última vez:</span>
+                    <span style={{ color: "var(--text-dim)", fontWeight: 700 }}>
+                      {lastRef.weight} kg × {lastRef.reps} rep
+                    </span>
+                    {(lastRef.notes === "barra" || lastRef.notes === "mancuernas" || lastRef.notes === "maquina") && (
+                      <span>· {lastRef.notes === "barra" ? "Barra" : lastRef.notes === "mancuernas" ? "Mancu." : "Máq."}</span>
+                    )}
+                    {lastRef.rpe != null && <span style={{ color: "var(--lime)" }}>· RPE {lastRef.rpe}</span>}
+                    {lastRef.rpe == null && lastRef.rir != null && <span style={{ color: "var(--lime)" }}>· RIR {lastRef.rir}</span>}
+                  </div>
+                )}
               </div>
             </div>
 
