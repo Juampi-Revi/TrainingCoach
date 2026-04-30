@@ -163,8 +163,8 @@ export interface SessionSummary {
   energyRating: number | null;
   sessionNotes: string | null;
   workoutTemplate: { id: string; title: string; tags: string[] } | null;
-  totalVolumeKg: number;
   setsCount: number;
+  targetSetsCount: number;
 }
 
 export interface PatchSessionRequest {

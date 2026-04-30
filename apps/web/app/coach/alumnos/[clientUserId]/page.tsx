@@ -717,8 +717,7 @@ export default function AthleteDetailPage() {
                                 marginTop: 2,
                               }}
                             >
-                              {s.setsCount} series ·{" "}
-                              {Math.round(s.totalVolumeKg).toLocaleString("es")}kg
+                              {s.setsCount} series
                             </div>
                           )}
                         </div>

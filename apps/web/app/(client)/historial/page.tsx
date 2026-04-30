@@ -201,9 +201,18 @@ export default function HistorialPage() {
                 : null;
             const durationStr = durationMinutes != null ? fmtMinutes(durationMinutes) : null;
             const isManual = !s.workoutTemplate && (manualMeta.title || manualMeta.type);
-            const metaStr = isManual
-              ? `${manualMeta.type ?? "Actividad"}${durationStr ? ` · ${durationStr}` : ""}`
-              : `${s.setsCount} series · ${Math.round(s.totalVolumeKg).toLocaleString("es")}kg${durationStr ? ` · ${durationStr}` : ""}`;
+            const energy = normalizeEnergyRating(s.energyRating);
+            const isComplete = s.targetSetsCount > 0 && s.setsCount >= s.targetSetsCount;
+            const isPartial = s.targetSetsCount > 0 && s.setsCount < s.targetSetsCount;
+            const metaParts: string[] = [];
+            if (isManual) {
+              if (manualMeta.type) metaParts.push(manualMeta.type);
+            } else {
+              metaParts.push(`${s.setsCount}${s.targetSetsCount > 0 ? `/${s.targetSetsCount}` : ""} series`);
+            }
+            if (durationStr) metaParts.push(durationStr);
+            if (energy) metaParts.push(`Energía ${energy}/5`);
+
             return (
               <div
                 key={s.id}
@@ -252,19 +261,23 @@ export default function HistorialPage() {
                     className="ta-mono"
                     style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}
                   >
-                    {metaStr}
-                    {(() => {
-                      const e = normalizeEnergyRating(s.energyRating);
-                      return e ? ` · Energía ${e}/5` : "";
-                    })()}
+                    {metaParts.join(" · ")}
                   </div>
                 </div>
 
-                {normalizeEnergyRating(s.energyRating) === 5 && (
-                  <Badge tone="limeSoft" size="sm">
-                    <Icon name="star" size={11} /> Top
-                  </Badge>
-                )}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                  {energy === 5 && (
+                    <Badge tone="limeSoft" size="sm">
+                      <Icon name="star" size={11} /> Top
+                    </Badge>
+                  )}
+                  {isComplete && (
+                    <Badge tone="limeSoft" size="sm">Completado</Badge>
+                  )}
+                  {isPartial && (
+                    <Badge tone="neutral" size="sm">Parcial {s.setsCount}/{s.targetSetsCount}</Badge>
+                  )}
+                </div>
 
                 <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <button

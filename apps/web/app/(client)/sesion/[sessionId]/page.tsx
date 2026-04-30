@@ -660,6 +660,8 @@ export default function SessionInProgressPage() {
   const [loggerOpen, setLoggerOpen] = useState(false);
   const [sheetSaving, setSheetSaving] = useState(false);
   const [sheetRows, setSheetRows] = useState<Array<{ setNumber: number; reps: string; kg: string; effort: string; existingId?: string }>>([]);
+  const [equipmentType, setEquipmentType] = useState<"barra" | "mancuernas" | "maquina" | null>(null);
+  const [restFromLogger, setRestFromLogger] = useState(false);
   const [prefillExId, setPrefillExId] = useState<string | null>(null);
   const [didInitIdx, setDidInitIdx] = useState(false);
   const [nowMs, setNowMs] = useState(0);
@@ -792,6 +794,13 @@ export default function SessionInProgressPage() {
     }, 1000);
     return () => clearTimeout(id);
   }, [restSeconds]);
+
+  // Cuando el descanso termina, volver al logger si fue iniciado desde ahí
+  useEffect(() => {
+    if (restSeconds !== null || !restFromLogger) return;
+    setRestFromLogger(false);
+    setLoggerOpen(true);
+  }, [restSeconds, restFromLogger]);
 
   const flushQueue = useCallback(async () => {
     try {
@@ -978,6 +987,18 @@ export default function SessionInProgressPage() {
 
   function openLogger(target: SessionExercise) {
     setSheetRows(buildSheetRowsFor(target));
+    // Leer equipamiento de los sets guardados primero, sino del localStorage
+    const saved = target.sets.find(
+      (s) => s.notes === "barra" || s.notes === "mancuernas" || s.notes === "maquina",
+    );
+    if (saved) {
+      setEquipmentType(saved.notes as "barra" | "mancuernas" | "maquina");
+    } else {
+      try {
+        const eq = localStorage.getItem(`regen_equip_${sessionId}_${target.id}`);
+        setEquipmentType(eq === "barra" || eq === "mancuernas" || eq === "maquina" ? eq : null);
+      } catch { setEquipmentType(null); }
+    }
     setLoggerOpen(true);
   }
 
@@ -1079,7 +1100,7 @@ export default function SessionInProgressPage() {
     if (e.supersetGroup) groupSizes[e.supersetGroup] = (groupSizes[e.supersetGroup] ?? 0) + 1;
   });
 
-  async function saveSheet() {
+  async function saveSheet(opts?: { startRest?: boolean }) {
     if (!ex) return;
     setSheetSaving(true);
     try {
@@ -1087,6 +1108,7 @@ export default function SessionInProgressPage() {
         const body: Record<string, string> = { reps: row.reps, weight: row.kg };
         if (effortMode === "RPE") body.rpe = row.effort;
         else body.rir = row.effort;
+        if (equipmentType) body.notes = equipmentType;
         const hasAny = !!(row.reps || row.kg || row.effort);
         if (!hasAny) continue;
         try {
@@ -1103,6 +1125,13 @@ export default function SessionInProgressPage() {
       }
       setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
       load();
+      if (opts?.startRest) {
+        const rest = ex.target?.restSeconds ?? 90;
+        setRestTotal(rest);
+        setRestSeconds(rest);
+        setRestFromLogger(true);
+        setLoggerOpen(false);
+      }
     } finally {
       setSheetSaving(false);
     }
@@ -1477,10 +1506,11 @@ export default function SessionInProgressPage() {
               overflow: "auto",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            {/* Header: solo cierre + nombre */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <button
                 onClick={() => setLoggerOpen(false)}
-                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
+                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer", flexShrink: 0 }}
               >
                 <Icon name="x" size={14} color="var(--text)" />
               </button>
@@ -1492,40 +1522,45 @@ export default function SessionInProgressPage() {
                   {ex.sets.length}/{ex.target?.sets ?? "—"} series
                 </div>
               </div>
-              <button
-                onClick={() => setSheetRows((prev) => prev.length < 1 ? [{ setNumber: 1, reps: "", kg: "", effort: "" }] : prev)}
-                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
-                aria-label="Reset"
-              >
-                <Icon name="repeat" size={14} color="var(--text-mute)" />
-              </button>
-              <button
-                onClick={() => setSheetRows((prev) => [...prev, { setNumber: prev.length + 1, reps: "", kg: "", effort: "" }])}
-                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
-                aria-label="Agregar serie"
-              >
-                <Icon name="plus" size={14} color="var(--text)" />
-              </button>
-              <button
-                onClick={() => setSheetRows((prev) => {
-                  if (prev.length <= 1) return prev;
-                  const last = prev[prev.length - 1]!;
-                  if (last.existingId) return prev;
-                  if (last.reps || last.kg || last.effort) return prev;
-                  return prev.slice(0, -1);
-                })}
-                style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", cursor: "pointer" }}
-                aria-label="Quitar serie"
-              >
-                <Icon name="x" size={14} color="var(--text)" />
-              </button>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            {/* Equipamiento */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+              {(["barra", "mancuernas", "maquina"] as const).map((eq) => {
+                const sel = equipmentType === eq;
+                const label = eq === "barra" ? "Barra" : eq === "mancuernas" ? "Mancuernas" : "Máquina";
+                return (
+                  <button
+                    key={eq}
+                    onClick={() => {
+                      const next = sel ? null : eq;
+                      setEquipmentType(next);
+                      try {
+                        if (next) localStorage.setItem(`regen_equip_${sessionId}_${ex.id}`, next);
+                        else localStorage.removeItem(`regen_equip_${sessionId}_${ex.id}`);
+                      } catch {}
+                    }}
+                    style={{
+                      flex: 1, padding: "7px 4px", borderRadius: 9,
+                      border: `1px solid ${sel ? "var(--lime)" : "var(--line-2)"}`,
+                      background: sel ? "rgba(215,255,58,.1)" : "transparent",
+                      color: sel ? "var(--lime)" : "var(--text-mute)",
+                      fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Esfuerzo */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>Esfuerzo</span>
               <Tabs variant="pills" tabs={["RPE", "RIR"]} active={effortMode} onChange={(t) => setEffortMode(t as EffortMode)} />
             </div>
 
+            {/* Encabezado columnas */}
             <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, padding: "0 2px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>
               <div>Serie</div>
               <div style={{ textAlign: "center" }}>kg</div>
@@ -1534,30 +1569,25 @@ export default function SessionInProgressPage() {
               <div />
             </div>
 
+            {/* Filas de series */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {sheetRows.map((row) => (
                 <div key={row.setNumber} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
                   <div className="ta-mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--text-mute)" }}>{row.setNumber}</div>
                   <input
-                    type="number"
-                    inputMode="decimal"
-                    value={row.kg}
+                    type="number" inputMode="decimal" value={row.kg}
                     onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
                     placeholder="—"
                     style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                   />
                   <input
-                    type="number"
-                    inputMode="decimal"
-                    value={row.reps}
+                    type="number" inputMode="decimal" value={row.reps}
                     onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, reps: e.target.value } : r))}
                     placeholder={ex.target?.reps ?? "—"}
                     style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                   />
                   <input
-                    type="number"
-                    inputMode="decimal"
-                    value={row.effort}
+                    type="number" inputMode="decimal" value={row.effort}
                     onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
                     placeholder={ex.target?.intensityTarget ?? "—"}
                     style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
@@ -1576,11 +1606,47 @@ export default function SessionInProgressPage() {
               ))}
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            {/* Controles de series — al final de la lista */}
+            <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+              <button
+                onClick={() => setSheetRows((prev) => {
+                  if (prev.length <= 1) return prev;
+                  const last = prev[prev.length - 1]!;
+                  if (last.existingId || last.reps || last.kg || last.effort) return prev;
+                  return prev.slice(0, -1);
+                })}
+                style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+              >
+                − Quitar serie
+              </button>
+              <button
+                onClick={() => setSheetRows((prev) => [...prev, { setNumber: prev.length + 1, reps: "", kg: "", effort: "" }])}
+                style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+              >
+                + Agregar serie
+              </button>
+            </div>
+
+            {/* Footer: volver / descanso / guardar */}
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <Button size="lg" variant="secondary" style={{ flex: 1 }} onClick={() => setLoggerOpen(false)}>
                 Volver
               </Button>
-              <Button size="lg" style={{ flex: 2 }} disabled={sheetSaving} onClick={saveSheet} icon="check">
+              <button
+                onClick={() => saveSheet({ startRest: true })}
+                disabled={sheetSaving}
+                style={{
+                  flex: 1, padding: "12px 0", borderRadius: 12,
+                  border: "1px solid var(--line-2)", background: "transparent",
+                  color: "var(--text-mute)", fontSize: 13, fontWeight: 700,
+                  cursor: sheetSaving ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                }}
+              >
+                <Icon name="timer" size={13} color="var(--text-mute)" />
+                {ex.target?.restSeconds ? `${ex.target.restSeconds}s` : "Descanso"}
+              </button>
+              <Button size="lg" style={{ flex: 2 }} disabled={sheetSaving} onClick={() => saveSheet()} icon="check">
                 {sheetSaving ? "Guardando…" : "Guardar"}
               </Button>
             </div>

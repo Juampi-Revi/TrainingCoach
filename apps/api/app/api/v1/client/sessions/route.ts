@@ -32,18 +32,14 @@ export async function GET(req: NextRequest) {
         exercises: {
           select: {
             sets: { select: { reps: true, weight: true } },
+            workoutExercise: { select: { targetSets: true, isWarmup: true } },
           },
         },
       },
     });
 
     const items = sessions.map((s) => {
-      const totalVolume = s.exercises.flatMap((e) => e.sets).reduce((acc, set) => {
-        const w = set.weight ? parseFloat(String(set.weight)) : 0;
-        const r = set.reps ?? 0;
-        return acc + w * r;
-      }, 0);
-
+      const workExercises = s.exercises.filter((e) => !e.workoutExercise?.isWarmup);
       return {
         id: s.id,
         status: s.status,
@@ -52,8 +48,8 @@ export async function GET(req: NextRequest) {
         energyRating: s.energyRating,
         sessionNotes: s.sessionNotes,
         workoutTemplate: s.workoutTemplate,
-        totalVolumeKg: Math.round(totalVolume),
-        setsCount: s.exercises.flatMap((e) => e.sets).length,
+        setsCount: workExercises.flatMap((e) => e.sets).length,
+        targetSetsCount: workExercises.reduce((acc, e) => acc + (e.workoutExercise?.targetSets ?? 0), 0),
       };
     });
 

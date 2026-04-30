@@ -3,14 +3,10 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Avatar, Icon, StateBlock, Tabs } from "@/components/ui";
-import type { Comment, SessionDetail } from "@regen/types";
+import { Avatar, Badge, Icon, StateBlock, Tabs } from "@/components/ui";
+import type { Comment, SessionDetail, SessionExercise, WorkoutSet } from "@regen/types";
 
-type Tab = "Sesión" | "Por ejercicio";
-
-function readKey(sessionId: string) {
-  return `regen_msg_read_${sessionId}`;
-}
+type Tab = "Detalle" | "Mensajes";
 
 function parseManualMeta(sessionNotes: string | null) {
   if (!sessionNotes) return { title: null as string | null, type: null as string | null };
@@ -25,6 +21,173 @@ function parseManualMeta(sessionNotes: string | null) {
   return { title, type };
 }
 
+function fmtMinutes(ms: number) {
+  const m = Math.max(0, Math.round(ms / 60000));
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  if (h > 0) return `${h}h${mm ? ` ${mm}m` : ""}`;
+  return `${m}m`;
+}
+
+function equipLabel(notes: string | null): string | null {
+  if (notes === "barra") return "Barra";
+  if (notes === "mancuernas") return "Mancu.";
+  if (notes === "maquina") return "Máq.";
+  return null;
+}
+
+// ─── Set row display ──────────────────────────────────────────────────────────
+
+function SetDetail({ set }: { set: WorkoutSet }) {
+  const effort = set.rpe != null
+    ? `RPE ${set.rpe}`
+    : set.rir != null
+    ? `RIR ${set.rir}`
+    : null;
+  const equip = equipLabel(set.notes);
+
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "28px 1fr 1fr 60px",
+      gap: 6, alignItems: "center",
+      padding: "6px 0",
+      borderBottom: "1px solid var(--line)",
+    }}>
+      <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 700 }}>
+        {set.setNumber}
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+        <span className="ta-mono" style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+          {set.weight ?? "—"}
+        </span>
+        <span style={{ fontSize: 10, color: "var(--text-dim)" }}>kg</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+        <span className="ta-mono" style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+          {set.reps ?? "—"}
+        </span>
+        <span style={{ fontSize: 10, color: "var(--text-dim)" }}>rep</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end" }}>
+        {effort && (
+          <span className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", fontWeight: 700 }}>
+            {effort}
+          </span>
+        )}
+        {equip && (
+          <span className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 600 }}>
+            {equip}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Exercise detail card ─────────────────────────────────────────────────────
+
+function ExerciseCard({
+  ex,
+  index,
+  onComment,
+}: {
+  ex: SessionExercise;
+  index: number;
+  onComment: () => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const hasData = ex.sets.length > 0;
+
+  return (
+    <div style={{
+      border: "1px solid var(--line)",
+      borderRadius: 12,
+      overflow: "hidden",
+      marginBottom: 10,
+    }}>
+      {/* Exercise header */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", gap: 10,
+          padding: "12px 14px", background: "var(--bg-1)",
+          border: "none", cursor: "pointer", textAlign: "left",
+        }}
+      >
+        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, flexShrink: 0, width: 22 }}>
+          {String(index + 1).padStart(2, "0")}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {ex.exercise.name}
+          </div>
+          {ex.target && (
+            <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 1 }}>
+              {[
+                ex.target.sets && ex.target.reps ? `${ex.target.sets} × ${ex.target.reps}` : null,
+                ex.target.intensityTarget ? `${ex.target.intensityType?.toUpperCase() ?? ""} ${ex.target.intensityTarget}` : null,
+              ].filter(Boolean).join(" · ")}
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <span className="ta-mono" style={{
+            fontSize: 11, fontWeight: 700,
+            color: hasData ? "var(--success)" : "var(--text-dim)",
+          }}>
+            {ex.sets.length}/{ex.target?.sets ?? "—"}
+          </span>
+          {hasData && <Icon name="check" size={12} color="var(--success)" />}
+          <Icon name={expanded ? "chevL" : "chevR"} size={12} color="var(--text-mute)" />
+        </div>
+      </button>
+
+      {/* Sets detail */}
+      {expanded && (
+        <div style={{ padding: "0 14px 10px", background: "var(--bg)" }}>
+          {!hasData ? (
+            <div style={{ fontSize: 12, color: "var(--text-dim)", padding: "10px 0", fontStyle: "italic" }}>
+              Sin series registradas
+            </div>
+          ) : (
+            <>
+              {/* Column headers */}
+              <div style={{
+                display: "grid", gridTemplateColumns: "28px 1fr 1fr 60px",
+                gap: 6, padding: "8px 0 4px",
+                fontSize: 9, color: "var(--text-dim)", textTransform: "uppercase",
+                letterSpacing: ".08em", fontWeight: 800,
+              }}>
+                <div>#</div>
+                <div>Peso</div>
+                <div>Reps</div>
+                <div style={{ textAlign: "right" }}>Esfuerzo</div>
+              </div>
+              {ex.sets.map((s) => <SetDetail key={s.id} set={s} />)}
+            </>
+          )}
+
+          {/* Comment button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onComment(); }}
+            style={{
+              marginTop: 10, display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 12px", borderRadius: 8,
+              border: "1px solid var(--line-2)", background: "transparent",
+              color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            <Icon name="msg" size={13} color="var(--text-mute)" />
+            Comentar con el coach
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function ComentariosPage() {
   const { api, user } = useAuth();
   const router = useRouter();
@@ -33,8 +196,8 @@ export default function ComentariosPage() {
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("Sesión");
-  const [selectedExIdx, setSelectedExIdx] = useState<number | null>(null);
+  const [tab, setTab] = useState<Tab>("Detalle");
+  const [selectedEx, setSelectedEx] = useState<SessionExercise | null>(null);
   const [newMsg, setNewMsg] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -54,22 +217,22 @@ export default function ComentariosPage() {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      try { window.localStorage.setItem(readKey(sessionId), new Date().toISOString()); } catch {}
+      try { window.localStorage.setItem(`regen_msg_read_${sessionId}`, new Date().toISOString()); } catch {}
     }, 0);
     return () => clearTimeout(id);
   }, [sessionId]);
 
   useEffect(() => {
-    if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (tab === "Mensajes") {
+      if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [comments, tab]);
 
   useEffect(() => {
+    if (tab !== "Mensajes") return;
     const isNearBottom = () =>
-      typeof window !== "undefined" &&
       window.innerHeight + window.scrollY >= document.body.scrollHeight - 120;
-
     let cancelled = false;
-
     const tick = async () => {
       if (document.visibilityState !== "visible") return;
       stickToBottomRef.current = isNearBottom();
@@ -79,32 +242,29 @@ export default function ComentariosPage() {
         setComments((prev) => {
           const prevLastId = prev[prev.length - 1]?.id;
           const nextLastId = c[c.length - 1]?.id;
-          if (prev.length === c.length && prevLastId && prevLastId === nextLastId) return prev;
+          if (prev.length === c.length && prevLastId === nextLastId) return prev;
           return c;
         });
       } catch {}
     };
-
     const interval = window.setInterval(tick, 5000);
-    const onVis = () => {
-      if (document.visibilityState === "visible") tick();
-    };
+    const onVis = () => { if (document.visibilityState === "visible") tick(); };
     document.addEventListener("visibilitychange", onVis);
-
     return () => {
       cancelled = true;
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [api, sessionId]);
+  }, [api, sessionId, tab]);
 
   async function sendComment() {
     if (!newMsg.trim()) return;
     setSending(true);
     stickToBottomRef.current = true;
+    const prefix = selectedEx ? `[${selectedEx.exercise.name}] ` : "";
     try {
       const c = await api.post<Comment>(`/sessions/${sessionId}/comments`, {
-        text: newMsg.trim(),
+        text: prefix + newMsg.trim(),
       });
       setComments((prev) => [...prev, c]);
       setNewMsg("");
@@ -115,10 +275,15 @@ export default function ComentariosPage() {
     }
   }
 
+  function goToMessages(ex?: SessionExercise) {
+    setSelectedEx(ex ?? null);
+    setTab("Mensajes");
+  }
+
   if (loading || !session) {
     return (
       <div style={{ minHeight: "100dvh", background: "var(--bg)" }}>
-        <StateBlock kind="loading" title="Cargando comentarios…" />
+        <StateBlock kind="loading" title="Cargando sesión…" />
       </div>
     );
   }
@@ -126,196 +291,202 @@ export default function ComentariosPage() {
   const manualMeta = parseManualMeta(session.sessionNotes);
   const sessionTitle = session.workoutTemplate?.title ?? manualMeta.title ?? "Sesión";
   const sessionDate = new Date(session.performedAt).toLocaleDateString("es", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
+    weekday: "short", day: "numeric", month: "short",
   });
+  const durationMs = session.completedAt
+    ? new Date(session.completedAt).getTime() - new Date(session.performedAt).getTime()
+    : null;
+  const coachName = comments.find((c) => c.author.role === "coach")?.author.name ?? "Coach";
+  const workExercises = session.exercises.filter((e) => !e.isWarmup);
+  const totalSets = workExercises.reduce((acc, e) => acc + e.sets.length, 0);
+  const targetSets = workExercises.reduce((acc, e) => acc + (e.target?.sets ?? 0), 0);
+  const isComplete = targetSets > 0 && totalSets >= targetSets;
 
-  const coachName =
-    comments.find((c) => c.author.role === "coach")?.author.name ?? "Coach";
+  const filteredComments = selectedEx
+    ? comments.filter((c) => c.text.includes(`[${selectedEx.exercise.name}]`))
+    : comments.filter((c) => !c.text.match(/^\[.+\] /));
 
   return (
-    <div
-      style={{
-        minHeight: "100dvh",
-        background: "var(--bg)",
-        display: "flex",
-        flexDirection: "column",
-        paddingBottom: 100,
-      }}
-    >
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column", paddingBottom: 100 }}>
+
       {/* Header */}
-      <div
-        style={{
-          padding: "44px 16px 10px",
-          borderBottom: "1px solid var(--line)",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 8,
-          }}
-        >
+      <div style={{ padding: "44px 16px 10px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <button
             onClick={() => {
-              if (tab === "Por ejercicio" && selectedExIdx !== null) {
-                setSelectedExIdx(null);
+              if (tab === "Mensajes" && selectedEx) {
+                setSelectedEx(null);
+              } else if (tab === "Mensajes") {
+                setTab("Detalle");
               } else {
                 router.back();
               }
             }}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "var(--text)",
+              width: 36, height: 36, borderRadius: 10,
+              background: "var(--bg-1)", border: "1px solid var(--line)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "var(--text)",
             }}
           >
             <Icon name="chevL" size={18} />
           </button>
           <Tabs
             variant="pills"
-            tabs={["Sesión", "Por ejercicio"]}
+            tabs={["Detalle", "Mensajes"]}
             active={tab}
-            onChange={(t) => { setTab(t as Tab); setSelectedExIdx(null); }}
+            onChange={(t) => { setTab(t as Tab); setSelectedEx(null); }}
           />
           <div style={{ width: 36 }} />
         </div>
-        <div
-          style={{
-            fontSize: 16,
-            fontWeight: 600,
-            letterSpacing: "-.01em",
-            marginTop: 4,
-            paddingLeft: 4,
-          }}
-        >
-          {sessionTitle} · {sessionDate}
-        </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--text-mute)",
-            paddingLeft: 4,
-            marginTop: 2,
-          }}
-        >
-          {tab === "Sesión"
-            ? `Thread con ${coachName}`
-            : selectedExIdx !== null
-            ? `Comentarios · ${session.exercises[selectedExIdx]?.exercise.name}`
-            : "Elegí un ejercicio para comentar"}
+        <div style={{ paddingLeft: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-.01em" }}>
+            {sessionTitle}
+          </div>
+          <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 2, textTransform: "uppercase", letterSpacing: ".08em" }}>
+            {sessionDate}
+            {durationMs ? ` · ${fmtMinutes(durationMs)}` : ""}
+            {session.energyRating ? ` · Energía ${Math.min(5, Math.ceil(session.energyRating / 2))}/5` : ""}
+          </div>
         </div>
       </div>
 
-      {/* ── TAB: Sesión ── */}
-      {tab === "Sesión" && (
-        <>
-          <div
+      {/* ── TAB: Detalle ── */}
+      {tab === "Detalle" && (
+        <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px" }}>
+
+          {/* Stats row */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <div style={{ flex: 1, padding: "10px 12px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 10 }}>
+              <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700 }}>SERIES</div>
+              <div className="ta-mono" style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+                {totalSets}{targetSets > 0 ? `/${targetSets}` : ""}
+              </div>
+            </div>
+            <div style={{ flex: 1, padding: "10px 12px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 10 }}>
+              <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700 }}>ESTADO</div>
+              <div style={{ marginTop: 4 }}>
+                {isComplete
+                  ? <Badge tone="limeSoft" size="sm">Completado</Badge>
+                  : targetSets > 0
+                  ? <Badge tone="neutral" size="sm">Parcial</Badge>
+                  : <Badge tone="neutral" size="sm">Libre</Badge>
+                }
+              </div>
+            </div>
+            {durationMs != null && (
+              <div style={{ flex: 1, padding: "10px 12px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 10 }}>
+                <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700 }}>TIEMPO</div>
+                <div className="ta-mono" style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>{fmtMinutes(durationMs)}</div>
+              </div>
+            )}
+          </div>
+
+          {/* Exercise list */}
+          {workExercises.length === 0 ? (
+            <div style={{ textAlign: "center", color: "var(--text-mute)", fontSize: 13, padding: 24 }}>
+              Sin ejercicios registrados
+            </div>
+          ) : (
+            workExercises.map((ex, i) => (
+              <ExerciseCard
+                key={ex.id}
+                ex={ex}
+                index={i}
+                onComment={() => goToMessages(ex)}
+              />
+            ))
+          )}
+
+          {/* Message about whole session */}
+          <button
+            onClick={() => goToMessages()}
             style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "16px 14px 16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
+              width: "100%", marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "12px", borderRadius: 12,
+              border: "1px solid var(--line-2)", background: "transparent",
+              color: "var(--text-mute)", fontSize: 13, fontWeight: 600, cursor: "pointer",
             }}
           >
-            {/* Context pill */}
-            <div
-              style={{
-                alignSelf: "center",
-                padding: "4px 10px",
-                background: "var(--bg-2)",
-                border: "1px solid var(--line)",
-                borderRadius: 999,
-                fontSize: 10,
-                color: "var(--text-mute)",
-                textTransform: "uppercase",
-                letterSpacing: ".08em",
-                fontWeight: 600,
-              }}
-            >
-              Comentarios · {session.status === "completed" ? "sesión completa" : "en curso"}
+            <Icon name="msg" size={15} color="var(--text-mute)" />
+            Mensaje al coach sobre esta sesión
+          </button>
+        </div>
+      )}
+
+      {/* ── TAB: Mensajes ── */}
+      {tab === "Mensajes" && (
+        <>
+          {/* Exercise context pill if filtered */}
+          {selectedEx && (
+            <div style={{
+              padding: "8px 16px", background: "var(--bg-1)", borderBottom: "1px solid var(--line)",
+              display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
+            }}>
+              <div style={{
+                padding: "4px 10px", borderRadius: 999,
+                background: "rgba(215,255,58,.12)", border: "1px solid rgba(215,255,58,.3)",
+                fontSize: 10, color: "var(--lime)", fontFamily: "var(--font-mono)",
+                fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em",
+              }}>
+                {selectedEx.exercise.name}
+              </div>
+              {selectedEx.target && (
+                <span className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                  {selectedEx.target.sets && selectedEx.target.reps
+                    ? `${selectedEx.target.sets} × ${selectedEx.target.reps}`
+                    : ""}
+                  {selectedEx.target.intensityTarget
+                    ? ` @ ${selectedEx.target.intensityType ?? ""} ${selectedEx.target.intensityTarget}`
+                    : ""}
+                </span>
+              )}
+              <button
+                onClick={() => setSelectedEx(null)}
+                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--text-mute)", fontSize: 12, fontWeight: 600 }}
+              >
+                Ver todo
+              </button>
+            </div>
+          )}
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{
+              alignSelf: "center", padding: "4px 10px",
+              background: "var(--bg-2)", border: "1px solid var(--line)",
+              borderRadius: 999, fontSize: 10, color: "var(--text-mute)",
+              textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600,
+            }}>
+              {selectedEx ? `Sobre ${selectedEx.exercise.name}` : "Sesión completa"}
             </div>
 
-            {comments.length === 0 && (
-              <div
-                style={{
-                  textAlign: "center",
-                  fontSize: 13,
-                  color: "var(--text-mute)",
-                  marginTop: 16,
-                }}
-              >
-                Aún no hay comentarios. Sé el primero en escribir.
+            {filteredComments.length === 0 && (
+              <div style={{ textAlign: "center", fontSize: 13, color: "var(--text-mute)", marginTop: 16 }}>
+                Sin mensajes aún. Escribile al {coachName}.
               </div>
             )}
 
-            {comments.map((m) => {
+            {filteredComments.map((m) => {
               const isMe = m.author.id === user?.id;
+              const text = m.text.replace(/^\[.+?\] /, "");
               return (
-                <div
-                  key={m.id}
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "flex-end",
-                    flexDirection: isMe ? "row-reverse" : "row",
-                  }}
-                >
-                  <Avatar
-                    name={m.author.name ?? m.author.role}
-                    size={28}
-                    tone={isMe ? "var(--lime)" : "#7AB8FF"}
-                  />
+                <div key={m.id} style={{ display: "flex", gap: 8, alignItems: "flex-end", flexDirection: isMe ? "row-reverse" : "row" }}>
+                  <Avatar name={m.author.name ?? m.author.role} size={28} tone={isMe ? "var(--lime)" : "#7AB8FF"} />
                   <div style={{ maxWidth: 260 }}>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: "var(--text-mute)",
-                        marginBottom: 3,
-                        display: "flex",
-                        gap: 6,
-                        justifyContent: isMe ? "flex-end" : "flex-start",
-                      }}
-                    >
-                      <span style={{ fontWeight: 600 }}>
-                        {isMe ? "Vos" : (m.author.name ?? m.author.role)}
-                      </span>
+                    <div style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 3, display: "flex", gap: 6, justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                      <span style={{ fontWeight: 600 }}>{isMe ? "Vos" : (m.author.name ?? m.author.role)}</span>
                       <span>·</span>
-                      <span className="ta-mono">
-                        {new Date(m.createdAt).toLocaleTimeString("es", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
+                      <span className="ta-mono">{new Date(m.createdAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}</span>
                     </div>
-                    <div
-                      style={{
-                        padding: "10px 12px",
-                        background: isMe ? "var(--lime)" : "var(--bg-1)",
-                        color: isMe ? "#0B0B0C" : "var(--text)",
-                        border: isMe ? "none" : "1px solid var(--line)",
-                        borderRadius: isMe
-                          ? "14px 14px 4px 14px"
-                          : "14px 14px 14px 4px",
-                        fontSize: 14,
-                        lineHeight: 1.45,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {m.text}
+                    <div style={{
+                      padding: "10px 12px",
+                      background: isMe ? "var(--lime)" : "var(--bg-1)",
+                      color: isMe ? "#0B0B0C" : "var(--text)",
+                      border: isMe ? "none" : "1px solid var(--line)",
+                      borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                      fontSize: 14, lineHeight: 1.45, fontWeight: 500,
+                    }}>
+                      {text}
                     </div>
                   </div>
                 </div>
@@ -325,53 +496,30 @@ export default function ComentariosPage() {
           </div>
 
           {/* Composer */}
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "12px 14px 32px",
-              background: "var(--bg)",
-              borderTop: "1px solid var(--line)",
-            }}
-          >
+          <div style={{ flexShrink: 0, padding: "12px 14px 32px", background: "var(--bg)", borderTop: "1px solid var(--line)" }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input
                 value={newMsg}
                 onChange={(e) => setNewMsg(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendComment();
-                  }
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendComment(); }
                 }}
-                placeholder={`Responder a ${coachName}…`}
+                placeholder={selectedEx ? `Sobre ${selectedEx.exercise.name}…` : `Escribirle a ${coachName}…`}
                 style={{
-                  flex: 1,
-                  height: 44,
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: 22,
-                  padding: "0 16px",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 13,
-                  color: "var(--text)",
-                  outline: "none",
+                  flex: 1, height: 44, background: "var(--bg-2)", border: "1px solid var(--line-2)",
+                  borderRadius: 22, padding: "0 16px", fontFamily: "var(--font-sans)",
+                  fontSize: 13, color: "var(--text)", outline: "none",
                 }}
               />
               <button
                 onClick={sendComment}
                 disabled={sending || !newMsg.trim()}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
+                  width: 44, height: 44, borderRadius: 22,
                   background: newMsg.trim() ? "var(--lime)" : "var(--bg-2)",
-                  border: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  border: "none", display: "flex", alignItems: "center", justifyContent: "center",
                   color: newMsg.trim() ? "#0B0B0C" : "var(--text-mute)",
-                  cursor: newMsg.trim() ? "pointer" : "default",
-                  transition: "background .15s",
+                  cursor: newMsg.trim() ? "pointer" : "default", transition: "background .15s",
                 }}
               >
                 <Icon name="send" size={18} />
@@ -380,281 +528,6 @@ export default function ComentariosPage() {
           </div>
         </>
       )}
-
-      {/* ── TAB: Por ejercicio — lista ── */}
-      {tab === "Por ejercicio" && selectedExIdx === null && (
-        <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px 28px" }}>
-          {session.exercises.map((ex, i) => {
-            const exComments = comments.filter((c) =>
-              c.text.toLowerCase().includes(ex.exercise.name.toLowerCase())
-            );
-            const count = exComments.length;
-            const lastComment = exComments[exComments.length - 1];
-            return (
-              <div
-                key={ex.id}
-                onClick={() => setSelectedExIdx(i)}
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  padding: 12,
-                  marginBottom: 8,
-                  background: "transparent",
-                  border: "1px solid var(--line)",
-                  borderRadius: 12,
-                  cursor: "pointer",
-                }}
-                className="ta-row"
-              >
-                <div
-                  className="ta-mono"
-                  style={{
-                    fontSize: 11,
-                    color: "var(--text-mute)",
-                    width: 18,
-                    paddingTop: 2,
-                    fontWeight: 600,
-                    flexShrink: 0,
-                  }}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>
-                    {ex.exercise.name}
-                  </div>
-                  {lastComment ? (
-                    <div
-                      className="ta-ellipsis"
-                      style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 3 }}
-                    >
-                      {lastComment.author.role === "coach" ? "Coach" : "Vos"}:{" "}
-                      &ldquo;{lastComment.text}&rdquo;
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "var(--text-dim)",
-                        marginTop: 3,
-                        fontStyle: "italic",
-                      }}
-                    >
-                      Sin comentarios
-                    </div>
-                  )}
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    flexShrink: 0,
-                  }}
-                >
-                  {count > 0 ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        padding: "3px 8px",
-                        background: "var(--bg-2)",
-                        borderRadius: 999,
-                      }}
-                    >
-                      <Icon name="msg" size={11} color="var(--text-mute)" />
-                      <span
-                        className="ta-mono"
-                        style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}
-                      >
-                        {count}
-                      </span>
-                    </div>
-                  ) : (
-                    <Icon name="plus" size={14} color="var(--text-mute)" />
-                  )}
-                  <Icon name="chevR" size={14} color="var(--text-mute)" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── TAB: Por ejercicio — thread específico ── */}
-      {tab === "Por ejercicio" && selectedExIdx !== null && (() => {
-        const ex = session.exercises[selectedExIdx];
-        if (!ex) return null;
-        const exComments = comments.filter((c) =>
-          c.text.toLowerCase().includes(ex.exercise.name.toLowerCase())
-        );
-
-        return (
-          <>
-            {/* Exercise context badge */}
-            <div
-              style={{
-                padding: "10px 16px",
-                background: "var(--bg-1)",
-                borderBottom: "1px solid var(--line)",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  padding: "4px 10px",
-                  background: "rgba(215,255,58,.12)",
-                  border: "1px solid rgba(215,255,58,.3)",
-                  borderRadius: 999,
-                  fontSize: 10,
-                  color: "var(--lime)",
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: ".08em",
-                }}
-              >
-                {ex.exercise.name}
-              </div>
-              {ex.target && (
-                <span
-                  className="ta-mono"
-                  style={{ fontSize: 11, color: "var(--text-mute)" }}
-                >
-                  {ex.target.sets && ex.target.reps
-                    ? `${ex.target.sets} × ${ex.target.reps}`
-                    : ""}
-                  {ex.target.intensityTarget
-                    ? ` @ ${ex.target.intensityType ?? ""} ${ex.target.intensityTarget}`
-                    : ""}
-                </span>
-              )}
-            </div>
-
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "16px 14px 16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-              }}
-            >
-              {exComments.length === 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    fontSize: 13,
-                    color: "var(--text-mute)",
-                    marginTop: 16,
-                  }}
-                >
-                  Sin comentarios para este ejercicio. Escribí uno.
-                </div>
-              )}
-              {exComments.map((m) => {
-                const isMe = m.author.id === user?.id;
-                return (
-                  <div
-                    key={m.id}
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "flex-end",
-                      flexDirection: isMe ? "row-reverse" : "row",
-                    }}
-                  >
-                    <Avatar
-                      name={m.author.name ?? m.author.role}
-                      size={28}
-                      tone={isMe ? "var(--lime)" : "#7AB8FF"}
-                    />
-                    <div style={{ maxWidth: 260 }}>
-                      <div
-                        style={{
-                          padding: "10px 12px",
-                          background: isMe ? "var(--lime)" : "var(--bg-1)",
-                          color: isMe ? "#0B0B0C" : "var(--text)",
-                          border: isMe ? "none" : "1px solid var(--line)",
-                          borderRadius: isMe
-                            ? "14px 14px 4px 14px"
-                            : "14px 14px 14px 4px",
-                          fontSize: 14,
-                          lineHeight: 1.45,
-                          fontWeight: 500,
-                        }}
-                      >
-                        {m.text}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Composer */}
-            <div
-              style={{
-                flexShrink: 0,
-                padding: "12px 14px 32px",
-                background: "var(--bg)",
-                borderTop: "1px solid var(--line)",
-              }}
-            >
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input
-                  value={newMsg}
-                  onChange={(e) => setNewMsg(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendComment();
-                    }
-                  }}
-                  placeholder={`Comentar sobre ${ex.exercise.name}…`}
-                  style={{
-                    flex: 1,
-                    height: 44,
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--line-2)",
-                    borderRadius: 22,
-                    padding: "0 16px",
-                    fontFamily: "var(--font-sans)",
-                    fontSize: 13,
-                    color: "var(--text)",
-                    outline: "none",
-                  }}
-                />
-                <button
-                  onClick={sendComment}
-                  disabled={sending || !newMsg.trim()}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    background: newMsg.trim() ? "var(--lime)" : "var(--bg-2)",
-                    border: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: newMsg.trim() ? "#0B0B0C" : "var(--text-mute)",
-                    cursor: newMsg.trim() ? "pointer" : "default",
-                    transition: "background .15s",
-                  }}
-                >
-                  <Icon name="send" size={18} />
-                </button>
-              </div>
-            </div>
-          </>
-        );
-      })()}
     </div>
   );
 }
