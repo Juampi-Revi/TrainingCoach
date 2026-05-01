@@ -659,7 +659,9 @@ export default function SessionInProgressPage() {
   const [warmupTimer, setWarmupTimer] = useState<{ accMs: number; runningSince: number | null }>({ accMs: 0, runningSince: null });
   const [loggerOpen, setLoggerOpen] = useState(false);
   const [sheetSaving, setSheetSaving] = useState(false);
-  const [sheetRows, setSheetRows] = useState<Array<{ setNumber: number; reps: string; kg: string; effort: string; existingId?: string }>>([]);
+  const [sheetRows, setSheetRows] = useState<Array<{ setNumber: number; reps: string; duration: string; kg: string; effort: string; existingId?: string }>>([]);
+  const [activeTimerRow, setActiveTimerRow] = useState<number | null>(null);
+  const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
   const [equipmentType, setEquipmentType] = useState<"barra" | "mancuernas" | "maquina" | null>(null);
   const [restFromLogger, setRestFromLogger] = useState(false);
   const [lastRef, setLastRef] = useState<{ weight: string | null; reps: number | null; rpe: string | null; rir: string | null; notes: string | null } | null>(null);
@@ -889,6 +891,7 @@ export default function SessionInProgressPage() {
           return {
             setNumber,
             reps: s?.reps != null ? String(s.reps) : "",
+            duration: s?.durationSeconds != null ? String(s.durationSeconds) : "",
             kg: s?.weight != null ? String(s.weight) : "",
             effort: effort != null ? String(effort) : "",
             existingId: s?.id,
@@ -898,6 +901,21 @@ export default function SessionInProgressPage() {
     }, 0);
     return () => clearTimeout(id);
   }, [loggerOpen, session, currentExIdx, effortMode]);
+
+  useEffect(() => {
+    if (activeTimerRow === null || timerSecondsLeft <= 0) return;
+    const id = setTimeout(() => setTimerSecondsLeft((t) => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [activeTimerRow, timerSecondsLeft]);
+
+  useEffect(() => {
+    if (activeTimerRow === null || timerSecondsLeft > 0) return;
+    const targetSec = session?.exercises[currentExIdx]?.target?.durationSeconds ?? 30;
+    setSheetRows((prev) =>
+      prev.map((r) => r.setNumber === activeTimerRow ? { ...r, duration: String(targetSec) } : r),
+    );
+    setActiveTimerRow(null);
+  }, [activeTimerRow, timerSecondsLeft, session, currentExIdx]);
 
   useEffect(() => {
     if (!loggerOpen || !session) return;
@@ -989,6 +1007,7 @@ export default function SessionInProgressPage() {
       return {
         setNumber,
         reps: s?.reps != null ? String(s.reps) : "",
+        duration: s?.durationSeconds != null ? String(s.durationSeconds) : "",
         kg: s?.weight != null ? String(s.weight) : "",
         effort: effort != null ? String(effort) : "",
         existingId: s?.id,
@@ -1114,13 +1133,16 @@ export default function SessionInProgressPage() {
   async function saveSheet(opts?: { startRest?: boolean }) {
     if (!ex) return;
     setSheetSaving(true);
+    const isTimed = !!(ex?.target?.durationSeconds);
     try {
       for (const row of sheetRows) {
-        const body: Record<string, string> = { reps: row.reps, weight: row.kg };
+        const body: Record<string, string> = { weight: row.kg };
+        if (isTimed) { if (row.duration) body.durationSeconds = row.duration; }
+        else { body.reps = row.reps; }
         if (effortMode === "RPE") body.rpe = row.effort;
         else body.rir = row.effort;
         if (equipmentType) body.notes = equipmentType;
-        const hasAny = !!(row.reps || row.kg || row.effort);
+        const hasAny = isTimed ? !!(row.duration || row.kg) : !!(row.reps || row.kg || row.effort);
         if (!hasAny) continue;
         try {
           await api.put(`/client/sessions/${sessionId}/exercises/${ex.id}/sets/${row.setNumber}`, body);
@@ -1585,49 +1607,122 @@ export default function SessionInProgressPage() {
             </div>
 
             {/* Encabezado columnas */}
-            <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, padding: "0 2px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>
-              <div>Serie</div>
-              <div style={{ textAlign: "center" }}>kg</div>
-              <div style={{ textAlign: "center" }}>reps</div>
-              <div style={{ textAlign: "center" }}>{effortMode}</div>
-              <div />
-            </div>
+            {ex.target?.durationSeconds ? (
+              <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, padding: "0 2px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>
+                <div>Serie</div>
+                <div style={{ textAlign: "center" }}>seg</div>
+                <div style={{ textAlign: "center" }}>kg</div>
+                <div style={{ textAlign: "center" }}>{effortMode}</div>
+                <div />
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, padding: "0 2px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>
+                <div>Serie</div>
+                <div style={{ textAlign: "center" }}>kg</div>
+                <div style={{ textAlign: "center" }}>reps</div>
+                <div style={{ textAlign: "center" }}>{effortMode}</div>
+                <div />
+              </div>
+            )}
 
             {/* Filas de series */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {sheetRows.map((row) => (
-                <div key={row.setNumber} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
-                  <div className="ta-mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--text-mute)" }}>{row.setNumber}</div>
-                  <input
-                    type="number" inputMode="decimal" value={row.kg}
-                    onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
-                    placeholder="—"
-                    style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                  />
-                  <input
-                    type="number" inputMode="decimal" value={row.reps}
-                    onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, reps: e.target.value } : r))}
-                    placeholder={ex.target?.reps ?? "—"}
-                    style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                  />
-                  <input
-                    type="number" inputMode="decimal" value={row.effort}
-                    onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
-                    placeholder={ex.target?.intensityTarget ?? "—"}
-                    style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                  />
-                  {row.existingId ? (
-                    <button
-                      onClick={() => deleteSet(row.setNumber)}
-                      style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
-                    >
-                      Borrar
-                    </button>
-                  ) : (
-                    <div />
-                  )}
-                </div>
-              ))}
+              {sheetRows.map((row) => {
+                const isTimingThis = activeTimerRow === row.setNumber;
+                return ex.target?.durationSeconds ? (
+                  // ── Fila para ejercicio por TIEMPO ──────────────────────
+                  <div key={row.setNumber} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
+                    <div className="ta-mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--text-mute)" }}>{row.setNumber}</div>
+                    {/* Seg input o countdown */}
+                    <div style={{ position: "relative" }}>
+                      {isTimingThis ? (
+                        <div style={{
+                          textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--lime)",
+                          borderRadius: 10, padding: "10px 0", fontSize: 22, fontWeight: 800,
+                          fontFamily: "var(--font-mono)", color: "var(--lime)", width: "100%",
+                        }}>
+                          {timerSecondsLeft}
+                        </div>
+                      ) : (
+                        <input
+                          type="number" inputMode="decimal" value={row.duration}
+                          onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, duration: e.target.value } : r))}
+                          placeholder={String(ex.target.durationSeconds)}
+                          style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                        />
+                      )}
+                    </div>
+                    <input
+                      type="number" inputMode="decimal" value={row.kg}
+                      onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
+                      placeholder="—"
+                      style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                    />
+                    <input
+                      type="number" inputMode="decimal" value={row.effort}
+                      onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
+                      placeholder={ex.target?.intensityTarget ?? "—"}
+                      style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                    />
+                    {/* Timer button o Borrar */}
+                    {isTimingThis ? (
+                      <button
+                        onClick={() => setActiveTimerRow(null)}
+                        style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--lime)", background: "rgba(215,255,58,.1)", color: "var(--lime)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+                      >
+                        Parar
+                      </button>
+                    ) : row.existingId ? (
+                      <button
+                        onClick={() => deleteSet(row.setNumber)}
+                        style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                      >
+                        Borrar
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setActiveTimerRow(row.setNumber); setTimerSecondsLeft(ex.target!.durationSeconds!); }}
+                        style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+                      >
+                        <Icon name="timer" size={14} />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  // ── Fila para ejercicio por REPS ────────────────────────
+                  <div key={row.setNumber} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
+                    <div className="ta-mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--text-mute)" }}>{row.setNumber}</div>
+                    <input
+                      type="number" inputMode="decimal" value={row.kg}
+                      onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
+                      placeholder="—"
+                      style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                    />
+                    <input
+                      type="number" inputMode="decimal" value={row.reps}
+                      onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, reps: e.target.value } : r))}
+                      placeholder={ex.target?.reps ?? "—"}
+                      style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                    />
+                    <input
+                      type="number" inputMode="decimal" value={row.effort}
+                      onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
+                      placeholder={ex.target?.intensityTarget ?? "—"}
+                      style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
+                    />
+                    {row.existingId ? (
+                      <button
+                        onClick={() => deleteSet(row.setNumber)}
+                        style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                      >
+                        Borrar
+                      </button>
+                    ) : (
+                      <div />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Controles de series — al final de la lista */}
@@ -1644,7 +1739,7 @@ export default function SessionInProgressPage() {
                 − Quitar serie
               </button>
               <button
-                onClick={() => setSheetRows((prev) => [...prev, { setNumber: prev.length + 1, reps: "", kg: "", effort: "" }])}
+                onClick={() => setSheetRows((prev) => [...prev, { setNumber: prev.length + 1, reps: "", duration: "", kg: "", effort: "" }])}
                 style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
               >
                 + Agregar serie

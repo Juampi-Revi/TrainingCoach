@@ -29,6 +29,7 @@ export async function GET(
                 isWarmup: true,
                 targetSets: true,
                 targetReps: true,
+                durationSeconds: true,
                 intensityType: true,
                 intensityTarget: true,
                 restSeconds: true,
@@ -89,19 +90,21 @@ export async function GET(
           ? {
               sets: ex.workoutExercise.targetSets,
               reps: ex.workoutExercise.targetReps,
+              durationSeconds: ex.workoutExercise.durationSeconds,
               intensityType: ex.workoutExercise.intensityType,
               intensityTarget: ex.workoutExercise.intensityTarget
                 ? String(ex.workoutExercise.intensityTarget)
                 : null,
               restSeconds: ex.workoutExercise.restSeconds,
               notes: ex.workoutExercise.notes,
-            groupNote: ex.workoutExercise.groupNote,
+              groupNote: ex.workoutExercise.groupNote,
             }
           : null,
         sets: ex.sets.map((s) => ({
           id: s.id,
           setNumber: s.setNumber,
           reps: s.reps,
+          durationSeconds: s.durationSeconds,
           weight: s.weight ? String(s.weight) : null,
           rpe: s.rpe ? String(s.rpe) : null,
           rir: s.rir ? String(s.rir) : null,

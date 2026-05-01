@@ -206,6 +206,7 @@ model WorkoutExercise {
   isWarmup          Boolean  @default(false)
   targetSets        Int?
   targetReps        String?
+  durationSeconds   Int?     // if set, exercise is timed (replaces reps)
   targetLoadNote    String?
   intensityType     String?  // 'rpe' | 'rir' | 'none'
   intensityTarget   Decimal?
@@ -288,6 +289,7 @@ model WorkoutSet {
   workoutSessionExerciseId String
   setNumber                Int
   reps                     Int?
+  durationSeconds          Int?     // actual seconds completed (for timed exercises)
   weight                   Decimal?
   rpe                      Decimal?
   rir                      Decimal?

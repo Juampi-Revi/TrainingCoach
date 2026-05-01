@@ -64,6 +64,7 @@ export interface ExerciseSummary {
 export interface ExerciseTarget {
   sets: number | null;
   reps: string | null;
+  durationSeconds: number | null;
   intensityType: string | null;
   intensityTarget: string | null;
   restSeconds: number | null;
@@ -78,6 +79,7 @@ export interface WorkoutSet {
   id: string;
   setNumber: number;
   reps: number | null;
+  durationSeconds: number | null;
   weight: string | null;
   rpe: string | null;
   rir: string | null;

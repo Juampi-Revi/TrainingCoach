@@ -33,6 +33,7 @@ interface WE {
   exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl?: string | null; youtubeUrl?: string | null; isSystem?: boolean };
   targetSets: number | null;
   targetReps: string | null;
+  durationSeconds: number | null;
   intensityType: string | null;
   intensityTarget: string | null;
   restSeconds: number | null;
@@ -483,6 +484,7 @@ function ExerciseInspector({ we, templateId, usedGroups, groupSizes, nextGroup, 
   const { api } = useAuth();
   const [localSets, setLocalSets] = useState(String(we.targetSets ?? ""));
   const [localReps, setLocalReps] = useState(we.targetReps ?? "");
+  const [localDuration, setLocalDuration] = useState(String(we.durationSeconds ?? ""));
   const [localIntType, setLocalIntType] = useState<"rpe" | "rir" | "">(
     (we.intensityType?.toLowerCase() as "rpe" | "rir") ?? ""
   );
@@ -499,6 +501,7 @@ function ExerciseInspector({ we, templateId, usedGroups, groupSizes, nextGroup, 
     prevId.current = we.id;
     setLocalSets(String(we.targetSets ?? ""));
     setLocalReps(we.targetReps ?? "");
+    setLocalDuration(String(we.durationSeconds ?? ""));
     setLocalIntType((we.intensityType?.toLowerCase() as "rpe" | "rir") ?? "");
     setLocalIntVal(we.intensityTarget ?? "");
     setLocalRest(String(we.restSeconds ?? ""));
@@ -523,6 +526,12 @@ function ExerciseInspector({ we, templateId, usedGroups, groupSizes, nextGroup, 
 
   function commitReps() {
     save({ targetReps: localReps || null });
+  }
+
+  function commitDuration() {
+    const n = parseInt(localDuration);
+    if (!isNaN(n) && n > 0) save({ durationSeconds: n });
+    else if (!localDuration) save({ durationSeconds: null });
   }
 
   function commitInt() {
@@ -657,16 +666,44 @@ function ExerciseInspector({ we, templateId, usedGroups, groupSizes, nextGroup, 
               />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".04em" }}>Reps</span>
-              <input
-                value={localReps}
-                onChange={(e) => setLocalReps(e.target.value)}
-                onBlur={commitReps}
-                placeholder="8-12"
-                style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", outline: "none", textAlign: "center", width: "100%" }}
-              />
+              <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".04em" }}>
+                {localDuration ? "Duración (seg)" : "Reps"}
+              </span>
+              {localDuration ? (
+                <input
+                  type="number" value={localDuration}
+                  onChange={(e) => setLocalDuration(e.target.value)}
+                  onBlur={commitDuration}
+                  placeholder="30"
+                  style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--lime)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--lime)", outline: "none", textAlign: "center", width: "100%" }}
+                />
+              ) : (
+                <input
+                  value={localReps}
+                  onChange={(e) => setLocalReps(e.target.value)}
+                  onBlur={commitReps}
+                  placeholder="8-12"
+                  style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", outline: "none", textAlign: "center", width: "100%" }}
+                />
+              )}
             </div>
           </div>
+          {/* Toggle reps ↔ duración */}
+          <button
+            onClick={() => {
+              if (localDuration) { setLocalDuration(""); save({ durationSeconds: null }); }
+              else { setLocalReps(""); save({ targetReps: null, durationSeconds: null }); setLocalDuration("30"); }
+            }}
+            style={{
+              marginTop: 4, padding: "5px 10px", borderRadius: 7,
+              border: `1px solid ${localDuration ? "var(--lime)" : "var(--line-2)"}`,
+              background: "transparent",
+              color: localDuration ? "var(--lime)" : "var(--text-mute)",
+              fontSize: 11, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start",
+            }}
+          >
+            {localDuration ? "⏱ Por tiempo · cambiar a reps" : "⏱ Cambiar a por tiempo"}
+          </button>
 
           <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 8, marginTop: 8, alignItems: "end" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

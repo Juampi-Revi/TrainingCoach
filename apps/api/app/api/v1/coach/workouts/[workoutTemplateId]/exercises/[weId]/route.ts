@@ -27,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       data: {
         ...(body.targetSets !== undefined && { targetSets: body.targetSets ? Number(body.targetSets) : null }),
         ...(body.targetReps !== undefined && { targetReps: body.targetReps || null }),
+        ...(body.durationSeconds !== undefined && { durationSeconds: body.durationSeconds ? Number(body.durationSeconds) : null }),
         ...(body.intensityType !== undefined && { intensityType: body.intensityType || null }),
         ...(body.intensityTarget !== undefined && { intensityTarget: body.intensityTarget ? Number(body.intensityTarget) : null }),
         ...(body.restSeconds !== undefined && { restSeconds: body.restSeconds ? Number(body.restSeconds) : null }),
@@ -47,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       exercise: updated.exercise,
       targetSets: updated.targetSets,
       targetReps: updated.targetReps,
+      durationSeconds: updated.durationSeconds,
       intensityType: updated.intensityType,
       intensityTarget: updated.intensityTarget ? String(updated.intensityTarget) : null,
       restSeconds: updated.restSeconds,

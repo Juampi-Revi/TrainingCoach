@@ -44,12 +44,13 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     if (!se) return notFound("Exercise not found or session not in progress");
 
     const body = await req.json().catch(() => ({}));
-    const { reps, weight, rpe, rir, notes } = body;
+    const { reps, durationSeconds, weight, rpe, rir, notes } = body;
 
     const result = await prisma.workoutSet.upsert({
       where: { workoutSessionExerciseId_setNumber: { workoutSessionExerciseId: se.id, setNumber } },
       update: {
         reps: parseOptionalInt(reps),
+        durationSeconds: parseOptionalInt(durationSeconds),
         weight: parseOptionalDecimal(weight),
         rpe: parseOptionalDecimal(rpe),
         rir: parseOptionalDecimal(rir),
@@ -59,18 +60,20 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
         workoutSessionExerciseId: se.id,
         setNumber,
         reps: parseOptionalInt(reps),
+        durationSeconds: parseOptionalInt(durationSeconds),
         weight: parseOptionalDecimal(weight),
         rpe: parseOptionalDecimal(rpe),
         rir: parseOptionalDecimal(rir),
         notes: notes?.trim() || null,
       },
-      select: { id: true, setNumber: true, reps: true, weight: true, rpe: true, rir: true, notes: true },
+      select: { id: true, setNumber: true, reps: true, durationSeconds: true, weight: true, rpe: true, rir: true, notes: true },
     });
 
     return ok({
       id: result.id,
       setNumber: result.setNumber,
       reps: result.reps,
+      durationSeconds: result.durationSeconds,
       weight: result.weight ? String(result.weight) : null,
       rpe: result.rpe ? String(result.rpe) : null,
       rir: result.rir ? String(result.rir) : null,
