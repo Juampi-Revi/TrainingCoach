@@ -1,0 +1,118 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import { Icon, ConfirmModal } from "@/components/ui";
+import { MUSCLE_LABEL, GROUP_COLORS } from "@/lib/constants";
+import type { WE } from "./_types";
+
+export function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDelete }: {
+  we: WE;
+  selected: boolean;
+  onSelect: () => void;
+  onMoveUp: (() => void) | null;
+  onMoveDown: (() => void) | null;
+  onDelete: () => void;
+}) {
+  const gc = we.supersetGroup ? (GROUP_COLORS[we.supersetGroup] ?? null) : null;
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const muscleLabel = we.exercise.primaryMuscle ? (MUSCLE_LABEL[we.exercise.primaryMuscle] ?? we.exercise.primaryMuscle) : null;
+
+  return (
+    <>
+      <div
+        onClick={onSelect}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "20px 44px 1fr auto auto auto auto 68px",
+          gap: 10, alignItems: "center",
+          padding: "9px 14px",
+          borderBottom: "1px solid var(--line)",
+          borderLeft: selected ? "3px solid var(--lime)" : gc ? `3px solid ${gc}40` : "3px solid transparent",
+          background: selected ? "rgba(215,255,58,.04)" : "transparent",
+          cursor: "pointer",
+          paddingLeft: selected || gc ? 11 : 14,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 1 }} onClick={(e) => e.stopPropagation()}>
+          <button onClick={onMoveUp ?? undefined} disabled={!onMoveUp}
+            style={{ background: "none", border: "none", cursor: onMoveUp ? "pointer" : "default", padding: "2px 3px", opacity: onMoveUp ? 0.7 : 0.15, lineHeight: 1 }}>
+            <Icon name="chevUp" size={10} color="var(--text-mute)" />
+          </button>
+          <button onClick={onMoveDown ?? undefined} disabled={!onMoveDown}
+            style={{ background: "none", border: "none", cursor: onMoveDown ? "pointer" : "default", padding: "2px 3px", opacity: onMoveDown ? 0.7 : 0.15, lineHeight: 1 }}>
+            <Icon name="chevD" size={10} color="var(--text-mute)" />
+          </button>
+        </div>
+
+        <div style={{ position: "relative", width: 44, height: 44, borderRadius: 8, background: "var(--bg-2)", border: "1px solid var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+          {we.exercise.thumbnailUrl ? (
+            <Image unoptimized src={we.exercise.thumbnailUrl} alt="" fill sizes="44px" style={{ objectFit: "cover" }} />
+          ) : (
+            <Icon name="dumbbell" size={18} color="var(--text-mute)" />
+          )}
+          {gc && (
+            <div style={{ position: "absolute", top: 2, left: 2, width: 14, height: 14, borderRadius: 3, background: gc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 800, color: "#0B0B0C", fontFamily: "var(--font-mono)" }}>
+              {we.supersetGroup}
+            </div>
+          )}
+        </div>
+
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{we.exercise.name}</div>
+          <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 2 }}>
+            {muscleLabel ? muscleLabel.toUpperCase() : "—"}
+            {we.isWarmup && <span style={{ color: "var(--warn)", marginLeft: 6 }}>· CALENT.</span>}
+          </div>
+        </div>
+
+        <div className="ta-mono" style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}>
+          {we.targetSets && we.targetReps ? `${we.targetSets} × ${we.targetReps}` : we.targetSets ? `${we.targetSets} ×` : "—"}
+        </div>
+
+        <div className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--accent-text)", whiteSpace: "nowrap" }}>
+          {we.intensityTarget ? `${we.intensityType?.toUpperCase() ?? ""} ${we.intensityTarget}`.trim() : "—"}
+        </div>
+
+        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", whiteSpace: "nowrap" }}>
+          {we.restSeconds ? `${we.restSeconds}s` : "—"}
+        </div>
+
+        <div>
+          {(we.alternativesCount ?? 0) > 0 ? (
+            <span style={{ padding: "2px 6px", borderRadius: 5, background: "rgba(122,184,255,.15)", border: "1px solid rgba(122,184,255,.3)", fontSize: 9, fontWeight: 700, color: "#7AB8FF", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+              {we.alternativesCount} alt
+            </span>
+          ) : (
+            <span style={{ fontSize: 9, color: "var(--bg-3)", fontFamily: "var(--font-mono)" }}>—</span>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onSelect}
+            title="Editar"
+            style={{ width: 28, height: 28, borderRadius: 7, background: selected ? "var(--lime)" : "transparent", border: `1px solid ${selected ? "var(--lime)" : "var(--line-2)"}`, color: selected ? "#0B0B0C" : "var(--text-mute)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            <Icon name="edit" size={12} color={selected ? "#0B0B0C" : "var(--text-mute)"} />
+          </button>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            title="Eliminar"
+            style={{ width: 28, height: 28, borderRadius: 7, background: "transparent", border: "1px solid var(--line-2)", color: "var(--text-mute)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            <Icon name="trash" size={12} color="var(--text-mute)" />
+          </button>
+        </div>
+      </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          message={`¿Eliminar "${we.exercise.name}" de este workout?`}
+          onConfirm={() => { setConfirmDelete(false); onDelete(); }}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+    </>
+  );
+}

@@ -11,6 +11,10 @@ export default function CoachLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production") {
+      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
+      return;
+    }
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
 

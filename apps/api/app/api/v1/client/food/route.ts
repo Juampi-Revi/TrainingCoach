@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
         text: true,
         photoUrl: true,
         source: true,
+        mealType: true,
+        quality: true,
+        macroTags: true,
         coachComments: {
           orderBy: { createdAt: "desc" },
           take: 5,
@@ -42,6 +45,9 @@ export async function GET(req: NextRequest) {
         text: i.text,
         photoUrl: i.photoUrl,
         source: i.source,
+        mealType: i.mealType,
+        quality: i.quality,
+        macroTags: i.macroTags,
         coachComments: i.coachComments.map((c) => ({
           id: c.id,
           text: c.text,
@@ -66,10 +72,13 @@ export async function POST(req: NextRequest) {
     const photoUrl = typeof body.photoUrl === "string" && body.photoUrl.trim() ? body.photoUrl.trim() : null;
     const source = typeof body.source === "string" && body.source.trim() ? body.source.trim() : "manual";
     const sourceRef = typeof body.sourceRef === "string" && body.sourceRef.trim() ? body.sourceRef.trim() : null;
+    const mealType = typeof body.mealType === "string" && body.mealType.trim() ? body.mealType.trim() : null;
+    const quality = typeof body.quality === "string" && body.quality.trim() ? body.quality.trim() : null;
+    const macroTags = Array.isArray(body.macroTags) ? body.macroTags.filter((t: unknown) => typeof t === "string") : [];
 
     const created = await prisma.foodLogEntry.create({
-      data: { clientUserId: auth.user.sub, loggedAt, text, photoUrl, source, sourceRef },
-      select: { id: true, loggedAt: true, text: true, photoUrl: true, source: true },
+      data: { clientUserId: auth.user.sub, loggedAt, text, photoUrl, source, sourceRef, mealType, quality, macroTags },
+      select: { id: true, loggedAt: true, text: true, photoUrl: true, source: true, mealType: true, quality: true, macroTags: true },
     });
 
     const rel = await prisma.coachClient.findFirst({

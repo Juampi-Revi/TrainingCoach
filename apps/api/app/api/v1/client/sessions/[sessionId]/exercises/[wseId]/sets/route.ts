@@ -1,17 +1,9 @@
 import { NextRequest } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, withHandler } from "@/lib/api-response";
 
 type Ctx = { params: Promise<{ sessionId: string; wseId: string }> };
-
-function parseOptionalDecimal(v: unknown): Prisma.Decimal | null {
-  if (v == null || v === "") return null;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  return new Prisma.Decimal(String(v));
-}
 
 async function resolveExercise(sessionId: string, wseId: string, clientUserId: string) {
   return prisma.workoutSessionExercise.findFirst({
@@ -34,22 +26,18 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const se = await resolveExercise(sessionId, wseId, auth.user.sub);
     if (!se) return notFound("Exercise not found or session not in progress");
 
-    await prisma.$executeRaw`
-      INSERT INTO "WorkoutSet" ("id","workoutSessionExerciseId","setNumber","createdAt","updatedAt")
-      VALUES (
-        gen_random_uuid(), ${se.id},
-        (SELECT COALESCE(MAX("setNumber"),0)+1 FROM "WorkoutSet" WHERE "workoutSessionExerciseId"=${se.id}),
-        NOW(), NOW()
-      )
-    `;
-
-    const newSet = await prisma.workoutSet.findFirst({
-      where: { workoutSessionExerciseId: se.id },
-      orderBy: { setNumber: "desc" },
-      select: { id: true, setNumber: true },
+    const newSet = await prisma.$transaction(async (tx) => {
+      const agg = await tx.workoutSet.aggregate({
+        where: { workoutSessionExerciseId: se.id },
+        _max: { setNumber: true },
+      });
+      const nextSetNumber = (agg._max.setNumber ?? 0) + 1;
+      return tx.workoutSet.create({
+        data: { workoutSessionExerciseId: se.id, setNumber: nextSetNumber },
+        select: { id: true, setNumber: true },
+      });
     });
 
-    if (!newSet) return notFound("Could not create set");
     return ok({ id: newSet.id, setNumber: newSet.setNumber }, 201);
   });
 }

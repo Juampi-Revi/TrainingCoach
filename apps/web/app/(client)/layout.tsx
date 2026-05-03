@@ -10,18 +10,20 @@ import type { IconName } from "@/components/ui";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003/api/v1";
 
-type NavId = "home" | "history" | "messages" | "notifications" | "chart" | "me";
-const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
-  { id: "home",     icon: "home",    label: "Semana",    href: "/semana"    },
-  { id: "history",  icon: "history", label: "Historial", href: "/historial" },
-  { id: "messages", icon: "msg",     label: "Mensajes",  href: "/mensajes"  },
-  { id: "notifications", icon: "bell", label: "Notificaciones", href: "/notificaciones" },
-  { id: "chart",    icon: "chart",   label: "Progreso",  href: "/progreso"  },
-  { id: "me",       icon: "user",    label: "Cuenta",    href: "/cuenta"    },
+type NavId = "home" | "panel" | "history" | "messages" | "notifications" | "chart" | "me";
+const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string; mobileHide?: true }> = [
+  { id: "home",          icon: "home",    label: "Semana",    href: "/semana"    },
+  { id: "panel",         icon: "chart",   label: "Mi panel",  href: "/panel"     },
+  { id: "history",       icon: "history", label: "Historial", href: "/historial" },
+  { id: "messages",      icon: "msg",     label: "Mensajes",  href: "/mensajes"  },
+  { id: "notifications", icon: "bell",    label: "Notificaciones", href: "/notificaciones", mobileHide: true },
+  { id: "chart",         icon: "chart",   label: "Progreso",  href: "/progreso",  mobileHide: true },
+  { id: "me",            icon: "user",    label: "Cuenta",    href: "/cuenta"    },
 ];
 
 function useActiveNav(): NavId {
   const p = usePathname() ?? "";
+  if (p.startsWith("/panel")) return "panel";
   if (p.startsWith("/historial")) return "history";
   if (p.startsWith("/mensajes") || p.startsWith("/comentarios")) return "messages";
   if (p.startsWith("/notificaciones")) return "notifications";
@@ -87,6 +89,10 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production") {
+      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
+      return;
+    }
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
 
@@ -184,7 +190,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           padding: "8px 8px calc(28px + env(safe-area-inset-bottom))",
           zIndex: 50,
         }}>
-        {NAV.map((item) => {
+        {NAV.filter((item) => !item.mobileHide).map((item) => {
           const isActive = item.id === active;
           const badge =
             item.id === "messages"

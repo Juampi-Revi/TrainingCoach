@@ -6,6 +6,18 @@ export type BillingStatus = "good" | "due";
 export type SessionStatus = "in_progress" | "completed" | "discarded";
 export type PlanStatus = "draft" | "published" | "archived";
 export type AssignmentStatus = "active" | "paused" | "finished";
+export type BlockType = "tabata" | "hiit" | "emom" | "amrap";
+
+export interface WorkoutBlockSummary {
+  id: string;
+  type: BlockType;
+  label: string | null;
+  sortOrder?: number;
+  workSeconds: number | null;
+  restSeconds: number | null;
+  rounds: number | null;
+  totalDurationSeconds: number | null;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Generic API envelope
@@ -114,14 +126,17 @@ export interface WorkoutTemplateDetail {
   warmupMinutes: number | null;
   tags: string[];
   type: string;
+  blocks: WorkoutBlockSummary[];
   exercises: Array<{
     id: string;
     sortOrder: number;
     supersetGroup: string | null;
     isWarmup: boolean;
+    workoutBlockId: string | null;
     exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean };
     targetSets: number | null;
     targetReps: string | null;
+    durationSeconds: number | null;
     intensityType: string | null;
     intensityTarget: string | null;
     restSeconds: number | null;
@@ -139,6 +154,7 @@ export interface SessionExercise {
   sortOrder: number;
   supersetGroup: string | null;
   isWarmup: boolean;
+  block: WorkoutBlockSummary | null;
   exercise: { id: string; name: string; primaryMuscle: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null };
   media: { id: string; url: string; mediaType: string }[];
   alternatives: { exerciseId: string; name: string; primaryMuscle: string | null }[];
@@ -259,6 +275,46 @@ export interface CoachClientSummary {
     plan: { id: string; title: string; weeksCount: number } | null;
   } | null;
   lastSession: { performedAt: string; status: SessionStatus } | null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Client — Dashboard (Mi Panel)
+// ─────────────────────────────────────────────────────────────
+export interface ClientDashboard {
+  weekStart: string;
+  weekEnd: string;
+  weekScore: number;
+  workoutsCompleted: number;
+  workoutsTarget: number | null;
+  energyAvg: number | null;
+  stepsAvg: number | null;
+  sleepMinutesAvg: number | null;
+  foodGood: number;
+  foodRegular: number;
+  foodPoor: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Client — Food Log
+// ─────────────────────────────────────────────────────────────
+export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
+export type FoodQuality = "good" | "regular" | "poor";
+
+export interface FoodLogEntry {
+  id: string;
+  loggedAt: string;
+  mealType: MealType | null;
+  quality: FoodQuality | null;
+  macroTags: string[];
+  text: string | null;
+  photoUrl: string | null;
+}
+
+export interface CreateFoodLogRequest {
+  mealType: MealType;
+  quality: FoodQuality;
+  macroTags?: string[];
+  text?: string;
 }
 
 // ─────────────────────────────────────────────────────────────

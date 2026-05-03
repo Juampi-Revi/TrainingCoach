@@ -146,12 +146,32 @@ model WorkoutTemplate {
   planWeek         PlanWeek?         @relation(fields: [planWeekId], references: [id], onDelete: Cascade)
   coach            User?             @relation("CoachWorkoutTemplates", fields: [coachUserId], references: [id], onDelete: Restrict)
   workoutExercises WorkoutExercise[]
+  workoutBlocks    WorkoutBlock[]
   workoutSessions  WorkoutSession[]
   scheduledInWeeks PlanWeekWorkout[]
   inPlans          PlanWorkout[]
 
   @@index([planWeekId])
   @@index([coachUserId])
+}
+
+model WorkoutBlock {
+  id                   String   @id @default(uuid())
+  workoutTemplateId    String
+  sortOrder            Int      @default(0)
+  type                 String   // 'tabata' | 'hiit' | 'emom' | 'amrap'
+  label                String?
+  workSeconds          Int?     // seconds of work per interval (tabata/hiit)
+  restSeconds          Int?     // seconds of rest between intervals
+  rounds               Int?     // number of rounds (tabata/hiit/emom)
+  totalDurationSeconds Int?     // total block time in seconds (amrap/emom)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  workoutTemplate WorkoutTemplate  @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
+  exercises       WorkoutExercise[]
+
+  @@index([workoutTemplateId, sortOrder])
 }
 
 model PlanWorkout {
@@ -204,6 +224,7 @@ model WorkoutExercise {
   sortOrder         Int      @default(0)
   supersetGroup     String?  // 'A' | 'B' | 'C' ... — groups exercises into biseries/triseries/circuits
   isWarmup          Boolean  @default(false)
+  workoutBlockId    String?
   targetSets        Int?
   targetReps        String?
   durationSeconds   Int?     // if set, exercise is timed (replaces reps)
@@ -219,6 +240,7 @@ model WorkoutExercise {
 
   workoutTemplate        WorkoutTemplate              @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
   exercise               Exercise                     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  workoutBlock           WorkoutBlock?                @relation(fields: [workoutBlockId], references: [id], onDelete: SetNull)
   alternatives           WorkoutExerciseAlternative[]
   workoutSessionExercises WorkoutSessionExercise[]
 
@@ -439,12 +461,17 @@ model FoodLogEntry {
   photoUrl     String?
   source       String   @default("manual")
   sourceRef    String?
+  mealType     String?
+  quality      String?
+  macroTags    String[] @default([])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
 
   coachComments FoodCoachComment[]
+
+  @@index([clientUserId, loggedAt(sort: Desc)])
 }
 
 model FoodCoachComment {

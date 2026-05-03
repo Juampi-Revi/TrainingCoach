@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
-import { ok, unauthorized, notFound, forbidden, withHandler } from "@/lib/api-response";
+import { ok, unauthorized, notFound, forbidden, err, withHandler } from "@/lib/api-response";
+import { workoutExercisePatchSchema } from "@/lib/schemas";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string; weId: string }> };
 
@@ -20,22 +21,29 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const { workoutTemplateId, weId } = await params;
     if (!(await verifyOwner(workoutTemplateId, weId, auth.user.sub))) return forbidden();
 
-    const body = await req.json().catch(() => ({}));
+    const raw = await req.json().catch(() => ({}));
+
+    const parsed = workoutExercisePatchSchema.safeParse(raw);
+    if (!parsed.success) {
+      return err(parsed.error.issues[0]?.message ?? "Invalid input", 400);
+    }
+    const body = parsed.data;
 
     const updated = await prisma.workoutExercise.update({
       where: { id: weId },
       data: {
-        ...(body.targetSets !== undefined && { targetSets: body.targetSets ? Number(body.targetSets) : null }),
-        ...(body.targetReps !== undefined && { targetReps: body.targetReps || null }),
-        ...(body.durationSeconds !== undefined && { durationSeconds: body.durationSeconds ? Number(body.durationSeconds) : null }),
-        ...(body.intensityType !== undefined && { intensityType: body.intensityType || null }),
-        ...(body.intensityTarget !== undefined && { intensityTarget: body.intensityTarget ? Number(body.intensityTarget) : null }),
-        ...(body.restSeconds !== undefined && { restSeconds: body.restSeconds ? Number(body.restSeconds) : null }),
-        ...(body.notes !== undefined && { notes: body.notes || null }),
-        ...(body.sortOrder !== undefined && { sortOrder: Number(body.sortOrder) }),
-        ...(body.supersetGroup !== undefined && { supersetGroup: body.supersetGroup || null }),
-        ...(body.isWarmup !== undefined && { isWarmup: Boolean(body.isWarmup) }),
-        ...(body.groupNote !== undefined && { groupNote: body.groupNote || null }),
+        ...(body.workoutBlockId !== undefined && { workoutBlockId: body.workoutBlockId }),
+        ...(body.targetSets !== undefined && { targetSets: body.targetSets }),
+        ...(body.targetReps !== undefined && { targetReps: body.targetReps }),
+        ...(body.durationSeconds !== undefined && { durationSeconds: body.durationSeconds }),
+        ...(body.intensityType !== undefined && { intensityType: body.intensityType }),
+        ...(body.intensityTarget !== undefined && { intensityTarget: body.intensityTarget }),
+        ...(body.restSeconds !== undefined && { restSeconds: body.restSeconds }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+        ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        ...(body.supersetGroup !== undefined && { supersetGroup: body.supersetGroup }),
+        ...(body.isWarmup !== undefined && { isWarmup: body.isWarmup }),
+        ...(body.groupNote !== undefined && { groupNote: body.groupNote }),
       },
       include: { exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } } },
     });

@@ -16,6 +16,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     const template = await prisma.workoutTemplate.findFirst({
       where: { id: workoutTemplateId, coachUserId: auth.user.sub },
       include: {
+        workoutBlocks: { orderBy: { sortOrder: "asc" } },
         workoutExercises: {
           orderBy: { sortOrder: "asc" },
           include: {
@@ -36,14 +37,26 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       warmupMinutes: template.warmupMinutes,
       tags: template.tags,
       type: template.type,
+      blocks: template.workoutBlocks.map((b) => ({
+        id: b.id,
+        type: b.type,
+        label: b.label,
+        workSeconds: b.workSeconds,
+        restSeconds: b.restSeconds,
+        rounds: b.rounds,
+        totalDurationSeconds: b.totalDurationSeconds,
+        sortOrder: b.sortOrder,
+      })),
       exercises: template.workoutExercises.map((we) => ({
         id: we.id,
         sortOrder: we.sortOrder,
         supersetGroup: we.supersetGroup,
         isWarmup: we.isWarmup,
+        workoutBlockId: we.workoutBlockId,
         exercise: we.exercise,
         targetSets: we.targetSets,
         targetReps: we.targetReps,
+        durationSeconds: we.durationSeconds,
         intensityType: we.intensityType,
         intensityTarget: we.intensityTarget ? String(we.intensityTarget) : null,
         restSeconds: we.restSeconds,
