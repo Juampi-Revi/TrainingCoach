@@ -159,12 +159,20 @@ model WorkoutBlock {
   id                   String   @id @default(uuid())
   workoutTemplateId    String
   sortOrder            Int      @default(0)
-  type                 String   // 'tabata' | 'hiit' | 'emom' | 'amrap'
+  type                 String   // 'warmup' | 'strength' | 'intervals' | 'cardio' | 'stretching'
   label                String?
-  workSeconds          Int?     // seconds of work per interval (tabata/hiit)
-  restSeconds          Int?     // seconds of rest between intervals
-  rounds               Int?     // number of rounds (tabata/hiit/emom)
-  totalDurationSeconds Int?     // total block time in seconds (amrap/emom)
+  warmupMinutes        Int?
+  restMode             String?  // 'per_exercise' | 'per_round'
+  restSeconds          Int?
+  workSeconds          Int?
+  intervalRestSeconds Int?
+  rounds               Int?
+  totalDurationSeconds Int?
+  intervalPreset       String?  // 'tabata' | 'hiit_30_30' | 'emom' | 'amrap' | 'custom'
+  audioBeep            Boolean  @default(true)
+  audioCountdown       Boolean  @default(true)
+  audioVoiceExName     Boolean  @default(true)
+  audioCoachMusic      Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

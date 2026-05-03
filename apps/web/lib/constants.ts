@@ -38,12 +38,18 @@ export function groupLabel(size: number): string {
 // ─── Block type helpers ─────────────────────────────────────────────────────────
 
 export function blockTypeLabel(type: BlockType): string {
-  switch (type) {
-    case "tabata": return "TABATA";
-    case "hiit":   return "HIIT";
-    case "emom":   return "EMOM";
-    case "amrap":  return "AMRAP";
-  }
+  const labels: Record<BlockType, string> = {
+    warmup: "CALENTAMIENTO",
+    strength: "FUERZA",
+    intervals: "INTERVALOS",
+    cardio: "CARDIO",
+    stretching: "STRETCHING",
+    tabata: "TABATA",
+    hiit: "HIIT",
+    emom: "EMOM",
+    amrap: "AMRAP",
+  };
+  return labels[type] ?? type.toUpperCase();
 }
 
 export function blockSummary(b: {

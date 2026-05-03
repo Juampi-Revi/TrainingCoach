@@ -6,17 +6,27 @@ export type BillingStatus = "good" | "due";
 export type SessionStatus = "in_progress" | "completed" | "discarded";
 export type PlanStatus = "draft" | "published" | "archived";
 export type AssignmentStatus = "active" | "paused" | "finished";
-export type BlockType = "tabata" | "hiit" | "emom" | "amrap";
+export type BlockType = "warmup" | "strength" | "intervals" | "cardio" | "stretching" | "tabata" | "hiit" | "emom" | "amrap";
+export type IntervalPreset = "tabata" | "hiit_30_30" | "emom" | "amrap" | "custom";
+export type RestMode = "per_exercise" | "per_round";
 
 export interface WorkoutBlockSummary {
   id: string;
   type: BlockType;
   label: string | null;
-  sortOrder?: number;
-  workSeconds: number | null;
+  warmupMinutes: number | null;
+  sortOrder: number;
+  restMode: RestMode | null;
   restSeconds: number | null;
+  workSeconds: number | null;
+  intervalRestSeconds: number | null;
   rounds: number | null;
   totalDurationSeconds: number | null;
+  intervalPreset: IntervalPreset | null;
+  audioBeep: boolean;
+  audioCountdown: boolean;
+  audioVoiceExName: boolean;
+  audioCoachMusic: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────
