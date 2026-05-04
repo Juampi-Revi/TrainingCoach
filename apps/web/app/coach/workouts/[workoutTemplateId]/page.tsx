@@ -270,9 +270,6 @@ export default function TemplateEditorPage() {
                       <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(b.id); setShowPicker(true); }}>
                         Agregar ejercicio al bloque
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedWeId(null); setEditingBlockId(b.id); setBlockModalOpen(true); }}>
-                        Editar bloque
-                      </Button>
                     </div>
                   </div>
                 );

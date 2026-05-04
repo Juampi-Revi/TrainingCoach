@@ -66,16 +66,17 @@ export function blockSummary(b: WorkoutBlockSummary): string {
       const w = b.workSeconds ?? 20;
       const r = b.restSeconds ?? 10;
       const rounds = b.rounds ?? 8;
-      return `${w}/${r}s · ${rounds} rondas`;
+      const totalMin = Math.round((w + r) * rounds / 60);
+      return `${w}/${r}s · ${rounds} rnd · ${totalMin}min`;
     }
     if (b.intervalType === "emom") {
-      const total = b.totalDurationSeconds ?? (b.rounds ? b.rounds * 60 : null);
-      if (total) return `${Math.round(total / 60)} min`;
+      const rounds = b.rounds ?? 0;
+      if (rounds > 0) return `${rounds} min (1min/rnd)`;
       return "—";
     }
     if (b.intervalType === "amrap") {
       const total = b.totalDurationSeconds ?? null;
-      if (total) return `${Math.round(total / 60)} min`;
+      if (total) return `${Math.round(total / 60)} min AMRAP`;
       return "—";
     }
   }
@@ -85,14 +86,9 @@ export function blockSummary(b: WorkoutBlockSummary): string {
     return `${b.targetMinutes} min${b.targetZone ? ` · ${b.targetZone}` : ""}`;
   }
 
-  // Strength blocks - show exercise count
-  if (b.type === "strength" && b.exerciseCount > 0) {
-    return `${b.exerciseCount} ejercicio${b.exerciseCount !== 1 ? "s" : ""}`;
-  }
-
-  // Warmup/Cooldown
-  if ((b.type === "warmup" || b.type === "cooldown") && b.exerciseCount > 0) {
-    return `${b.exerciseCount} ejercicio${b.exerciseCount !== 1 ? "s" : ""}`;
+  // Strength/Warmup/Cooldown blocks - show duration if configured
+  if ((b.type === "strength" || b.type === "warmup" || b.type === "cooldown") && b.targetMinutes) {
+    return `${b.targetMinutes} min`;
   }
 
   return "—";

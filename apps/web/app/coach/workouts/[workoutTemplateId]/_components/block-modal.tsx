@@ -102,15 +102,42 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       let payload;
 
       if (blockType === "intervals" && intervalType) {
-        payload = {
-          ...basePayload,
-          type: blockType,
-          intervalType,
-          workSeconds: !isNaN(w) && w > 0 ? w : null,
-          restSeconds: !isNaN(r) && r > 0 ? r : null,
-          rounds: !isNaN(ro) && ro > 0 ? ro : null,
-          totalDurationSeconds: !isNaN(t) && t > 0 ? t : null,
-        };
+        // EMOM: rounds = minutes, total = rounds * 60
+        // AMRAP: only total duration
+        // Tabata/HIIT: work, rest, rounds
+        if (intervalType === "emom") {
+          const emomRounds = !isNaN(ro) && ro > 0 ? ro : null;
+          payload = {
+            ...basePayload,
+            type: blockType,
+            intervalType,
+            rounds: emomRounds,
+            totalDurationSeconds: emomRounds ? emomRounds * 60 : null,
+            workSeconds: null,
+            restSeconds: null,
+          };
+        } else if (intervalType === "amrap") {
+          payload = {
+            ...basePayload,
+            type: blockType,
+            intervalType,
+            totalDurationSeconds: !isNaN(t) && t > 0 ? t : null,
+            workSeconds: null,
+            restSeconds: null,
+            rounds: null,
+          };
+        } else {
+          // Tabata / HIIT
+          payload = {
+            ...basePayload,
+            type: blockType,
+            intervalType,
+            workSeconds: !isNaN(w) && w > 0 ? w : null,
+            restSeconds: !isNaN(r) && r > 0 ? r : null,
+            rounds: !isNaN(ro) && ro > 0 ? ro : null,
+            totalDurationSeconds: null,
+          };
+        }
       } else if (blockType === "cardio") {
         payload = {
           ...basePayload,
@@ -168,12 +195,18 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   const isWarmup = blockType === "warmup";
   const isCooldown = blockType === "cooldown";
   const isStrength = blockType === "strength";
+  const isEmom = intervalType === "emom";
+  const isAmrap = intervalType === "amrap";
   const showIntervalFields = isInterval && intervalType;
-  const showWorkRest = showIntervalFields && (intervalType === "tabata" || intervalType === "hiit");
-  const showRounds = showIntervalFields && (intervalType === "tabata" || intervalType === "hiit" || intervalType === "emom");
-  const showTotal = showIntervalFields && (intervalType === "amrap" || intervalType === "emom");
+  const showWorkRest = showIntervalFields && !isEmom && !isAmrap; // Only Tabata/HIIT
+  const showRounds = showIntervalFields && !isAmrap; // Tabata, HIIT, EMOM have rounds
+  const showTotal = showIntervalFields && (isAmrap || isEmom);
   // Universal config for warmup/strength/cooldown
   const showUniversalConfig = isWarmup || isStrength || isCooldown;
+
+  // Auto-calculate total duration for EMOM
+  const emomRounds = parseInt(rounds);
+  const calculatedEmomTotal = !isNaN(emomRounds) && emomRounds > 0 ? emomRounds * 60 : "";
 
   return (
     <div
@@ -286,10 +319,42 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
                 </div>
               )}
               {showRounds && (
-                <Input label="Rondas" placeholder="8" value={rounds} onChange={(e) => setRounds(e.target.value)} />
+                <>
+                  <Input
+                    label={isEmom ? "Minutos (rondas)" : "Rondas"}
+                    placeholder={isEmom ? "10" : "8"}
+                    value={rounds}
+                    onChange={(e) => {
+                      setRounds(e.target.value);
+                      // Auto-calculate total for EMOM
+                      if (isEmom) {
+                        const r = parseInt(e.target.value);
+                        if (!isNaN(r) && r > 0) {
+                          setTotal(String(r * 60));
+                        }
+                      }
+                    }}
+                  />
+                  {isEmom && (
+                    <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: -10 }}>
+                      Cada minuto empieza una nueva serie. El alumno completa el ejercicio y descansa el tiempo restante.
+                    </div>
+                  )}
+                </>
               )}
               {showTotal && (
-                <Input label="Duración total (seg)" placeholder="600" value={total} onChange={(e) => setTotal(e.target.value)} />
+                <Input
+                  label={isEmom ? "Duración total (auto)" : "Duración total (seg)"}
+                  placeholder={isEmom ? "600" : "600"}
+                  value={isEmom ? (calculatedEmomTotal || total) : total}
+                  onChange={(e) => !isEmom && setTotal(e.target.value)}
+                  disabled={isEmom}
+                />
+              )}
+              {isAmrap && (
+                <div style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                  AMRAP = "As Many Rounds As Possible". El alumno hace tantas rondas como pueda en el tiempo total.
+                </div>
               )}
             </>
           )}
