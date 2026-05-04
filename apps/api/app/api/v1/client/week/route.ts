@@ -63,7 +63,6 @@ export async function GET(req: NextRequest) {
                 id: true,
                 title: true,
                 description: true,
-                warmupNotes: true,
                 tags: true,
                 workoutExercises: { select: { id: true }, orderBy: { sortOrder: "asc" } },
               },

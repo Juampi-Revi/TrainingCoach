@@ -442,13 +442,8 @@ export default function CoachChatPage() {
                     {new Date(refDetailData.performedAt).toLocaleString("es", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </div>
                 )}
-                {refDetail.kind === "workoutTemplate" && (refDetailData.warmupMinutes || refDetailData.tags?.length) && (
+                {refDetail.kind === "workoutTemplate" && refDetailData.tags?.length > 0 && (
                   <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {!!refDetailData.warmupMinutes && (
-                      <span className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
-                        Warmup {refDetailData.warmupMinutes}m
-                      </span>
-                    )}
                     {(refDetailData.tags ?? []).slice(0, 4).map((t: string) => (
                       <span key={t} className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
                         #{t}
@@ -459,11 +454,6 @@ export default function CoachChatPage() {
                 {!!refDetailData.description && (
                   <div style={{ marginTop: 8, fontSize: 13, color: "var(--text-mute)", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
                     {refDetailData.description}
-                  </div>
-                )}
-                {!!refDetailData.warmupNotes && (
-                  <div style={{ marginTop: 8, fontSize: 13, color: "var(--text-mute)", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-                    {refDetailData.warmupNotes}
                   </div>
                 )}
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>

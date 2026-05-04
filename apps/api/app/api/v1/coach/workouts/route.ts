@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return unauthorized(auth.message);
 
     const body = await req.json().catch(() => ({}));
-    const { title, description, warmupNotes, tags, type } = body;
+    const { title, description, tags, type } = body;
     if (!title) return err("title required", 400);
 
     const template = await prisma.workoutTemplate.create({
@@ -43,7 +43,6 @@ export async function POST(req: NextRequest) {
         coachUserId: auth.user.sub,
         title,
         description: description ?? null,
-        warmupNotes: warmupNotes ?? null,
         tags: tags ?? [],
         type: type ?? "strength",
       },
