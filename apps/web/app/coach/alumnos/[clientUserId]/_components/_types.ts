@@ -68,6 +68,9 @@ export interface FoodItem {
   text: string | null;
   photoUrl: string | null;
   source: string;
+  mealType: string | null;
+  quality: "good" | "regular" | "poor" | null;
+  macroTags: string[];
   coachComments: FoodCoachComment[];
 }
 

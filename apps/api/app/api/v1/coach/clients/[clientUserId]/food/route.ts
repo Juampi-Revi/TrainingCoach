@@ -30,6 +30,9 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         text: true,
         photoUrl: true,
         source: true,
+        mealType: true,
+        quality: true,
+        macroTags: true,
         coachComments: {
           orderBy: { createdAt: "desc" },
           take: 10,
@@ -50,6 +53,9 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         text: i.text,
         photoUrl: i.photoUrl,
         source: i.source,
+        mealType: i.mealType,
+        quality: i.quality,
+        macroTags: i.macroTags,
         coachComments: i.coachComments.map((c) => ({
           id: c.id,
           text: c.text,

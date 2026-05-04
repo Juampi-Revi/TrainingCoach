@@ -7,6 +7,7 @@ import { MUSCLE_LABEL, GROUP_COLORS, GROUP_LETTERS, groupLabel, blockTypeLabel, 
 import type { WorkoutTemplateDetail } from "@regen/types";
 import type { WE } from "./_types";
 import { AlternativesPanel } from "./alternatives-panel";
+import { MediaManager } from "./media-manager";
 
 export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSizes, nextGroup, onUpdate, onSetGroup, onToggleWarmup, onClose }: {
   we: WE;
@@ -33,6 +34,21 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
   const [localNotes, setLocalNotes] = useState(we.notes ?? "");
   const [localGroupNote, setLocalGroupNote] = useState(we.groupNote ?? "");
   const [localYoutubeUrl, setLocalYoutubeUrl] = useState(we.exercise.youtubeUrl ?? "");
+  
+  // Media state
+  const [exerciseMedia, setExerciseMedia] = useState<Array<{
+    id: string;
+    mediaType: "image" | "video";
+    url: string;
+    publicId?: string | null;
+    thumbnailUrl?: string;
+    previewUrl?: string;
+    isPrimary?: boolean;
+    displayOrder?: number;
+    videoId?: string;
+    embedUrl?: string;
+  }>>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
 
   const prevId = useRef(we.id);
   useEffect(() => {
@@ -48,7 +64,51 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
     setLocalNotes(we.notes ?? "");
     setLocalGroupNote(we.groupNote ?? "");
     setLocalYoutubeUrl(we.exercise.youtubeUrl ?? "");
+    // Load media when exercise changes
+    loadMedia();
   }, [we]);
+  
+  // Load media on mount
+  useEffect(() => {
+    loadMedia();
+  }, []);
+  
+  async function loadMedia() {
+    setMediaLoading(true);
+    try {
+      const res = await api.get<{
+        images: Array<{
+          id: string;
+          mediaType: "image";
+          url: string;
+          publicId?: string;
+          thumbnailUrl?: string;
+          previewUrl?: string;
+          isPrimary?: boolean;
+          displayOrder?: number;
+        }>;
+        videos: Array<{
+          id: string;
+          mediaType: "video";
+          url: string;
+          publicId?: string;
+          videoId?: string;
+          embedUrl?: string;
+          thumbnailUrl?: string;
+        }>;
+      }>(`/coach/exercises/${we.exercise.id}/media`);
+      
+      const allMedia = [
+        ...res.images.map(img => ({ ...img, mediaType: "image" as const })),
+        ...res.videos.map(vid => ({ ...vid, mediaType: "video" as const })),
+      ];
+      setExerciseMedia(allMedia);
+    } catch (e) {
+      console.error("Error loading media:", e);
+    } finally {
+      setMediaLoading(false);
+    }
+  }
 
   async function save(patch: Record<string, unknown>) {
     onUpdate(patch as Partial<WE>);
@@ -380,6 +440,20 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
           {we.exercise.isSystem && (
             <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 3 }}>Solo lectura — ejercicio del sistema</div>
           )}
+        </div>
+
+        {/* Media Manager Section */}
+        <div style={{ borderTop: "2px solid var(--lime)", paddingTop: 16, marginTop: 8 }}>
+          <div className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", letterSpacing: ".12em", fontWeight: 700, marginBottom: 12, textTransform: "uppercase" }}>
+            📸 Media del Ejercicio
+          </div>
+          <MediaManager
+            exerciseId={we.exercise.id}
+            exerciseName={we.exercise.name}
+            media={exerciseMedia}
+            onMediaChange={loadMedia}
+            limits={{ maxImages: 3, maxVideos: 1 }}
+          />
         </div>
       </div>
     </div>

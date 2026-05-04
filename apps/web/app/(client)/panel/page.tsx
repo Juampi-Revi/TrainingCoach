@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import type { ClientDashboard } from "@regen/types";
-import { QuickFoodLogger } from "./_components/quick-food-logger";
+import {
+  ScoreHeader,
+  QuickLogStrip,
+  MetricCard,
+  DotProgress,
+  MiniBars,
+  SleepRing,
+  EnergyBars,
+  NutritionStack,
+} from "./_components";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtSleepH(minutes: number | null): string {
-  if (minutes === null) return "—";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
-}
 
 function weekLabel(weekStart: string): string {
   const s = new Date(weekStart);
@@ -22,144 +25,35 @@ function weekLabel(weekStart: string): string {
   return `${fmt(s)} – ${fmt(e)}`;
 }
 
-// ─── SVG Ring ─────────────────────────────────────────────────────────────────
-
-function Ring({ value, color, size = 52, stroke = 5 }: {
-  value: number; // 0-1
-  color: string;
-  size?: number;
-  stroke?: number;
-}) {
-  const r = (size - stroke * 2) / 2;
-  const cx = size / 2;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference * (1 - Math.min(1, Math.max(0, value)));
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--bg-2)" strokeWidth={stroke} />
-      <circle
-        cx={cx} cy={cx} r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth={stroke}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset .6s ease" }}
-      />
-    </svg>
-  );
+function fmtSleepH(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
 }
 
-// ─── Score Ring ───────────────────────────────────────────────────────────────
+function calculateTrend(dailySteps: (number | null)[]): string | undefined {
+  const validSteps = dailySteps.filter((s): s is number => s !== null);
+  if (validSteps.length < 6) return undefined;
 
-function ScoreRing({ score }: { score: number }) {
-  const size = 90;
-  const stroke = 7;
-  const r = (size - stroke * 2) / 2;
-  const cx = size / 2;
-  const circumference = 2 * Math.PI * r;
-  const fraction = score / 100;
-  const offset = circumference * (1 - Math.min(1, fraction));
-  const color = score >= 80 ? "var(--lime)" : score >= 50 ? "#FF8E72" : "var(--danger)";
-  return (
-    <div style={{ position: "relative", width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--bg-2)" strokeWidth={stroke} />
-        <circle
-          cx={cx} cy={cx} r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset .6s ease, stroke .3s" }}
-        />
-      </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <div className="ta-mono" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, color }}>{score}</div>
-        <div style={{ fontSize: 9, color: "var(--text-mute)", marginTop: 2 }}>/100</div>
-      </div>
-    </div>
-  );
-}
+  const firstHalf = validSteps.slice(0, Math.floor(validSteps.length / 2));
+  const secondHalf = validSteps.slice(Math.floor(validSteps.length / 2));
 
-// ─── Metric Card ──────────────────────────────────────────────────────────────
+  const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+  const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
 
-function MetricCard({ label, value, sub, accent, ring }: {
-  label: string;
-  value: string;
-  sub?: string;
-  accent: string;
-  ring?: React.ReactNode;
-}) {
-  return (
-    <div style={{
-      background: "var(--bg-1)",
-      border: "1px solid var(--line)",
-      borderRadius: 14,
-      padding: "14px 16px",
-      display: "flex",
-      flexDirection: "column",
-      gap: 6,
-    }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-        <div>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", fontWeight: 700, letterSpacing: ".1em", marginBottom: 6 }}>
-            {label}
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: accent, letterSpacing: "-.02em" }}>{value}</div>
-          {sub && <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 3 }}>{sub}</div>}
-        </div>
-        {ring && <div style={{ flexShrink: 0 }}>{ring}</div>}
-      </div>
-    </div>
-  );
-}
+  if (avgFirst === 0) return undefined;
 
-// ─── Nutrition Bar ────────────────────────────────────────────────────────────
-
-function NutritionBar({ good, regular, poor }: { good: number; regular: number; poor: number }) {
-  const total = good + regular + poor;
-  if (total === 0) return <div style={{ fontSize: 12, color: "var(--text-mute)" }}>Sin registros esta semana</div>;
-  const score = total > 0 ? Math.round(((good * 10 + regular * 5) / (total * 10)) * 10) : 0;
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: "var(--lime)", letterSpacing: "-.02em" }}>{score}/10</div>
-        <div style={{ fontSize: 11, color: "var(--text-mute)" }}>{total} comidas</div>
-      </div>
-      <div style={{ display: "flex", gap: 2, borderRadius: 4, overflow: "hidden", height: 8 }}>
-        {good > 0 && <div style={{ flex: good, background: "var(--lime)", transition: "flex .4s" }} />}
-        {regular > 0 && <div style={{ flex: regular, background: "#FF8E72", transition: "flex .4s" }} />}
-        {poor > 0 && <div style={{ flex: poor, background: "var(--danger)", transition: "flex .4s" }} />}
-      </div>
-      <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--lime)" }} />
-          <span style={{ fontSize: 10, color: "var(--text-mute)" }}>{good} buenas</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: "#FF8E72" }} />
-          <span style={{ fontSize: 10, color: "var(--text-mute)" }}>{regular} ok</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--danger)" }} />
-          <span style={{ fontSize: 10, color: "var(--text-mute)" }}>{poor} pobres</span>
-        </div>
-      </div>
-    </div>
-  );
+  const pct = ((avgSecond - avgFirst) / avgFirst) * 100;
+  return `${pct >= 0 ? "+" : ""}${Math.round(pct)}%`;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PanelPage() {
+  const router = useRouter();
   const { api } = useAuth();
   const [data, setData] = useState<ClientDashboard | null>(null);
   const [loading, setLoading] = useState(true);
-  const [foodLoggerOpen, setFoodLoggerOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -172,162 +66,404 @@ export default function PanelPage() {
     }
   }, [api]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-        <div style={{ color: "var(--text-mute)", fontSize: 13 }}>Cargando panel…</div>
+      <div className="panel-page">
+        <div className="panel-loading">
+          <div style={{ color: "var(--text-mute)", fontSize: 13 }}>
+            Cargando panel…
+          </div>
+        </div>
       </div>
     );
   }
 
   const d = data;
-  const workoutFraction = d && d.workoutsTarget ? d.workoutsCompleted / d.workoutsTarget : d ? Math.min(1, d.workoutsCompleted / 5) : 0;
-  const energyFraction = d?.energyAvg ? d.energyAvg / 5 : 0;
+  const totalTarget = d?.workoutsTarget ?? 4;
+  const strengthTarget = d?.strengthTarget ?? Math.ceil(totalTarget / 2);
+  const cardioTarget = d?.cardioTarget ?? Math.floor(totalTarget / 2);
+
+  // Calculate fractions for activity rings
+  const workoutFraction = totalTarget > 0 ? (d?.workoutsCompleted ?? 0) / totalTarget : 0;
+  const stepsFraction = d?.stepsAvg ? Math.min(1, d.stepsAvg / 10000) : 0;
+  const sleepFraction = d?.sleepMinutesAvg ? Math.min(1, d.sleepMinutesAvg / (8 * 60)) : 0;
+
+  // Food count for badge
+  const foodCount = (d?.foodGood ?? 0) + (d?.foodRegular ?? 0) + (d?.foodPoor ?? 0);
+
+  // Data processing for cards
   const stepsK = d?.stepsAvg ? Math.round(d.stepsAvg / 100) / 10 : null;
+  const dailyStepsK = d?.dailySteps.map((s) => (s !== null ? Math.round(s / 100) / 10 : null)) ?? [];
+  const trend = calculateTrend(d?.dailySteps ?? []);
+  const sleepHours = d?.sleepMinutesAvg ? d.sleepMinutesAvg / 60 : null;
 
   return (
-    <div style={{ padding: "20px 16px calc(100px + env(safe-area-inset-bottom))", maxWidth: 520, margin: "0 auto" }}>
-
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".1em", marginBottom: 4 }}>
-          MI PANEL
+    <div className="panel-page">
+      {/* Header Section */}
+      <div className="panel-header">
+        <div className="panel-title">Mi Panel</div>
+        <div className="panel-subtitle">
+          {d && (
+            <>
+              Semana {d.weekNumber} de {d.totalWeeks} · {weekLabel(d.weekStart)}
+            </>
+          )}
         </div>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>Esta semana</div>
+      </div>
+
+      {/* Score Section - Full Width, más separado del header */}
+      <div className="panel-section panel-section-score">
         {d && (
-          <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-            {weekLabel(d.weekStart)}
-          </div>
+          <ScoreHeader
+            weekNumber={d.weekNumber}
+            totalWeeks={d.totalWeeks}
+            weekScore={d.weekScore}
+            previousWeekScore={d.previousWeekScore}
+            workoutFraction={workoutFraction}
+            stepsFraction={stepsFraction}
+            sleepFraction={sleepFraction}
+          />
         )}
       </div>
 
-      {/* Score + rings row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 20, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 16, padding: "16px 20px", marginBottom: 16 }}>
-        <ScoreRing score={d?.weekScore ?? 0} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Score semanal</div>
-          <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 3 }}>
-            {d?.workoutsCompleted ?? 0} entreno{(d?.workoutsCompleted ?? 0) !== 1 ? "s" : ""}
-            {d?.workoutsTarget ? ` / ${d.workoutsTarget}` : ""} completado{(d?.workoutsCompleted ?? 0) !== 1 ? "s" : ""}
-          </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <Ring value={workoutFraction} color="var(--lime)" size={36} stroke={4} />
-              <span style={{ fontSize: 9, color: "var(--text-mute)" }}>Entrenos</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <Ring value={energyFraction} color="#7AB8FF" size={36} stroke={4} />
-              <span style={{ fontSize: 9, color: "var(--text-mute)" }}>Energía</span>
-            </div>
-            {stepsK !== null && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <Ring value={Math.min(1, stepsK / 10)} color="#FF8E72" size={36} stroke={4} />
-                <span style={{ fontSize: 9, color: "var(--text-mute)" }}>Pasos</span>
-              </div>
-            )}
-          </div>
+      {/* Quick Log Section */}
+      <div className="panel-section">
+        {d && (
+          <QuickLogStrip
+            workoutsCompleted={d.workoutsCompleted}
+            workoutsTarget={d.workoutsTarget}
+            foodCount={foodCount}
+            onLogFood={() => router.push("/comida")}
+          />
+        )}
+      </div>
+
+      {/* Stats Grid Section - 4 métricas principales */}
+      <div className="panel-section">
+        <div className="stats-grid-main">
+          {/* FUERZA */}
+          {d && (
+            <MetricCard
+              label="FUERZA"
+              value={String(d.strengthCompleted)}
+              sub={`de ${strengthTarget} esta sem`}
+              accent="var(--lime)"
+            >
+              <DotProgress count={strengthTarget} done={d.strengthCompleted} color="var(--lime)" />
+            </MetricCard>
+          )}
+
+          {/* AERÓBICO */}
+          {d && (
+            <MetricCard
+              label="AERÓBICO"
+              value={String(d.cardioCompleted)}
+              sub={`de ${cardioTarget} esta sem`}
+              accent="#7AB8FF"
+            >
+              <DotProgress count={cardioTarget} done={d.cardioCompleted} color="#7AB8FF" />
+            </MetricCard>
+          )}
+
+          {/* PASOS */}
+          {d && (
+            <MetricCard
+              label="PASOS · 7D"
+              value={stepsK !== null ? stepsK.toFixed(1).replace(".", ",") + "k" : "—"}
+              sub={stepsK !== null ? "prom diario · meta 8k" : "no registrado"}
+              trend={trend}
+              accent="var(--lime)"
+            >
+              <MiniBars data={dailyStepsK} target={8} color="var(--lime)" unit="k" />
+            </MetricCard>
+          )}
+
+          {/* SUEÑO */}
+          {d && (
+            <MetricCard
+              label="SUEÑO"
+              value={sleepHours !== null ? fmtSleepH(sleepHours) : "—"}
+              sub={sleepHours !== null ? "prom · meta 8h" : "no registrado"}
+              accent="#A78BFA"
+            >
+              {sleepHours !== null && (
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <SleepRing hours={sleepHours} targetHours={8} size={40} />
+                </div>
+              )}
+            </MetricCard>
+          )}
         </div>
       </div>
 
-      {/* Quick log strip */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button
-          onClick={() => setFoodLoggerOpen(true)}
-          style={{
-            flex: 1, padding: "12px 8px", background: "var(--bg-1)", border: "1px solid var(--line)",
-            borderRadius: 12, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-          }}
-        >
-          <div style={{ fontSize: 20 }}>🍽️</div>
-          <div style={{ fontSize: 11, fontWeight: 600 }}>Comida</div>
-          {d && (d.foodGood + d.foodRegular + d.foodPoor) > 0 && (
-            <div style={{ fontSize: 10, color: "var(--lime)", fontWeight: 700 }}>
-              {d.foodGood + d.foodRegular + d.foodPoor}
+      {/* Secondary Stats Section - Energía y Nutrición (más anchas) */}
+      <div className="panel-section">
+        <div className="stats-grid-secondary">
+          {/* ENERGÍA */}
+          {d && (
+            <div className="secondary-card">
+              <div className="secondary-label">ENERGÍA · DIARIA</div>
+              <div className="secondary-content">
+                <div className="secondary-value-row">
+                  <span className="secondary-value" style={{ color: "#7AB8FF" }}>
+                    {d.energyAvg !== null ? d.energyAvg.toFixed(1).replace(".", ",") : "—"}
+                  </span>
+                  <span className="secondary-unit">/ 5</span>
+                </div>
+                <div className="secondary-sub">
+                  {d.energyAvg !== null ? "promedio 7 días" : "sin datos"}
+                </div>
+                <div style={{ marginTop: 16 }}>
+                  <EnergyBars data={d.dailyEnergy} />
+                </div>
+              </div>
             </div>
           )}
-        </button>
-        <div style={{
-          flex: 1, padding: "12px 8px", background: "var(--bg-1)", border: "1px solid var(--line)",
-          borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-          opacity: 0.4,
-        }}>
-          <div style={{ fontSize: 20 }}>💊</div>
-          <div style={{ fontSize: 11, fontWeight: 600 }}>Suplementos</div>
-          <div style={{ fontSize: 10, color: "var(--text-mute)" }}>Pronto</div>
-        </div>
-        <div style={{
-          flex: 1, padding: "12px 8px", background: "var(--bg-1)", border: "1px solid var(--line)",
-          borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-          opacity: 0.4,
-        }}>
-          <div style={{ fontSize: 20 }}>😴</div>
-          <div style={{ fontSize: 11, fontWeight: 600 }}>Sueño</div>
-          <div style={{ fontSize: 10, color: "var(--text-mute)" }}>Pronto</div>
+
+          {/* NUTRICIÓN */}
+          {d && (
+            <div className="secondary-card">
+              <div className="secondary-label">NUTRICIÓN · 7D</div>
+              <div className="secondary-content">
+                <NutritionStack good={d.foodGood} regular={d.foodRegular} poor={d.foodPoor} />
+                <button onClick={() => router.push("/comida")} className="nutrition-add-btn">
+                  + Registrar comida
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Metrics grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <MetricCard
-          label="ENTRENAMIENTOS"
-          value={String(d?.workoutsCompleted ?? 0)}
-          sub={d?.workoutsTarget ? `/ ${d.workoutsTarget} esta semana` : "esta semana"}
-          accent="var(--lime)"
-          ring={<Ring value={workoutFraction} color="var(--lime)" size={44} stroke={5} />}
-        />
-        <MetricCard
-          label="ENERGÍA · 7D"
-          value={d?.energyAvg ? d.energyAvg.toFixed(1) : "—"}
-          sub={d?.energyAvg ? "promedio /5" : "sin datos"}
-          accent="#7AB8FF"
-          ring={<Ring value={energyFraction} color="#7AB8FF" size={44} stroke={5} />}
-        />
-        <MetricCard
-          label="PASOS · 7D"
-          value={stepsK !== null ? `${stepsK}k` : "—"}
-          sub={stepsK !== null ? "promedio diario" : "no registrado"}
-          accent="#FF8E72"
-          ring={stepsK !== null ? <Ring value={Math.min(1, stepsK / 10)} color="#FF8E72" size={44} stroke={5} /> : undefined}
-        />
-        <MetricCard
-          label="SUEÑO · 7D"
-          value={fmtSleepH(d?.sleepMinutesAvg ?? null)}
-          sub={d?.sleepMinutesAvg ? "promedio" : "no registrado"}
-          accent="var(--text-dim)"
-        />
-      </div>
+      <style jsx>{`
+        .panel-page {
+          min-height: 100dvh;
+          background: var(--bg);
+          padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        }
 
-      {/* Nutrition card */}
-      <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 14, padding: "14px 16px" }}>
-        <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", fontWeight: 700, letterSpacing: ".1em", marginBottom: 12 }}>
-          NUTRICIÓN · 7D
-        </div>
-        <NutritionBar
-          good={d?.foodGood ?? 0}
-          regular={d?.foodRegular ?? 0}
-          poor={d?.foodPoor ?? 0}
-        />
-        <button
-          onClick={() => setFoodLoggerOpen(true)}
-          style={{
-            marginTop: 12, width: "100%", padding: "10px", background: "transparent",
-            border: "1px dashed var(--line-2)", borderRadius: 10, cursor: "pointer",
-            fontSize: 12, color: "var(--text-mute)", fontWeight: 600,
-          }}
-        >
-          + Registrar comida
-        </button>
-      </div>
+        .panel-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 60vh;
+        }
 
-      {/* Food Logger modal */}
-      {foodLoggerOpen && (
-        <QuickFoodLogger
-          onClose={() => setFoodLoggerOpen(false)}
-          onSaved={() => { load(); }}
-        />
-      )}
+        /* Mobile first */
+        .panel-header {
+          padding: 20px 16px 16px;
+        }
+
+        .panel-title {
+          font-size: 20px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+
+        .panel-subtitle {
+          font-size: 12px;
+          color: var(--text-mute);
+          margin-top: 4px;
+        }
+
+        .panel-section {
+          padding: 0 16px 16px;
+        }
+
+        /* Más espacio para el score */
+        .panel-section-score {
+          padding-top: 8px;
+        }
+
+        /* Grid principal - 4 métricas (Fuerza, Aeróbico, Pasos, Sueño) */
+        .stats-grid-main {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+        }
+
+        /* Grid secundario - Energía y Nutrición (más anchas, debajo) */
+        .stats-grid-secondary {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        /* Secondary cards styling */
+        .secondary-card {
+          background: var(--bg-1);
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .secondary-label {
+          font-family: var(--font-mono);
+          font-size: 9px;
+          color: var(--text-mute);
+          font-weight: 700;
+          letter-spacing: 0.1em;
+        }
+
+        .secondary-content {
+          flex: 1;
+        }
+
+        .secondary-value-row {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+        }
+
+        .secondary-value {
+          font-family: var(--font-mono);
+          font-size: 26px;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          line-height: 1;
+        }
+
+        .secondary-unit {
+          font-family: var(--font-mono);
+          font-size: 14px;
+          color: var(--text-mute);
+        }
+
+        .secondary-sub {
+          font-family: var(--font-mono);
+          font-size: 11px;
+          color: var(--text-mute);
+          margin-top: 4px;
+        }
+
+        .nutrition-add-btn {
+          margin-top: 16px;
+          width: 100%;
+          padding: 10px;
+          background: transparent;
+          border: 1px dashed var(--line-2);
+          border-radius: 10px;
+          cursor: pointer;
+          font-size: 12px;
+          color: var(--text-mute);
+          font-weight: 600;
+          transition: border-color 0.2s, color 0.2s;
+        }
+
+        .nutrition-add-btn:hover {
+          border-color: var(--lime);
+          color: var(--lime);
+        }
+
+        /* Desktop - Full width */
+        @media (min-width: 768px) {
+          .panel-page {
+            padding-bottom: 32px;
+          }
+
+          .panel-header {
+            padding: 48px 28px 24px;
+            border-bottom: 1px solid var(--line);
+          }
+
+          .panel-title {
+            font-size: 28px;
+          }
+
+          .panel-subtitle {
+            font-size: 14px;
+            margin-top: 6px;
+          }
+
+          .panel-section {
+            padding: 0 28px 24px;
+          }
+
+          /* Más separación del score en desktop */
+          .panel-section-score {
+            padding-top: 24px;
+          }
+
+          /* Grid principal: 4 columnas en desktop */
+          .stats-grid-main {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+          }
+
+          /* Grid secundario: 2 columnas (Energía y Nutrición lado a lado) */
+          .stats-grid-secondary {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+
+          .secondary-card {
+            padding: 24px;
+            border-radius: 18px;
+            gap: 16px;
+          }
+
+          .secondary-label {
+            font-size: 11px;
+            letter-spacing: 0.12em;
+          }
+
+          .secondary-value {
+            font-size: 32px;
+          }
+
+          .secondary-unit {
+            font-size: 16px;
+          }
+
+          .secondary-sub {
+            font-size: 13px;
+          }
+
+          .nutrition-add-btn {
+            padding: 12px;
+            font-size: 13px;
+            border-radius: 12px;
+          }
+        }
+
+        /* Large desktop */
+        @media (min-width: 1200px) {
+          .panel-header {
+            padding: 48px 48px 24px;
+          }
+
+          .panel-section {
+            padding: 0 48px 24px;
+          }
+
+          .panel-section-score {
+            padding-top: 32px;
+          }
+
+          .stats-grid-main {
+            gap: 24px;
+          }
+
+          .stats-grid-secondary {
+            gap: 24px;
+          }
+
+          .secondary-card {
+            padding: 28px;
+          }
+
+          .secondary-value {
+            font-size: 36px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

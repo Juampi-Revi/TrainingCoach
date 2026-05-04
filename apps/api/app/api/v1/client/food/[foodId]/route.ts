@@ -24,14 +24,33 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const text = typeof body.text === "string" ? (body.text.trim() ? body.text.trim() : null) : undefined;
     const photoUrl = typeof body.photoUrl === "string" ? (body.photoUrl.trim() ? body.photoUrl.trim() : null) : undefined;
 
+    // Parse optional meal quality fields
+    const mealType = typeof body.mealType === "string" && body.mealType.trim() ? body.mealType.trim() : undefined;
+    const quality = typeof body.quality === "string" && body.quality.trim() ? body.quality.trim() : undefined;
+    const macroTags = Array.isArray(body.macroTags)
+      ? body.macroTags.filter((t: unknown) => typeof t === "string")
+      : undefined;
+
     const updated = await prisma.foodLogEntry.update({
       where: { id: foodId },
       data: {
         ...(loggedAt ? { loggedAt } : null),
         ...(text !== undefined ? { text } : null),
         ...(photoUrl !== undefined ? { photoUrl } : null),
+        ...(mealType !== undefined ? { mealType } : null),
+        ...(quality !== undefined ? { quality } : null),
+        ...(macroTags !== undefined ? { macroTags } : null),
       },
-      select: { id: true, loggedAt: true, text: true, photoUrl: true, source: true },
+      select: {
+        id: true,
+        loggedAt: true,
+        text: true,
+        photoUrl: true,
+        source: true,
+        mealType: true,
+        quality: true,
+        macroTags: true,
+      },
     });
 
     return ok(updated);

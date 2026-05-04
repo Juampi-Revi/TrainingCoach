@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Icon } from "@/components/ui";
 import { MUSCLE_LABEL } from "@/lib/constants";
@@ -142,8 +143,40 @@ export function ExercisePicker({ templateId, defaultWarmup, blockId, onAdd, onCl
                     style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid var(--line)", cursor: adding === ex.id ? "wait" : "pointer", opacity: adding === ex.id ? 0.5 : 1 }}
                     className="ta-row"
                   >
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg-2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon name="dumbbell" size={16} color="var(--text-mute)" />
+                    <div style={{ position: "relative", width: 48, height: 48, borderRadius: 8, background: ex.thumbnailUrl ? "var(--bg-2)" : ex.youtubeUrl ? "linear-gradient(135deg, #FF0000 0%, #CC0000 100%)" : "var(--bg-2)", border: ex.thumbnailUrl || ex.youtubeUrl ? "1px solid var(--line-2)" : "1px dashed var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+                      {ex.thumbnailUrl ? (
+                        <Image src={ex.thumbnailUrl} alt="" fill sizes="48px" style={{ objectFit: "cover" }} unoptimized />
+                      ) : ex.youtubeUrl ? (
+                        <div style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          background: "rgba(255,255,255,0.95)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}>
+                          <Icon name="play" size={12} color="#FF0000" />
+                        </div>
+                      ) : (
+                        <div style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          background: "var(--bg-3)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          border: "1px dashed var(--line-2)",
+                        }}>
+                          <Icon name="dumbbell" size={14} color="var(--text-mute)" />
+                        </div>
+                      )}
+                      {ex.youtubeUrl && ex.thumbnailUrl && (
+                        <div style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, background: "#FF0000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Icon name="play" size={7} color="#fff" />
+                        </div>
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{ex.name}</div>

@@ -427,14 +427,24 @@ model HealthCoachNote {
 }
 
 model ExerciseMedia {
-  id          String   @id @default(uuid())
-  exerciseId  String
-  mediaType   String   // 'image' | 'video'
-  url         String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid())
+  exerciseId   String
+  mediaType    String   // 'image' | 'video'
+  url          String   // Cloudinary secure_url o YouTube URL
+  publicId     String?  // Cloudinary public_id (para transformaciones/borrar)
+  width        Int?     // Dimensiones originales
+  height       Int?
+  fileSize     Int?     // Bytes
+  duration     Float?   // Segundos (solo videos)
+  isPrimary    Boolean  @default(false) // Thumbnail principal
+  displayOrder Int      @default(0)     // Orden de visualización
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId, displayOrder])
+  @@index([exerciseId, isPrimary])
 }
 
 model Notification {

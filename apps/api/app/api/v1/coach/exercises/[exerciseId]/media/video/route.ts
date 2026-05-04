@@ -1,0 +1,86 @@
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/api-auth";
+import { ok, unauthorized, err, notFound, withHandler } from "@/lib/api-response";
+
+const MAX_VIDEOS = 1;
+
+// Regex para extraer ID de YouTube de varios formatos de URL
+const YOUTUBE_REGEX = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\s]{11})/;
+
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(YOUTUBE_REGEX);
+  return match?.[1] ?? null;
+}
+
+function getYouTubeThumbnail(videoId: string): string {
+  return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+}
+
+type Ctx = { params: Promise<{ exerciseId: string }> };
+
+// POST /api/v1/coach/exercises/:exerciseId/media/video
+// Para agregar videos de YouTube
+export async function POST(req: NextRequest, { params }: Ctx) {
+  return withHandler(async () => {
+    const auth = requireRole(req, "coach");
+    if (!auth.ok) return unauthorized(auth.message);
+
+    const { exerciseId } = await params;
+    const ex = await prisma.exercise.findFirst({
+      where: { id: exerciseId, OR: [{ isSystem: true }, { coachUserId: auth.user.sub }] },
+      select: { id: true, name: true },
+    });
+    if (!ex) return notFound("Ejercicio no encontrado");
+
+    // Verificar límite de videos
+    const videoCount = await prisma.exerciseMedia.count({
+      where: { exerciseId, mediaType: "video" },
+    });
+    if (videoCount >= MAX_VIDEOS) {
+      return err(`Máximo ${MAX_VIDEOS} video por ejercicio`, 400);
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const { url } = body;
+    
+    if (!url?.trim()) return err("URL de YouTube requerida", 400);
+    
+    const videoId = extractYouTubeId(url);
+    if (!videoId) return err("URL de YouTube inválida", 400);
+
+    // Verificar que no exista ya este video
+    const existing = await prisma.exerciseMedia.findFirst({
+      where: { exerciseId, mediaType: "video", url: { contains: videoId } },
+    });
+    if (existing) return err("Este video ya está agregado", 400);
+
+    const maxOrder = await prisma.exerciseMedia.aggregate({
+      where: { exerciseId },
+      _max: { displayOrder: true },
+    });
+
+    // Guardar en DB
+    const media = await prisma.exerciseMedia.create({
+      data: {
+        exerciseId,
+        mediaType: "video",
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        publicId: videoId, // Guardamos el videoId para generar thumbnails
+        width: 1920, // YouTube standard
+        height: 1080,
+        isPrimary: false,
+        displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
+      },
+    });
+
+    return ok({
+      id: media.id,
+      mediaType: media.mediaType,
+      url: media.url,
+      videoId: media.publicId,
+      thumbnailUrl: getYouTubeThumbnail(videoId),
+      embedUrl: `https://www.youtube.com/embed/${videoId}`,
+    }, 201);
+  });
+}

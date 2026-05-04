@@ -27,6 +27,7 @@ export interface ExerciseOption {
   equipment: string | null;
   isSystem: boolean;
   thumbnailUrl: string | null;
+  youtubeUrl?: string | null;
 }
 
 export interface AltItem {

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, ConfirmModal, Icon, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
+import { MediaManager } from "../workouts/[workoutTemplateId]/_components/media-manager";
 
 interface Exercise {
   id: string;
@@ -61,9 +62,44 @@ function ExerciseFormModal({ exercise, onClose, onSaved, onDeleted }: ExerciseFo
   const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
+  async function loadMedia() {
+    if (!isEdit || !exercise?.id) return;
+    try {
+      const res = await api.get<{
+        images: Array<{
+          id: string;
+          mediaType: "image";
+          url: string;
+          publicId?: string;
+          thumbnailUrl?: string;
+          previewUrl?: string;
+          isPrimary?: boolean;
+          displayOrder?: number;
+        }>;
+        videos: Array<{
+          id: string;
+          mediaType: "video";
+          url: string;
+          publicId?: string;
+          videoId?: string;
+          embedUrl?: string;
+          thumbnailUrl?: string;
+        }>;
+      }>(`/coach/exercises/${exercise.id}/media`);
+      
+      const allMedia = [
+        ...res.images.map(img => ({ ...img, mediaType: "image" as const })),
+        ...res.videos.map(vid => ({ ...vid, mediaType: "video" as const })),
+      ];
+      setMedia(allMedia);
+    } catch (e) {
+      console.error("Error loading media:", e);
+    }
+  }
+
   useEffect(() => {
     if (isEdit && exercise?.id) {
-      api.get<MediaItem[]>(`/coach/exercises/${exercise.id}/media`).then(setMedia).catch(console.error);
+      loadMedia();
     }
   }, [api, isEdit, exercise?.id]);
 
@@ -251,135 +287,15 @@ function ExerciseFormModal({ exercise, onClose, onSaved, onDeleted }: ExerciseFo
         )}
 
         {/* ── Media tab ── */}
-        {tab === "media" && isEdit && (
+        {tab === "media" && isEdit && exercise && (
           <div style={{ marginBottom: 20 }}>
-            {/* Existing media grid */}
-            {media.length > 0 && (
-              <div
-                style={{
-                  display: "grid", gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: 8, marginBottom: 16,
-                }}
-              >
-                {media.map((m) => (
-                  <div
-                    key={m.id}
-                    style={{
-                      position: "relative", borderRadius: 10, overflow: "hidden",
-                      border: "1px solid var(--line-2)", background: "var(--bg-2)",
-                      aspectRatio: "16/9",
-                    }}
-                  >
-                    {m.mediaType === "video" ? (
-                      <video
-                        src={m.url}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        muted
-                        playsInline
-                        onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play()}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLVideoElement).pause(); (e.currentTarget as HTMLVideoElement).currentTime = 0; }}
-                      />
-                    ) : (
-                      <Image
-                        unoptimized
-                        src={m.url}
-                        alt=""
-                        fill
-                        sizes="(max-width: 520px) 50vw, 240px"
-                        style={{ objectFit: "cover" }}
-                      />
-                    )}
-                    <div
-                      style={{
-                        position: "absolute", bottom: 4, left: 6,
-                        fontSize: 10, fontWeight: 600, color: "var(--text-mute)",
-                        background: "rgba(0,0,0,.55)", padding: "2px 6px", borderRadius: 4,
-                      }}
-                    >
-                      {m.mediaType === "video" ? "▶ video" : "imagen"}
-                    </div>
-                    <button
-                      onClick={() => deleteMedia(m.id)}
-                      disabled={deletingMediaId === m.id}
-                      style={{
-                        position: "absolute", top: 4, right: 4,
-                        width: 22, height: 22, borderRadius: 6,
-                        background: "rgba(0,0,0,.6)", border: "none",
-                        color: "#fff", fontSize: 12, cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {media.length === 0 && (
-              <div style={{ fontSize: 13, color: "var(--text-mute)", marginBottom: 16, textAlign: "center", padding: "20px 0" }}>
-                Sin imágenes ni videos aún.
-              </div>
-            )}
-
-            {/* Add media */}
-            {media.length < 4 && (
-              <div style={{ borderTop: media.length > 0 ? "1px solid var(--line)" : "none", paddingTop: media.length > 0 ? 14 : 0 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-mute)", display: "block", marginBottom: 8 }}>
-                  Agregar URL {media.length > 0 ? `(${4 - media.length} restante${4 - media.length !== 1 ? "s" : ""})` : ""}
-                </label>
-                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                  {(["image", "video"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setMediaType(t)}
-                      style={{
-                        padding: "4px 12px", fontSize: 12, fontWeight: 600, borderRadius: 999,
-                        border: `1px solid ${mediaType === t ? "var(--lime)" : "var(--line-2)"}`,
-                        background: mediaType === t ? "rgba(215,255,58,.12)" : "transparent",
-                        color: mediaType === t ? "var(--lime)" : "var(--text-mute)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {t === "image" ? "Imagen" : "Video"}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div
-                    style={{
-                      flex: 1, padding: "0 12px", height: 40, background: "var(--bg-2)",
-                      border: "1px solid var(--line-2)", borderRadius: 10,
-                      display: "flex", alignItems: "center",
-                    }}
-                  >
-                    <input
-                      value={mediaUrl}
-                      onChange={(e) => setMediaUrl(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addMedia()}
-                      placeholder="https://…"
-                      style={{
-                        flex: 1, background: "transparent", border: "none", outline: "none",
-                        fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)",
-                      }}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={addMedia}
-                    disabled={addingMedia || !mediaUrl.trim()}
-                  >
-                    {addingMedia ? "…" : "Agregar"}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {media.length >= 4 && (
-              <div style={{ fontSize: 12, color: "var(--text-mute)", textAlign: "center" }}>
-                Máximo 4 archivos por ejercicio.
-              </div>
-            )}
+            <MediaManager
+              exerciseId={exercise.id}
+              exerciseName={exercise.name}
+              media={media.map(m => ({ ...m, mediaType: m.mediaType as "image" | "video" }))}
+              onMediaChange={loadMedia}
+              limits={{ maxImages: 3, maxVideos: 1 }}
+            />
           </div>
         )}
 

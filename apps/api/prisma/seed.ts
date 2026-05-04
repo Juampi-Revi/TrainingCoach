@@ -5,6 +5,7 @@ async function main() {
   console.log('Seeding database...')
 
   const passwordHash = await bcrypt.hash('123456', 10)
+  const juanjoPasswordHash = await bcrypt.hash('password123', 10)
 
   // 1. Create Coach
   const coach = await prisma.user.upsert({
@@ -18,6 +19,18 @@ async function main() {
     },
   })
   console.log(`Created coach: ${coach.displayName}`)
+
+  const juanjoCoach = await prisma.user.upsert({
+    where: { email: 'juanjo@coach.com' },
+    update: { passwordHash: juanjoPasswordHash, role: 'coach', displayName: 'Juanjo' },
+    create: {
+      email: 'juanjo@coach.com',
+      passwordHash: juanjoPasswordHash,
+      role: 'coach',
+      displayName: 'Juanjo',
+    },
+  })
+  console.log(`Created coach: ${juanjoCoach.displayName}`)
 
   // 2. Create Client
   const client = await prisma.user.upsert({
@@ -33,15 +46,15 @@ async function main() {
   console.log(`Created client: ${client.displayName}`)
 
   // 3. Link Coach and Client
-  await prisma.coachClient.upsert({
-    where: { coachUserId_clientUserId: { coachUserId: coach.id, clientUserId: client.id } },
-    update: {},
-    create: {
-      coachUserId: coach.id,
-      clientUserId: client.id,
-      status: 'active',
-    },
+  const rel = await prisma.coachClient.findFirst({
+    where: { coachUserId: coach.id, clientUserId: client.id },
+    select: { id: true },
   })
+  if (rel) {
+    await prisma.coachClient.update({ where: { id: rel.id }, data: { status: 'active' } })
+  } else {
+    await prisma.coachClient.create({ data: { coachUserId: coach.id, clientUserId: client.id, status: 'active' } })
+  }
   console.log('Linked coach and client')
 
   // 4. Create an Exercise

@@ -52,7 +52,17 @@ export async function GET(
                 name: true,
                 primaryMuscle: true,
                 youtubeUrl: true,
-                media: { select: { id: true, url: true, mediaType: true }, orderBy: { createdAt: "asc" } },
+                media: {
+                  select: {
+                    id: true,
+                    url: true,
+                    mediaType: true,
+                    publicId: true,
+                    isPrimary: true,
+                    displayOrder: true,
+                  },
+                  orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }],
+                },
               },
             },
             sets: { orderBy: { setNumber: "asc" } },
@@ -94,7 +104,33 @@ export async function GET(
           thumbnailUrl: ex.performedExercise.media[0]?.url ?? null,
           youtubeUrl: ex.performedExercise.youtubeUrl ?? null,
         },
-        media: ex.performedExercise.media.map((m) => ({ id: m.id, url: m.url, mediaType: m.mediaType })),
+        media: ex.performedExercise.media.map((m) => {
+          if (m.mediaType === "image" && m.publicId) {
+            return {
+              id: m.id,
+              mediaType: m.mediaType,
+              url: m.url,
+              publicId: m.publicId,
+              isPrimary: m.isPrimary,
+              thumbnailUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/c_fill,w_80,h_100,q_auto,f_webp/${m.publicId}`,
+              heroUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/c_fill,w_400,h_500,q_auto,f_webp/${m.publicId}`,
+              heroDesktopUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/c_fill,w_600,h_750,q_auto,f_webp/${m.publicId}`,
+              fullUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/q_auto,f_auto/${m.publicId}`,
+            };
+          }
+          if (m.mediaType === "video" && m.publicId) {
+            return {
+              id: m.id,
+              mediaType: m.mediaType,
+              url: m.url,
+              publicId: m.publicId,
+              videoId: m.publicId,
+              embedUrl: `https://www.youtube.com/embed/${m.publicId}?rel=0&modestbranding=1`,
+              thumbnailUrl: `https://img.youtube.com/vi/${m.publicId}/maxresdefault.jpg`,
+            };
+          }
+          return { id: m.id, mediaType: m.mediaType, url: m.url, publicId: m.publicId, isPrimary: m.isPrimary };
+        }),
         alternatives: (ex.workoutExercise?.alternatives ?? []).map((a) => ({
           exerciseId: a.alternativeExercise.id,
           name: a.alternativeExercise.name,

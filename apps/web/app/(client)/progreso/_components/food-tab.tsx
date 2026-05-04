@@ -56,6 +56,9 @@ export function FoodTab({ food, loadFood, loadSummary }: Props) {
         loggedAt: foodAt ? new Date(foodAt).toISOString() : null,
         text: foodText ? foodText : null,
         photoUrl: uploadedUrl ?? (foodPhotoUrl ? foodPhotoUrl : null),
+        mealType: null,
+        quality: null,
+        macroTags: [],
       });
       setFoodText("");
       setFoodPhotoUrl("");

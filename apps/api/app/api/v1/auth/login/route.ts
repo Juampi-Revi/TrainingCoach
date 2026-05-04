@@ -12,10 +12,13 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password) return err("email and password required", 400);
 
-    const key = `login:${String(email).toLowerCase()}`;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes("@")) return err("email inválido", 400);
+
+    const key = `login:${normalizedEmail}`;
     if (!rateLimit(key, 10, 60_000)) return err("Demasiados intentos, esperá 1 minuto", 429);
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user || !user.passwordHash) return err("Invalid credentials", 401);
 
     const valid = await bcrypt.compare(password, user.passwordHash);

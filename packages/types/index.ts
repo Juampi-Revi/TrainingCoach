@@ -284,11 +284,25 @@ export interface ClientDashboard {
   weekStart: string;
   weekEnd: string;
   weekScore: number;
+  weekNumber: number;           // SEM 5
+  totalWeeks: number;           // / 8
+  previousWeekScore: number | null;  // para trend "+X vs semana anterior"
   workoutsCompleted: number;
   workoutsTarget: number | null;
+  // Fuerza / Aeróbico separados
+  strengthCompleted: number;
+  strengthTarget: number | null;
+  cardioCompleted: number;
+  cardioTarget: number | null;
+  // Promedios
   energyAvg: number | null;
   stepsAvg: number | null;
   sleepMinutesAvg: number | null;
+  // Datos diarios para charts (7 días: L, M, M, J, V, S, D)
+  dailySteps: (number | null)[];
+  dailySleepMinutes: (number | null)[];
+  dailyEnergy: (number | null)[];
+  // Nutrición
   foodGood: number;
   foodRegular: number;
   foodPoor: number;
@@ -308,6 +322,13 @@ export interface FoodLogEntry {
   macroTags: string[];
   text: string | null;
   photoUrl: string | null;
+  source?: string;
+  coachComments?: Array<{
+    id: string;
+    text: string;
+    createdAt: string;
+    coach: { id: string; name: string | null };
+  }>;
 }
 
 export interface CreateFoodLogRequest {

@@ -31,6 +31,9 @@ export type FoodEntry = {
   text: string | null;
   photoUrl: string | null;
   source: string;
+  mealType: string | null;
+  quality: "good" | "regular" | "poor" | null;
+  macroTags: string[];
   coachComments: Array<{ id: string; text: string; createdAt: string; coach: { id: string; name: string | null } }>;
 };
 

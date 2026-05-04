@@ -12,6 +12,7 @@ import { ExercisePicker } from "./_components/exercise-picker";
 import { ExerciseList } from "./_components/exercise-list";
 import { PreSelectSheet } from "./_components/pre-select-sheet";
 import { MediaLightbox } from "./_components/media-lightbox";
+import { ExerciseMediaViewer } from "./_components/exercise-media-viewer";
 import { SwapSheet } from "./_components/swap-sheet";
 import { RestTimerOverlay } from "./_components/rest-timer-overlay";
 import { WarmupOverlay } from "./_components/warmup-overlay";
@@ -186,31 +187,14 @@ export default function SessionInProgressPage() {
         </div>
       )}
 
-      {hasMedia && (
-        <div onClick={() => setMediaOpen(true)} style={{ position: "relative", height: 140, background: "linear-gradient(135deg, #1f1f23, #0f0f12)", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-          {ex!.exercise.thumbnailUrl ? (
-            <Image unoptimized src={ex!.exercise.thumbnailUrl} alt="" fill sizes="100vw" style={{ objectFit: "cover", opacity: 0.5 }} />
-          ) : null}
-          <div style={{ position: "relative", zIndex: 1, width: 52, height: 52, borderRadius: 26, background: "rgba(215,255,58,.95)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon name="play" size={20} color="#0B0B0C" />
-          </div>
-          <div style={{ position: "absolute", bottom: 8, left: 8, display: "flex", gap: 4, zIndex: 1 }}>
-            <button onClick={(e) => { e.stopPropagation(); setMediaOpen(true); }} style={{ padding: "4px 8px", background: "rgba(11,11,12,.7)", backdropFilter: "blur(8px)", border: "1px solid var(--line-2)", borderRadius: 5, color: "var(--text)", fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
-              Técnica
-            </button>
-            {ex?.exercise.youtubeUrl && (
-              <a href={ex.exercise.youtubeUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", background: "rgba(255,0,0,.8)", border: "none", borderRadius: 5, color: "#fff", fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}>
-                ▶ YouTube
-              </a>
-            )}
-            {(ex?.alternatives?.length ?? 0) > 0 && (
-              <button onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }} style={{ padding: "4px 8px", background: "rgba(11,11,12,.4)", border: "1px solid var(--line-2)", borderRadius: 5, color: "var(--text-mute)", fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
-                Alternativas
-              </button>
-            )}
-          </div>
-          {lastSaved && <div style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}><span style={{ fontSize: 10, color: "var(--success)" }}>✓ {lastSaved}</span></div>}
-        </div>
+      {/* Exercise Media Viewer */}
+      {hasMedia && ex && (
+        <ExerciseMediaViewer
+          media={(ex.media || []).map(m => ({ ...m, mediaType: m.mediaType as "image" | "video" }))}
+          exerciseName={ex.exercise.name}
+          youtubeUrl={ex.exercise.youtubeUrl}
+          onOpenLightbox={() => setMediaOpen(true)}
+        />
       )}
 
       {!hasMedia && ex && (
@@ -359,7 +343,13 @@ export default function SessionInProgressPage() {
         />
       )}
 
-      {mediaOpen && ex?.media?.length > 0 && <MediaLightbox media={ex.media} onClose={() => setMediaOpen(false)} />}
+      {mediaOpen && ex?.media?.length > 0 && (
+        <MediaLightbox
+          media={ex.media.map(m => ({ ...m, mediaType: m.mediaType as "image" | "video" }))}
+          exerciseName={ex.exercise.name}
+          onClose={() => setMediaOpen(false)}
+        />
+      )}
       {swapOpen && ex && <SwapSheet ex={ex} sessionId={sessionId} onSwapped={() => load()} onClose={() => setSwapOpen(false)} />}
 
       {showReset && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "./auth";
 
 export interface AppNotification {
@@ -18,6 +18,8 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const inFlightRef = useRef(false);
+  const lastFetchAtRef = useRef(0);
 
   const fetch = useCallback(() => {
     if (!ready) return;
@@ -27,6 +29,10 @@ export function useNotifications() {
       setLoading(false);
       return;
     }
+    if (inFlightRef.current) return;
+    const now = Date.now();
+    if (now - lastFetchAtRef.current < 1500) return;
+    inFlightRef.current = true;
     api
       .get<{ notifications: AppNotification[]; unreadCount: number }>("/notifications")
       .then((res) => {
@@ -34,7 +40,11 @@ export function useNotifications() {
         setUnreadCount(res.unreadCount);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {
+        inFlightRef.current = false;
+        lastFetchAtRef.current = Date.now();
+        setLoading(false);
+      });
   }, [api, ready, token]);
 
   useEffect(() => {
@@ -54,7 +64,7 @@ export function useNotifications() {
 
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") fetch();
-    }, 15000);
+    }, 60000);
 
     return () => {
       cancelled = true;

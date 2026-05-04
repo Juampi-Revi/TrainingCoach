@@ -17,6 +17,10 @@ export function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDe
   const gc = we.supersetGroup ? (GROUP_COLORS[we.supersetGroup] ?? null) : null;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const muscleLabel = we.exercise.primaryMuscle ? (MUSCLE_LABEL[we.exercise.primaryMuscle] ?? we.exercise.primaryMuscle) : null;
+  
+  // Check if exercise has media indicators
+  const hasMedia = we.exercise.thumbnailUrl || we.exercise.youtubeUrl;
+  const hasVideo = we.exercise.youtubeUrl;
 
   return (
     <>
@@ -24,7 +28,7 @@ export function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDe
         onClick={onSelect}
         style={{
           display: "grid",
-          gridTemplateColumns: "20px 44px 1fr auto auto auto auto 68px",
+          gridTemplateColumns: "20px 52px 1fr auto auto auto auto 68px",
           gap: 10, alignItems: "center",
           padding: "9px 14px",
           borderBottom: "1px solid var(--line)",
@@ -45,15 +49,45 @@ export function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDe
           </button>
         </div>
 
-        <div style={{ position: "relative", width: 44, height: 44, borderRadius: 8, background: "var(--bg-2)", border: "1px solid var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "relative", width: 52, height: 52, borderRadius: 8, background: we.exercise.thumbnailUrl ? "var(--bg-2)" : hasVideo ? "linear-gradient(135deg, #FF0000 0%, #CC0000 100%)" : "var(--bg-2)", border: we.exercise.thumbnailUrl || hasVideo ? "1px solid var(--line-2)" : "1px dashed var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
           {we.exercise.thumbnailUrl ? (
-            <Image unoptimized src={we.exercise.thumbnailUrl} alt="" fill sizes="44px" style={{ objectFit: "cover" }} />
+            <Image unoptimized src={we.exercise.thumbnailUrl} alt="" fill sizes="52px" style={{ objectFit: "cover" }} />
+          ) : hasVideo ? (
+            <div style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              background: "rgba(255,255,255,0.95)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <Icon name="play" size={14} color="#FF0000" />
+            </div>
           ) : (
-            <Icon name="dumbbell" size={18} color="var(--text-mute)" />
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              background: "var(--bg-3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px dashed var(--line-2)",
+            }}>
+              <Icon name="dumbbell" size={16} color="var(--text-mute)" />
+            </div>
           )}
+          {/* Group badge */}
           {gc && (
-            <div style={{ position: "absolute", top: 2, left: 2, width: 14, height: 14, borderRadius: 3, background: gc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 800, color: "#0B0B0C", fontFamily: "var(--font-mono)" }}>
+            <div style={{ position: "absolute", top: 2, left: 2, width: 16, height: 16, borderRadius: 3, background: gc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#0B0B0C", fontFamily: "var(--font-mono)" }}>
               {we.supersetGroup}
+            </div>
+          )}
+          {/* Video indicator (only when thumbnail exists) */}
+          {hasVideo && we.exercise.thumbnailUrl && (
+            <div style={{ position: "absolute", bottom: 2, right: 2, width: 16, height: 16, borderRadius: 8, background: "#FF0000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name="play" size={8} color="#fff" />
             </div>
           )}
         </div>

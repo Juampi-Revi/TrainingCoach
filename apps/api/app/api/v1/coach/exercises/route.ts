@@ -28,20 +28,41 @@ export async function GET(req: NextRequest) {
         primaryMuscle: true,
         equipment: true,
         isSystem: true,
+        youtubeUrl: true,
         source: true,
-        media: { select: { url: true, mediaType: true }, take: 1 },
+        media: { 
+          select: { url: true, mediaType: true, publicId: true }, 
+          take: 1,
+          orderBy: { isPrimary: "desc" }
+        },
       },
     });
 
     return ok(
-      exercises.map((e) => ({
-        id: e.id,
-        name: e.name,
-        primaryMuscle: e.primaryMuscle,
-        equipment: e.equipment,
-        isSystem: e.isSystem,
-        thumbnailUrl: e.media[0]?.url ?? null,
-      })),
+      exercises.map((e) => {
+        // Get thumbnail URL - prioritize image media, then generate from video
+        let thumbnailUrl = null;
+        const firstMedia = e.media[0];
+        
+        if (firstMedia) {
+          if (firstMedia.mediaType === "image") {
+            thumbnailUrl = firstMedia.url;
+          } else if (firstMedia.mediaType === "video" && firstMedia.publicId) {
+            // Generate YouTube thumbnail
+            thumbnailUrl = `https://img.youtube.com/vi/${firstMedia.publicId}/mqdefault.jpg`;
+          }
+        }
+
+        return {
+          id: e.id,
+          name: e.name,
+          primaryMuscle: e.primaryMuscle,
+          equipment: e.equipment,
+          isSystem: e.isSystem,
+          youtubeUrl: e.youtubeUrl,
+          thumbnailUrl,
+        };
+      }),
     );
   });
 }
