@@ -108,27 +108,18 @@ export default function TemplateEditorPage() {
   // Create block lookup map
   const blockMap = new Map(blocks.map((b) => [b.id, b]));
   
-  // Get warmup block if exists
-  const warmupBlock = blocks.find((b) => b.type === "warmup");
-  
   const usedGroups = [...new Set(exercises
-    .filter((e) => blockMap.get(e.workoutBlockId)?.type !== "warmup")
     .map((e) => e.supersetGroup)
     .filter(Boolean) as string[]
   )].sort();
   const nextGroup = GROUP_LETTERS.find((l) => !usedGroups.includes(l)) ?? "A";
   const groupSizes: Record<string, number> = {};
   exercises.forEach((we) => {
-    const blockType = blockMap.get(we.workoutBlockId)?.type;
-    if (blockType !== "warmup" && we.supersetGroup) {
+    if (we.supersetGroup) {
       groupSizes[we.supersetGroup] = (groupSizes[we.supersetGroup] ?? 0) + 1;
     }
   });
 
-  const warmupExercises = warmupBlock 
-    ? exercises.filter((e) => e.workoutBlockId === warmupBlock.id)
-    : [];
-  const workExercises = exercises.filter((e) => e.workoutBlockId !== warmupBlock?.id);
   const blocksSorted = [...blocks].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const selectedWe = selectedWeId ? exercises.find((e) => e.id === selectedWeId) ?? null : null;
   const editingBlock = editingBlockId ? blocks.find((b) => b.id === editingBlockId) ?? null : null;
@@ -162,7 +153,7 @@ export default function TemplateEditorPage() {
           </>
         }
       >
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", height: "calc(100vh - 74px)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", height: "calc(100vh - 74px)" }}>
 
           {/* ── Exercise list ── */}
           <div style={{ overflow: "auto" }}>
@@ -177,67 +168,57 @@ export default function TemplateEditorPage() {
 
             <div style={{ margin: "0 24px 24px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
 
-              {warmupExercises.length > 0 && (
-                <>
-                  <SectionLabel label="Calentamiento" count={warmupExercises.length} accent="var(--warn)" />
-                  {warmupExercises.map((we) => {
-                    const secIdx = warmupExercises.findIndex((e) => e.id === we.id);
-                    return (
-                      <ExerciseRow
-                        key={we.id}
-                        we={we}
-                        selected={selectedWeId === we.id}
-                        onSelect={() => setSelectedWeId((id) => id === we.id ? null : we.id)}
-                        onMoveUp={secIdx > 0 && warmupBlock ? () => moveExerciseInSection(we.id, "up", warmupBlock.id) : null}
-                        onMoveDown={secIdx < warmupExercises.length - 1 && warmupBlock ? () => moveExerciseInSection(we.id, "down", warmupBlock.id) : null}
-                        onDelete={() => deleteExercise(we.id)}
-                      />
-                    );
-                  })}
-                  <div style={{ padding: "8px 14px", borderBottom: "1px solid var(--line)", display: "flex" }}>
-                    {warmupBlock && (
-                      <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(warmupBlock.id); setShowPicker(true); }}>
-                        Agregar ejercicio de calentamiento
-                      </Button>
-                    )}
+              {blocksSorted.length === 0 && exercises.length === 0 && (
+                <div style={{ padding: "40px 24px", textAlign: "center" }}>
+                  <div style={{ fontSize: 14, color: "var(--text-mute)", marginBottom: 16 }}>
+                    Este entrenamiento no tiene bloques todavía.
                   </div>
-                </>
+                  <Button variant="outline" size="sm" icon="plus" onClick={() => { setEditingBlockId(null); setBlockModalOpen(true); }}>
+                    Crear primer bloque
+                  </Button>
+                </div>
               )}
 
-              {(workExercises.length > 0 || warmupExercises.length > 0) && (
-                <SectionLabel label="Trabajo" count={workExercises.length} accent="var(--text-dim)" />
-              )}
-
-              {blocksSorted.length > 0 && (
-                <SectionLabel
-                  label="Bloques HIIT"
-                  count={blocksSorted.length}
-                  accent="var(--lime)"
-                  right={
-                    <Button variant="ghost" size="sm" icon="plus" onClick={() => { setEditingBlockId(null); setBlockModalOpen(true); }}>
-                      Agregar bloque
-                    </Button>
-                  }
-                />
-              )}
-
-              {blocksSorted.map((b) => {
-                const blockExercises = workExercises
+              {blocksSorted.map((b, bIdx) => {
+                const blockExercises = exercises
                   .filter((e) => e.workoutBlockId === b.id)
                   .sort((a, c) => a.sortOrder - c.sortOrder);
+                const isLast = bIdx === blocksSorted.length - 1;
                 return (
-                  <div key={b.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(215,255,58,.04)" }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(215,255,58,.12)", border: "1px solid rgba(215,255,58,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Icon name="timer" size={14} color="var(--lime)" />
+                  <div key={b.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--line)" }}>
+                    {/* Block Header */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "var(--bg-2)" }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        background: b.type === "warmup" ? "rgba(255,142,114,.12)" : b.type === "cooldown" ? "rgba(167,139,250,.12)" : b.type === "cardio" ? "rgba(122,184,255,.12)" : "rgba(215,255,58,.12)",
+                        border: `1px solid ${b.type === "warmup" ? "rgba(255,142,114,.25)" : b.type === "cooldown" ? "rgba(167,139,250,.25)" : b.type === "cardio" ? "rgba(122,184,255,.25)" : "rgba(215,255,58,.25)"}`,
+                        display: "flex", alignItems: "center", justifyContent: "center"
+                      }}>
+                        <Icon
+                          name={b.type === "warmup" ? "flame" : b.type === "cooldown" ? "moon" : b.type === "cardio" ? "repeat" : b.type === "intervals" ? "timer" : "dumbbell"}
+                          size={14}
+                          color={b.type === "warmup" ? "#FF8E72" : b.type === "cooldown" ? "#A78BFA" : b.type === "cardio" ? "#7AB8FF" : "var(--lime)"}
+                        />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="ta-mono" style={{ fontSize: 10, fontWeight: 800, color: "var(--lime)", letterSpacing: ".08em" }}>
-                          {blockTypeLabel(b.type)} {b.label ? `· ${b.label}` : ""} · {blockSummary(b)}
+                        <div className="ta-mono" style={{
+                          fontSize: 10, fontWeight: 800,
+                          color: b.type === "warmup" ? "#FF8E72" : b.type === "cooldown" ? "#A78BFA" : b.type === "cardio" ? "#7AB8FF" : "var(--lime)",
+                          letterSpacing: ".08em"
+                        }}>
+                          {blockTypeLabel(b.type).toUpperCase()} {b.label ? `· ${b.label}` : ""} · {blockSummary(b)}
                         </div>
                         <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-                          {blockExercises.length} ejercicio{blockExercises.length === 1 ? "" : "s"} en el bloque
+                          {blockExercises.length} ejercicio{blockExercises.length === 1 ? "" : "s"}
+                          {b.targetMinutes ? ` · ${b.targetMinutes} min` : ""}
+                          {b.restBetweenExercisesSeconds ? ` · descanso ${b.restBetweenExercisesSeconds}s` : ""}
+                          {b.restAfterSeconds ? ` · descanso post ${b.restAfterSeconds}s` : ""}
                         </div>
+                        {b.description && (
+                          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2, fontStyle: "italic" }}>
+                            {b.description}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
                         <Button variant="outline" size="sm" onClick={() => { setEditingBlockId(b.id); setBlockModalOpen(true); }}>
@@ -249,6 +230,7 @@ export default function TemplateEditorPage() {
                       </div>
                     </div>
 
+                    {/* Exercises in block */}
                     {blockExercises.map((we) => {
                       const secIdx = blockExercises.findIndex((e) => e.id === we.id);
                       const gc = we.supersetGroup ? (GROUP_COLORS[we.supersetGroup] ?? null) : null;
@@ -283,6 +265,7 @@ export default function TemplateEditorPage() {
                       );
                     })}
 
+                    {/* Add exercise button */}
                     <div style={{ padding: "8px 14px", display: "flex", gap: 8, justifyContent: "flex-start", background: "var(--bg-1)" }}>
                       <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(b.id); setShowPicker(true); }}>
                         Agregar ejercicio al bloque
@@ -295,17 +278,13 @@ export default function TemplateEditorPage() {
                 );
               })}
 
-              {exercises.length === 0 && (
-                <div style={{ padding: "20px 14px", color: "var(--text-mute)", fontSize: 13 }}>
-                  Sin ejercicios. Añadí el primero con el botón de abajo.
+              {blocksSorted.length > 0 && (
+                <div style={{ padding: 10, borderTop: "1px solid var(--line)", display: "flex", gap: 8, justifyContent: "center" }}>
+                  <Button variant="ghost" size="sm" icon="plus" onClick={() => { setEditingBlockId(null); setBlockModalOpen(true); }}>
+                    Agregar bloque
+                  </Button>
                 </div>
               )}
-
-              <div style={{ padding: 10, borderTop: "1px solid var(--line)", display: "flex", gap: 8, justifyContent: "center" }}>
-                <Button variant="ghost" size="sm" icon="plus" onClick={() => { setEditingBlockId(null); setBlockModalOpen(true); }}>
-                  Agregar bloque
-                </Button>
-              </div>
             </div>
           </div>
 

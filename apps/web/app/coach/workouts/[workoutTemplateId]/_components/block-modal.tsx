@@ -52,9 +52,12 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   const [rest, setRest] = useState(String(block?.restSeconds ?? ""));
   const [rounds, setRounds] = useState(String(block?.rounds ?? ""));
   const [total, setTotal] = useState(String(block?.totalDurationSeconds ?? ""));
-  
-  // Cardio-specific fields
+
+  // Universal config fields (warmup/strength/cooldown/cardio)
   const [targetMinutes, setTargetMinutes] = useState(String(block?.targetMinutes ?? ""));
+  const [restBetweenExercises, setRestBetweenExercises] = useState(String(block?.restBetweenExercisesSeconds ?? ""));
+
+  // Cardio-specific fields
   const [targetZone, setTargetZone] = useState(block?.targetZone ?? "");
   
   const [saving, setSaving] = useState(false);
@@ -72,6 +75,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       setRounds(String(block?.rounds ?? ""));
       setTotal(String(block?.totalDurationSeconds ?? ""));
       setTargetMinutes(String(block?.targetMinutes ?? ""));
+      setRestBetweenExercises(String(block?.restBetweenExercisesSeconds ?? ""));
       setTargetZone(block?.targetZone ?? "");
     }, 0);
     return () => clearTimeout(t);
@@ -79,12 +83,13 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
 
   async function save() {
     setSaving(true);
-    
+
     const w = parseInt(work);
     const r = parseInt(rest);
     const ro = parseInt(rounds);
     const t = parseInt(total);
     const restAfter = parseInt(restAfterSeconds);
+    const restBetweenEx = parseInt(restBetweenExercises);
     const targetMins = parseInt(targetMinutes);
 
     try {
@@ -95,7 +100,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       };
 
       let payload;
-      
+
       if (blockType === "intervals" && intervalType) {
         payload = {
           ...basePayload,
@@ -114,10 +119,12 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
           targetZone: targetZone || null,
         };
       } else {
-        // warmup, strength, cooldown
+        // warmup, strength, cooldown - configurable duration and rest between exercises
         payload = {
           ...basePayload,
           type: blockType,
+          targetMinutes: !isNaN(targetMins) && targetMins > 0 ? targetMins : null,
+          restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
         };
       }
 
@@ -158,10 +165,15 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   // Determine which fields to show based on block type
   const isInterval = blockType === "intervals";
   const isCardio = blockType === "cardio";
+  const isWarmup = blockType === "warmup";
+  const isCooldown = blockType === "cooldown";
+  const isStrength = blockType === "strength";
   const showIntervalFields = isInterval && intervalType;
   const showWorkRest = showIntervalFields && (intervalType === "tabata" || intervalType === "hiit");
   const showRounds = showIntervalFields && (intervalType === "tabata" || intervalType === "hiit" || intervalType === "emom");
   const showTotal = showIntervalFields && (intervalType === "amrap" || intervalType === "emom");
+  // Universal config for warmup/strength/cooldown
+  const showUniversalConfig = isWarmup || isStrength || isCooldown;
 
   return (
     <div
@@ -287,6 +299,16 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
             <>
               <Input label="Minutos objetivo" placeholder="20" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
               <Input label="Zona objetivo (opcional)" placeholder="Ej: Zona 2, 70-80% FCm" value={targetZone} onChange={(e) => setTargetZone(e.target.value)} />
+            </>
+          )}
+
+          {/* Universal config for warmup/strength/cooldown */}
+          {showUniversalConfig && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Input label="Tiempo objetivo (min)" placeholder="Ej: 10" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
+                <Input label="Descanso entre ejercicios (seg)" placeholder="Ej: 60" value={restBetweenExercises} onChange={(e) => setRestBetweenExercises(e.target.value)} />
+              </div>
             </>
           )}
 

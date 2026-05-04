@@ -17,7 +17,7 @@ export interface WE {
   alternativesCount?: number;
 }
 
-export type WB = WorkoutBlockSummary & { sortOrder?: number };
+export type WB = WorkoutBlockSummary & { sortOrder?: number; restBetweenExercisesSeconds?: number | null };
 
 export interface ExerciseOption {
   id: string;
