@@ -100,7 +100,10 @@ export function ExerciseList({
               </div>
               {isInterval && block && onStartBlock && (
                 <button
-                  onClick={() => onStartBlock(block)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartBlock(block);
+                  }}
                   style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#0B0B0C" }}
                 >
                   Iniciar
