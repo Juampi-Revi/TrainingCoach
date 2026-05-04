@@ -98,16 +98,30 @@ export function ExerciseList({
                   </span>
                 )}
               </div>
-              {isInterval && block && onStartBlock && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onStartBlock(block);
-                  }}
-                  style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#0B0B0C" }}
-                >
-                  Iniciar
-                </button>
+              {block && (
+                isInterval && onStartBlock ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStartBlock(block);
+                    }}
+                    style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#0B0B0C" }}
+                  >
+                    Iniciar
+                  </button>
+                ) : block.type === "strength" ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Select first exercise in the block to open the logger
+                      const firstEx = bg.exercises[0];
+                      if (firstEx) onSelectEx(firstEx.realIdx);
+                    }}
+                    style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#0B0B0C" }}
+                  >
+                    Iniciar
+                  </button>
+                ) : null
               )}
             </div>
 

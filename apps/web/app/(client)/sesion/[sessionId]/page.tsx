@@ -319,10 +319,10 @@ export default function SessionInProgressPage() {
                 {nextRealIdx != null && nextRealIdx >= 0 && (
                   <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(nextRealIdx)} icon="chevR" />
                 )}
-                <Button size="xl" icon={ex?.block ? "timer" : "book"} style={{ flex: 1, fontSize: 16 }} disabled={!ex}
+                <Button size="xl" icon={ex?.block?.type === "intervals" ? "timer" : "book"} style={{ flex: 1, fontSize: 16 }} disabled={!ex}
                   onClick={() => {
                     if (!ex) return;
-                    if (ex.block) {
+                    if (ex.block?.type === "intervals") {
                       setCurrentBlockId(ex.block.id);
                       setBlockRunnerOpen(true);
                     } else {
@@ -330,7 +330,7 @@ export default function SessionInProgressPage() {
                     }
                   }}
                 >
-                  {ex?.block ? "Iniciar bloque" : "Registrar series"}
+                  {ex?.block?.type === "intervals" ? "Iniciar bloque" : "Registrar series"}
                 </Button>
               </>
             )}
