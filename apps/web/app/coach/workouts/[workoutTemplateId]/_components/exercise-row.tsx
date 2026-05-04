@@ -5,9 +5,11 @@ import Image from "next/image";
 import { Icon, ConfirmModal } from "@/components/ui";
 import { MUSCLE_LABEL, GROUP_COLORS } from "@/lib/constants";
 import type { WE } from "./_types";
+import type { BlockType } from "@regen/types";
 
-export function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDelete }: {
+export function ExerciseRow({ we, blockType, selected, onSelect, onMoveUp, onMoveDown, onDelete }: {
   we: WE;
+  blockType?: BlockType;
   selected: boolean;
   onSelect: () => void;
   onMoveUp: (() => void) | null;
@@ -99,16 +101,33 @@ export function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDe
           </div>
         </div>
 
+        {/* Sets/Reps for strength, Duration for time-based blocks */}
         <div className="ta-mono" style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}>
-          {we.targetSets && we.targetReps ? `${we.targetSets} × ${we.targetReps}` : we.targetSets ? `${we.targetSets} ×` : "—"}
+          {blockType === "strength" ? (
+            we.targetSets && we.targetReps ? `${we.targetSets} × ${we.targetReps}` : we.targetSets ? `${we.targetSets} ×` : "—"
+          ) : blockType === "warmup" || blockType === "cooldown" || blockType === "cardio" ? (
+            we.durationSeconds ? `${Math.round(we.durationSeconds / 60)}min` : "—"
+          ) : blockType === "intervals" ? (
+            <span style={{ color: "var(--lime)" }}>○</span>
+          ) : (
+            we.targetSets && we.targetReps ? `${we.targetSets} × ${we.targetReps}` : "—"
+          )}
         </div>
 
         <div className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--accent-text)", whiteSpace: "nowrap" }}>
-          {we.intensityTarget ? `${we.intensityType?.toUpperCase() ?? ""} ${we.intensityTarget}`.trim() : "—"}
+          {blockType === "intervals" ? (
+            <span style={{ color: "var(--text-mute)" }}>por ronda</span>
+          ) : (
+            we.intensityTarget ? `${we.intensityType?.toUpperCase() ?? ""} ${we.intensityTarget}`.trim() : "—"
+          )}
         </div>
 
         <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", whiteSpace: "nowrap" }}>
-          {we.restSeconds ? `${we.restSeconds}s` : "—"}
+          {blockType === "intervals" ? (
+            <span style={{ color: "var(--lime)" }}>↻</span>
+          ) : (
+            we.restSeconds ? `${we.restSeconds}s` : "—"
+          )}
         </div>
 
         <div>

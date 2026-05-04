@@ -255,6 +255,7 @@ export default function TemplateEditorPage() {
                           )}
                           <ExerciseRow
                             we={we}
+                            blockType={b.type}
                             selected={selectedWeId === we.id}
                             onSelect={() => setSelectedWeId((id) => id === we.id ? null : we.id)}
                             onMoveUp={secIdx > 0 ? () => moveExerciseInSection(we.id, "up", b.id) : null}
