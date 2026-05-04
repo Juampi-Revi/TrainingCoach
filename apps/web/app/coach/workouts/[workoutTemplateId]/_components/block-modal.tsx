@@ -343,13 +343,22 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
                 </>
               )}
               {showTotal && (
-                <Input
-                  label={isEmom ? "Duración total (auto)" : "Duración total (seg)"}
-                  placeholder={isEmom ? "600" : "600"}
-                  value={isEmom ? (calculatedEmomTotal || total) : total}
-                  onChange={(e) => !isEmom && setTotal(e.target.value)}
-                  disabled={isEmom}
-                />
+                <div style={{ display: "grid", gridTemplateColumns: isEmom ? "1fr 1fr" : "1fr", gap: 10 }}>
+                  <Input
+                    label={isEmom ? "Duración total (auto)" : "Duración total (seg)"}
+                    placeholder={isEmom ? "600" : "600"}
+                    value={isEmom ? (calculatedEmomTotal || total) : total}
+                    onChange={(e) => !isEmom && setTotal(e.target.value)}
+                    disabled={isEmom}
+                  />
+                  {isEmom && (
+                    <Input
+                      label="En minutos"
+                      value={calculatedEmomTotal ? String(Math.round(Number(calculatedEmomTotal) / 60)) : ""}
+                      disabled
+                    />
+                  )}
+                </div>
               )}
               {isAmrap && (
                 <div style={{ fontSize: 11, color: "var(--text-mute)" }}>
