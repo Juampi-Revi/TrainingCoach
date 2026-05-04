@@ -14,13 +14,21 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
     const template = await prisma.workoutTemplate.findFirst({
       where: { id: workoutTemplateId, coachUserId: auth.user.sub },
-      select: { id: true, workoutExercises: { select: { sortOrder: true }, orderBy: { sortOrder: "desc" }, take: 1 } },
+      select: { id: true },
     });
     if (!template) return forbidden();
 
     const body = await req.json().catch(() => ({}));
-    const { exerciseId } = body;
+    const { exerciseId, workoutBlockId } = body;
+    
     if (!exerciseId) return err("exerciseId requerido", 400);
+    if (!workoutBlockId) return err("workoutBlockId requerido", 400);
+
+    // Verify the block belongs to this workout template
+    const block = await prisma.workoutBlock.findFirst({
+      where: { id: workoutBlockId, workoutTemplateId },
+    });
+    if (!block) return err("Block not found or doesn't belong to this workout", 404);
 
     const exercise = await prisma.exercise.findFirst({
       where: { id: exerciseId, OR: [{ isSystem: true }, { coachUserId: auth.user.sub }] },
@@ -28,14 +36,20 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     });
     if (!exercise) return err("Ejercicio no encontrado", 404);
 
-    const nextSort = (template.workoutExercises[0]?.sortOrder ?? -1) + 1;
+    // Get next sort order within the block
+    const lastInBlock = await prisma.workoutExercise.findFirst({
+      where: { workoutBlockId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    const nextSort = (lastInBlock?.sortOrder ?? -1) + 1;
 
     const we = await prisma.workoutExercise.create({
       data: {
         workoutTemplateId,
+        workoutBlockId,
         exerciseId,
         sortOrder: nextSort,
-        isWarmup: body.isWarmup === true,
         targetSets: body.targetSets ?? 3,
         targetReps: body.targetReps ?? "8-12",
         intensityType: body.intensityType ?? null,
@@ -49,7 +63,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       id: we.id,
       sortOrder: we.sortOrder,
       supersetGroup: we.supersetGroup,
-      isWarmup: we.isWarmup,
+      workoutBlockId: we.workoutBlockId,
       exercise,
       targetSets: we.targetSets,
       targetReps: we.targetReps,

@@ -343,26 +343,43 @@ async function main() {
   for (let wIdx = 0; wIdx < 4; wIdx++) {
     for (let dIdx = 0; dIdx < workoutDefs.length; dIdx++) {
       const def = workoutDefs[dIdx];
+      
+      // Create template first
       const template = await prisma.workoutTemplate.create({
         data: {
           coachUserId: coach.id,
           title: `${def.title} – S${wIdx + 1} (${weekLabels[wIdx].label})`,
           description: def.description,
           type: "strength",
-          workoutExercises: {
-            create: def.exercises.map((ex, i) => ({
-              exerciseId: exercises[ex.name],
-              sortOrder: i,
-              targetSets: ex.weeks[wIdx].sets,
-              targetReps: ex.weeks[wIdx].reps,
-              intensityType: ex.weeks[wIdx].rpe != null ? "rpe" : undefined,
-              intensityTarget: ex.weeks[wIdx].rpe != null ? ex.weeks[wIdx].rpe : undefined,
-              restSeconds: ex.weeks[wIdx].rest,
-              notes: ex.weeks[wIdx].notes,
-            })),
-          },
         },
       });
+      
+      // Create a strength block for this template
+      const block = await prisma.workoutBlock.create({
+        data: {
+          workoutTemplateId: template.id,
+          type: "strength",
+          label: "Bloque de fuerza",
+          sortOrder: 0,
+        },
+      });
+      
+      // Create exercises associated with the block
+      await prisma.workoutExercise.createMany({
+        data: def.exercises.map((ex, i) => ({
+          workoutTemplateId: template.id,
+          workoutBlockId: block.id,
+          exerciseId: exercises[ex.name],
+          sortOrder: i,
+          targetSets: ex.weeks[wIdx].sets,
+          targetReps: ex.weeks[wIdx].reps,
+          intensityType: ex.weeks[wIdx].rpe != null ? "rpe" : null,
+          intensityTarget: ex.weeks[wIdx].rpe != null ? ex.weeks[wIdx].rpe : null,
+          restSeconds: ex.weeks[wIdx].rest,
+          notes: ex.weeks[wIdx].notes,
+        })),
+      });
+      
       createdTemplates[wIdx].push(template.id);
     }
   }

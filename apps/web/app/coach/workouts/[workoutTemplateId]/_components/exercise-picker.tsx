@@ -7,10 +7,9 @@ import { Icon } from "@/components/ui";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import type { WE, ExerciseOption } from "./_types";
 
-export function ExercisePicker({ templateId, defaultWarmup, blockId, onAdd, onClose }: {
+export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
   templateId: string;
-  defaultWarmup: boolean;
-  blockId?: string | null;
+  blockId: string;
   onAdd: (we: WE) => void;
   onClose: () => void;
 }) {
@@ -18,7 +17,6 @@ export function ExercisePicker({ templateId, defaultWarmup, blockId, onAdd, onCl
   const [search, setSearch] = useState("");
   const [exercises, setExercises] = useState<ExerciseOption[] | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
-  const [asWarmup, setAsWarmup] = useState(defaultWarmup);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newMuscle, setNewMuscle] = useState("");
@@ -34,7 +32,10 @@ export function ExercisePicker({ templateId, defaultWarmup, blockId, onAdd, onCl
   async function handleAdd(ex: ExerciseOption) {
     setAdding(ex.id);
     try {
-      const we = await api.post<WE>(`/coach/workouts/${templateId}/exercises`, { exerciseId: ex.id, isWarmup: asWarmup, ...(blockId ? { workoutBlockId: blockId } : {}) });
+      if (!blockId) {
+        throw new Error("blockId is required");
+      }
+      const we = await api.post<WE>(`/coach/workouts/${templateId}/exercises`, { exerciseId: ex.id, workoutBlockId: blockId });
       onAdd(we);
       onClose();
     } catch (e) {
@@ -47,10 +48,14 @@ export function ExercisePicker({ templateId, defaultWarmup, blockId, onAdd, onCl
   async function handleCreate() {
     const name = newName.trim();
     if (!name) return;
+    if (!blockId) {
+      console.error("blockId is required");
+      return;
+    }
     setCreatingLoading(true);
     try {
       const ex = await api.post<ExerciseOption>("/coach/exercises", { name, primaryMuscle: newMuscle || null });
-      const we = await api.post<WE>(`/coach/workouts/${templateId}/exercises`, { exerciseId: ex.id, isWarmup: asWarmup, ...(blockId ? { workoutBlockId: blockId } : {}) });
+      const we = await api.post<WE>(`/coach/workouts/${templateId}/exercises`, { exerciseId: ex.id, workoutBlockId: blockId });
       onAdd(we);
       onClose();
     } catch (e) {
@@ -71,20 +76,6 @@ export function ExercisePicker({ templateId, defaultWarmup, blockId, onAdd, onCl
       >
         <div style={{ padding: "20px 20px 12px", borderBottom: "1px solid var(--line)" }}>
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Agregar ejercicio</div>
-          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-            <button
-              onClick={() => setAsWarmup(false)}
-              style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${!asWarmup ? "var(--line)" : "var(--line-2)"}`, background: !asWarmup ? "var(--bg-2)" : "transparent", color: !asWarmup ? "var(--text)" : "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-            >
-              Ejercicio de trabajo
-            </button>
-            <button
-              onClick={() => setAsWarmup(true)}
-              style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${asWarmup ? "var(--lime)" : "var(--line-2)"}`, background: asWarmup ? "rgba(132,204,22,.12)" : "transparent", color: asWarmup ? "var(--accent-text)" : "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-            >
-              Calentamiento
-            </button>
-          </div>
           {!creating ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8, height: 40, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "0 12px" }}>
               <Icon name="search" size={14} color="var(--text-mute)" />

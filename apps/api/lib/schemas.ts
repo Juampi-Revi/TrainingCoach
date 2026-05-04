@@ -19,7 +19,7 @@ export const sessionPatchSchema = z.object({
 
 // PATCH /api/v1/coach/workouts/:workoutTemplateId/exercises/:weId
 export const workoutExercisePatchSchema = z.object({
-  workoutBlockId: z.union([z.string(), z.null()]).optional(),
+  workoutBlockId: z.string().optional(),
   targetSets: z.union([z.number().int().positive(), z.null()]).optional(),
   targetReps: z.union([z.string().max(50), z.null()]).optional(),
   durationSeconds: z.union([z.number().int().positive(), z.null()]).optional(),
@@ -29,6 +29,5 @@ export const workoutExercisePatchSchema = z.object({
   notes: z.union([z.string().max(2000), z.null()]).optional(),
   sortOrder: z.number().int().optional(),
   supersetGroup: z.union([z.string().max(50), z.null()]).optional(),
-  isWarmup: z.boolean().optional(),
   groupNote: z.union([z.string().max(2000), z.null()]).optional(),
 });

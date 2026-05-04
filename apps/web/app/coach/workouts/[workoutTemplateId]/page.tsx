@@ -30,10 +30,7 @@ export default function TemplateEditorPage() {
   const [saved, setSaved] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [warmup, setWarmup] = useState("");
-  const [warmupMinutes, setWarmupMinutes] = useState<string>("");
   const [showPicker, setShowPicker] = useState(false);
-  const [pickerWarmup, setPickerWarmup] = useState(false);
   const [pickerBlockId, setPickerBlockId] = useState<string | null>(null);
   const [selectedWeId, setSelectedWeId] = useState<string | null>(null);
   const [blockModalOpen, setBlockModalOpen] = useState(false);
@@ -47,8 +44,6 @@ export default function TemplateEditorPage() {
         setBlocks(d.blocks ?? []);
         setTitle(d.title);
         setDescription(d.description ?? "");
-        setWarmup(d.warmupNotes ?? "");
-        setWarmupMinutes(d.warmupMinutes ? String(d.warmupMinutes) : "");
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -59,12 +54,9 @@ export default function TemplateEditorPage() {
   async function save() {
     setSaving(true);
     try {
-      const wm = parseInt(warmupMinutes);
       await api.patch(`/coach/workouts/${workoutTemplateId}`, {
         title,
         description,
-        warmupNotes: warmup || null,
-        warmupMinutes: !isNaN(wm) && wm > 0 ? wm : null,
       });
       setSaved(true);
       toast.success("Entrenamiento guardado");
@@ -81,12 +73,9 @@ export default function TemplateEditorPage() {
     setExercises((prev) => prev.map((e) => e.id === id ? { ...e, ...patch } : e));
   }
 
-  function moveExerciseInSection(id: string, direction: "up" | "down", scope?: { isWarmup: boolean; blockId: string | null }) {
+  function moveExerciseInSection(id: string, direction: "up" | "down", blockId: string) {
     setExercises((prev) => {
-      const we = prev.find((e) => e.id === id)!;
-      const isWarmup = scope?.isWarmup ?? we.isWarmup;
-      const blockId = scope?.blockId ?? we.workoutBlockId;
-      const section = prev.filter((e) => e.isWarmup === isWarmup && e.workoutBlockId === blockId);
+      const section = prev.filter((e) => e.workoutBlockId === blockId);
       const secIdx = section.findIndex((e) => e.id === id);
       const swapSecIdx = direction === "up" ? secIdx - 1 : secIdx + 1;
       if (swapSecIdx < 0 || swapSecIdx >= section.length) return prev;
@@ -108,18 +97,6 @@ export default function TemplateEditorPage() {
     } catch (e) { console.error(e); }
   }
 
-  async function toggleWarmup(id: string) {
-    const we = exercises.find((e) => e.id === id)!;
-    const newVal = !we.isWarmup;
-    setExercises((prev) => prev.map((e) => e.id === id ? { ...e, isWarmup: newVal, supersetGroup: null, workoutBlockId: null } : e));
-    try {
-      await api.patch(`/coach/workouts/${workoutTemplateId}/exercises/${id}`, { isWarmup: newVal, supersetGroup: null, workoutBlockId: null });
-    } catch (e) {
-      console.error(e);
-      setExercises((prev) => prev.map((e) => e.id === id ? { ...e, isWarmup: !newVal } : e));
-    }
-  }
-
   async function deleteExercise(id: string) {
     try {
       await api.del(`/coach/workouts/${workoutTemplateId}/exercises/${id}`);
@@ -128,17 +105,30 @@ export default function TemplateEditorPage() {
     } catch (e) { console.error(e); }
   }
 
-  const usedGroups = [...new Set(exercises.filter(e => !e.isWarmup).map((e) => e.supersetGroup).filter(Boolean) as string[])].sort();
+  // Create block lookup map
+  const blockMap = new Map(blocks.map((b) => [b.id, b]));
+  
+  // Get warmup block if exists
+  const warmupBlock = blocks.find((b) => b.type === "warmup");
+  
+  const usedGroups = [...new Set(exercises
+    .filter((e) => blockMap.get(e.workoutBlockId)?.type !== "warmup")
+    .map((e) => e.supersetGroup)
+    .filter(Boolean) as string[]
+  )].sort();
   const nextGroup = GROUP_LETTERS.find((l) => !usedGroups.includes(l)) ?? "A";
   const groupSizes: Record<string, number> = {};
   exercises.forEach((we) => {
-    if (!we.isWarmup && we.supersetGroup) {
+    const blockType = blockMap.get(we.workoutBlockId)?.type;
+    if (blockType !== "warmup" && we.supersetGroup) {
       groupSizes[we.supersetGroup] = (groupSizes[we.supersetGroup] ?? 0) + 1;
     }
   });
 
-  const warmupExercises = exercises.filter((e) => e.isWarmup);
-  const workExercises = exercises.filter((e) => !e.isWarmup);
+  const warmupExercises = warmupBlock 
+    ? exercises.filter((e) => e.workoutBlockId === warmupBlock.id)
+    : [];
+  const workExercises = exercises.filter((e) => e.workoutBlockId !== warmupBlock?.id);
   const blocksSorted = [...blocks].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const selectedWe = selectedWeId ? exercises.find((e) => e.id === selectedWeId) ?? null : null;
   const editingBlock = editingBlockId ? blocks.find((b) => b.id === editingBlockId) ?? null : null;
@@ -198,16 +188,18 @@ export default function TemplateEditorPage() {
                         we={we}
                         selected={selectedWeId === we.id}
                         onSelect={() => setSelectedWeId((id) => id === we.id ? null : we.id)}
-                        onMoveUp={secIdx > 0 ? () => moveExerciseInSection(we.id, "up") : null}
-                        onMoveDown={secIdx < warmupExercises.length - 1 ? () => moveExerciseInSection(we.id, "down") : null}
+                        onMoveUp={secIdx > 0 && warmupBlock ? () => moveExerciseInSection(we.id, "up", warmupBlock.id) : null}
+                        onMoveDown={secIdx < warmupExercises.length - 1 && warmupBlock ? () => moveExerciseInSection(we.id, "down", warmupBlock.id) : null}
                         onDelete={() => deleteExercise(we.id)}
                       />
                     );
                   })}
                   <div style={{ padding: "8px 14px", borderBottom: "1px solid var(--line)", display: "flex" }}>
-                    <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerWarmup(true); setPickerBlockId(null); setShowPicker(true); }}>
-                      Ejercicio de calentamiento
-                    </Button>
+                    {warmupBlock && (
+                      <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(warmupBlock.id); setShowPicker(true); }}>
+                        Agregar ejercicio de calentamiento
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
@@ -251,7 +243,7 @@ export default function TemplateEditorPage() {
                         <Button variant="outline" size="sm" onClick={() => { setEditingBlockId(b.id); setBlockModalOpen(true); }}>
                           Configurar
                         </Button>
-                        <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerWarmup(false); setPickerBlockId(b.id); setShowPicker(true); }}>
+                        <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(b.id); setShowPicker(true); }}>
                           Ejercicio
                         </Button>
                       </div>
@@ -283,8 +275,8 @@ export default function TemplateEditorPage() {
                             we={we}
                             selected={selectedWeId === we.id}
                             onSelect={() => setSelectedWeId((id) => id === we.id ? null : we.id)}
-                            onMoveUp={secIdx > 0 ? () => moveExerciseInSection(we.id, "up", { isWarmup: false, blockId: b.id }) : null}
-                            onMoveDown={secIdx < blockExercises.length - 1 ? () => moveExerciseInSection(we.id, "down", { isWarmup: false, blockId: b.id }) : null}
+                            onMoveUp={secIdx > 0 ? () => moveExerciseInSection(we.id, "up", b.id) : null}
+                            onMoveDown={secIdx < blockExercises.length - 1 ? () => moveExerciseInSection(we.id, "down", b.id) : null}
                             onDelete={() => deleteExercise(we.id)}
                           />
                         </div>
@@ -292,7 +284,7 @@ export default function TemplateEditorPage() {
                     })}
 
                     <div style={{ padding: "8px 14px", display: "flex", gap: 8, justifyContent: "flex-start", background: "var(--bg-1)" }}>
-                      <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerWarmup(false); setPickerBlockId(b.id); setShowPicker(true); }}>
+                      <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(b.id); setShowPicker(true); }}>
                         Agregar ejercicio al bloque
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => { setSelectedWeId(null); setEditingBlockId(b.id); setBlockModalOpen(true); }}>
@@ -303,51 +295,6 @@ export default function TemplateEditorPage() {
                 );
               })}
 
-              {(() => {
-                const loose = workExercises.filter((e) => !e.workoutBlockId).sort((a, b) => a.sortOrder - b.sortOrder);
-                if (loose.length === 0) return null;
-                return (
-                  <>
-                    {blocksSorted.length > 0 && (
-                      <SectionLabel label="Trabajo (libre)" count={loose.length} accent="var(--text-dim)" />
-                    )}
-                    {loose.map((we) => {
-                      const secIdx = loose.findIndex((e) => e.id === we.id);
-                      const gc = we.supersetGroup ? (GROUP_COLORS[we.supersetGroup] ?? null) : null;
-                      const isGroupStart = we.supersetGroup !== null && loose.findIndex((e) => e.supersetGroup === we.supersetGroup) === secIdx;
-                      return (
-                        <div key={we.id}>
-                          {isGroupStart && we.supersetGroup && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 14px 3px 17px", background: "var(--bg-2)", borderBottom: "1px solid var(--line)", borderLeft: `3px solid ${gc}` }}>
-                              <div style={{ width: 8, height: 8, borderRadius: 2, background: gc ?? "transparent" }} />
-                              <span style={{ fontSize: 10, fontWeight: 700, color: gc ?? "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em" }}>
-                                {groupLabel(loose.filter((x) => x.supersetGroup === we.supersetGroup).length)} {we.supersetGroup}
-                              </span>
-                              <span style={{ fontSize: 10, color: "var(--text-dim)", marginLeft: 4 }}>
-                                · {loose.filter((x) => x.supersetGroup === we.supersetGroup).length} ejercicios
-                              </span>
-                              {we.groupNote && (
-                                <span style={{ fontSize: 10, color: gc ?? "var(--text-mute)", opacity: 0.85, marginLeft: 4, fontStyle: "italic" }}>
-                                  · {we.groupNote}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <ExerciseRow
-                            we={we}
-                            selected={selectedWeId === we.id}
-                            onSelect={() => setSelectedWeId((id) => id === we.id ? null : we.id)}
-                            onMoveUp={secIdx > 0 ? () => moveExerciseInSection(we.id, "up", { isWarmup: false, blockId: null }) : null}
-                            onMoveDown={secIdx < loose.length - 1 ? () => moveExerciseInSection(we.id, "down", { isWarmup: false, blockId: null }) : null}
-                            onDelete={() => deleteExercise(we.id)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </>
-                );
-              })()}
-
               {exercises.length === 0 && (
                 <div style={{ padding: "20px 14px", color: "var(--text-mute)", fontSize: 13 }}>
                   Sin ejercicios. Añadí el primero con el botón de abajo.
@@ -355,17 +302,9 @@ export default function TemplateEditorPage() {
               )}
 
               <div style={{ padding: 10, borderTop: "1px solid var(--line)", display: "flex", gap: 8, justifyContent: "center" }}>
-                <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerWarmup(false); setPickerBlockId(null); setShowPicker(true); }}>
-                  Ejercicio de trabajo
-                </Button>
                 <Button variant="ghost" size="sm" icon="plus" onClick={() => { setEditingBlockId(null); setBlockModalOpen(true); }}>
-                  Bloque HIIT
+                  Agregar bloque
                 </Button>
-                {warmupExercises.length === 0 && (
-                  <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerWarmup(true); setPickerBlockId(null); setShowPicker(true); }}>
-                    Ejercicio de calentamiento
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -382,7 +321,6 @@ export default function TemplateEditorPage() {
                 nextGroup={nextGroup}
                 onUpdate={(patch) => updateExercise(selectedWe.id, patch)}
                 onSetGroup={(group) => setExerciseGroup(selectedWe.id, group)}
-                onToggleWarmup={() => toggleWarmup(selectedWe.id)}
                 onClose={() => setSelectedWeId(null)}
               />
             ) : (
@@ -391,10 +329,6 @@ export default function TemplateEditorPage() {
                 setTitle={setTitle}
                 description={description}
                 setDescription={setDescription}
-                warmup={warmup}
-                setWarmup={setWarmup}
-                warmupMinutes={warmupMinutes}
-                setWarmupMinutes={setWarmupMinutes}
                 usedGroups={usedGroups}
                 groupSizes={groupSizes}
               />
@@ -403,12 +337,11 @@ export default function TemplateEditorPage() {
         </div>
       </DesktopShell>
 
-      {showPicker && (
+      {showPicker && pickerBlockId && (
         <ExercisePicker
           templateId={workoutTemplateId}
-          defaultWarmup={pickerWarmup}
           blockId={pickerBlockId}
-          onAdd={(we) => setExercises((prev) => [...prev, { ...we, supersetGroup: null, isWarmup: we.isWarmup ?? false }])}
+          onAdd={(we) => setExercises((prev) => [...prev, we])}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -426,7 +359,8 @@ export default function TemplateEditorPage() {
           }}
           onDeleted={(id) => {
             setBlocks((prev) => prev.filter((b) => b.id !== id));
-            setExercises((prev) => prev.map((e) => (e.workoutBlockId === id ? { ...e, workoutBlockId: null } : e)));
+            // Exercises are cascade deleted in the DB, remove them from local state
+            setExercises((prev) => prev.filter((e) => e.workoutBlockId !== id));
           }}
         />
       )}

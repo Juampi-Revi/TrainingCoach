@@ -174,13 +174,21 @@ export function BlockRunner(props: BlockRunnerProps) {
     primaryButtonStyle,
   };
 
-  return (
-    <Overlay>
-      {(block.type === "tabata" || block.type === "hiit") && (
-        <TabataRunner {...props} {...sharedProps} />
-      )}
-      {block.type === "emom" && <EmomRunner {...props} {...sharedProps} />}
-      {block.type === "amrap" && <AmrapRunner {...props} {...sharedProps} />}
-    </Overlay>
-  );
+  // For interval blocks, delegate to specific runners based on intervalType
+  if (block.type === "intervals") {
+    const intervalType = block.intervalType;
+    return (
+      <Overlay>
+        {(intervalType === "tabata" || intervalType === "hiit") && (
+          <TabataRunner {...props} {...sharedProps} />
+        )}
+        {intervalType === "emom" && <EmomRunner {...props} {...sharedProps} />}
+        {intervalType === "amrap" && <AmrapRunner {...props} {...sharedProps} />}
+      </Overlay>
+    );
+  }
+
+  // Other block types (strength, warmup, cardio, cooldown) are handled differently
+  // They don't use the interval runners
+  return null;
 }

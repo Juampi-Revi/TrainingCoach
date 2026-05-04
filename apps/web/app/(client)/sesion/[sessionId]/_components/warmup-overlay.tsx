@@ -9,7 +9,7 @@ export function WarmupOverlay({
 }: {
   elapsedMs: number;
   targetMs: number | null;
-  notes: string | null | undefined;
+  notes?: string | null;
   exercises: SessionExercise[];
   running: boolean;
   onToggle: () => void;

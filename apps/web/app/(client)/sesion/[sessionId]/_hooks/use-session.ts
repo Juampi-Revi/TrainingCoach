@@ -49,7 +49,8 @@ export function useSession(sessionId: string) {
         setWorkoutStartedAtMs(new Date(s.performedAt).getTime());
         if (!didInitIdx) {
           setDidInitIdx(true);
-          const firstWorkIdx = s.exercises.findIndex((e) => !e.isWarmup);
+          // Find first exercise not in a warmup block
+          const firstWorkIdx = s.exercises.findIndex((e) => e.block.type !== "warmup");
           if (firstWorkIdx >= 0) setCurrentExIdx(firstWorkIdx);
         }
         if (s.status === "completed") router.replace(`/sesion/${sessionId}/completada`);
@@ -62,10 +63,8 @@ export function useSession(sessionId: string) {
 
   useEffect(() => {
     if (!session) return;
-    const hasWarmup =
-      !!session.workoutTemplate?.warmupMinutes ||
-      !!session.workoutTemplate?.warmupNotes ||
-      session.exercises.some((e) => e.isWarmup);
+    // Check if there's a warmup block by looking at exercise blocks
+    const hasWarmup = session.exercises.some((e) => e.block.type === "warmup");
     const id = setTimeout(() => {
       if (!hasWarmup) { setWarmupDone(true); return; }
       let done = false;

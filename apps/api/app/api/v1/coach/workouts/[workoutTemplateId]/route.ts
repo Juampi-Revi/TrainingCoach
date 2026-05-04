@@ -16,7 +16,12 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     const template = await prisma.workoutTemplate.findFirst({
       where: { id: workoutTemplateId, coachUserId: auth.user.sub },
       include: {
-        workoutBlocks: { orderBy: { sortOrder: "asc" } },
+        workoutBlocks: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            _count: { select: { exercises: true } },
+          },
+        },
         workoutExercises: {
           orderBy: { sortOrder: "asc" },
           include: {
@@ -33,25 +38,29 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       id: template.id,
       title: template.title,
       description: template.description,
-      warmupNotes: template.warmupNotes,
-      warmupMinutes: template.warmupMinutes,
       tags: template.tags,
       type: template.type,
       blocks: template.workoutBlocks.map((b) => ({
         id: b.id,
         type: b.type,
         label: b.label,
+        description: b.description,
+        sortOrder: b.sortOrder,
+        restAfterSeconds: b.restAfterSeconds,
+        intervalType: b.intervalType,
         workSeconds: b.workSeconds,
         restSeconds: b.restSeconds,
         rounds: b.rounds,
         totalDurationSeconds: b.totalDurationSeconds,
-        sortOrder: b.sortOrder,
+        restBetweenExercisesSeconds: b.restBetweenExercisesSeconds,
+        targetMinutes: b.targetMinutes,
+        targetZone: b.targetZone,
+        exerciseCount: b._count.exercises,
       })),
       exercises: template.workoutExercises.map((we) => ({
         id: we.id,
         sortOrder: we.sortOrder,
         supersetGroup: we.supersetGroup,
-        isWarmup: we.isWarmup,
         workoutBlockId: we.workoutBlockId,
         exercise: we.exercise,
         targetSets: we.targetSets,
@@ -99,19 +108,17 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (!existing) return forbidden();
 
     const body = await req.json().catch(() => ({}));
-    const { title, description, warmupNotes, warmupMinutes, tags, type } = body;
+    const { title, description, tags, type } = body;
 
     const updated = await prisma.workoutTemplate.update({
       where: { id: workoutTemplateId },
       data: {
         ...(title !== undefined && { title }),
         ...(description !== undefined && { description }),
-        ...(warmupNotes !== undefined && { warmupNotes }),
-        ...(warmupMinutes !== undefined && { warmupMinutes: warmupMinutes ? Number(warmupMinutes) : null }),
         ...(tags !== undefined && { tags }),
         ...(type !== undefined && { type }),
       },
-      select: { id: true, title: true, description: true, warmupNotes: true, warmupMinutes: true, tags: true, type: true, updatedAt: true },
+      select: { id: true, title: true, description: true, tags: true, type: true, updatedAt: true },
     });
 
     const recipients = await prisma.planAssignment.findMany({

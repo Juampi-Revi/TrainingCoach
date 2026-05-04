@@ -4,8 +4,27 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Button, ConfirmModal, Icon, Input } from "@/components/ui";
-import { blockTypeLabel, blockSummary } from "@/lib/constants";
+import { blockTypeLabel } from "@/lib/constants";
+import type { BlockType, IntervalType } from "@regen/types";
 import type { WB } from "./_types";
+
+const BLOCK_TYPES: BlockType[] = ["warmup", "strength", "intervals", "cardio", "cooldown"];
+const INTERVAL_TYPES: IntervalType[] = ["tabata", "hiit", "emom", "amrap"];
+
+const INTERVAL_PRESETS: Array<{
+  id: string;
+  label: string;
+  intervalType: IntervalType;
+  work: string;
+  rest: string;
+  rounds: string;
+  total: string;
+}> = [
+  { id: "tabata", label: "Tabata", intervalType: "tabata", work: "20", rest: "10", rounds: "8", total: "" },
+  { id: "hiit3030", label: "HIIT 30:30", intervalType: "hiit", work: "30", rest: "30", rounds: "10", total: "" },
+  { id: "emom", label: "EMOM 20min", intervalType: "emom", work: "", rest: "", rounds: "20", total: "1200" },
+  { id: "amrap", label: "AMRAP 10min", intervalType: "amrap", work: "", rest: "", rounds: "", total: "600" },
+];
 
 export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   templateId: string;
@@ -16,43 +35,91 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
 }) {
   const { api } = useAuth();
   const toast = useToast();
-  const [type, setType] = useState<WB["type"]>(block?.type ?? "tabata");
+  
+  // Block type state
+  const [blockType, setBlockType] = useState<BlockType>(block?.type ?? "intervals");
+  const [intervalType, setIntervalType] = useState<IntervalType | null>(
+    block?.type === "intervals" ? (block.intervalType ?? "tabata") : null
+  );
+  
+  // Common fields
   const [label, setLabel] = useState(block?.label ?? "");
+  const [description, setDescription] = useState(block?.description ?? "");
+  const [restAfterSeconds, setRestAfterSeconds] = useState(String(block?.restAfterSeconds ?? ""));
+  
+  // Interval-specific fields
   const [work, setWork] = useState(String(block?.workSeconds ?? ""));
   const [rest, setRest] = useState(String(block?.restSeconds ?? ""));
   const [rounds, setRounds] = useState(String(block?.rounds ?? ""));
   const [total, setTotal] = useState(String(block?.totalDurationSeconds ?? ""));
+  
+  // Cardio-specific fields
+  const [targetMinutes, setTargetMinutes] = useState(String(block?.targetMinutes ?? ""));
+  const [targetZone, setTargetZone] = useState(block?.targetZone ?? "");
+  
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      setType(block?.type ?? "tabata");
+      setBlockType(block?.type ?? "intervals");
+      setIntervalType(block?.type === "intervals" ? (block.intervalType ?? "tabata") : null);
       setLabel(block?.label ?? "");
+      setDescription(block?.description ?? "");
+      setRestAfterSeconds(String(block?.restAfterSeconds ?? ""));
       setWork(String(block?.workSeconds ?? ""));
       setRest(String(block?.restSeconds ?? ""));
       setRounds(String(block?.rounds ?? ""));
       setTotal(String(block?.totalDurationSeconds ?? ""));
+      setTargetMinutes(String(block?.targetMinutes ?? ""));
+      setTargetZone(block?.targetZone ?? "");
     }, 0);
     return () => clearTimeout(t);
   }, [block]);
 
   async function save() {
     setSaving(true);
+    
     const w = parseInt(work);
     const r = parseInt(rest);
     const ro = parseInt(rounds);
     const t = parseInt(total);
+    const restAfter = parseInt(restAfterSeconds);
+    const targetMins = parseInt(targetMinutes);
 
     try {
-      const payload = {
-        type,
+      const basePayload = {
         label: label || null,
-        workSeconds: !isNaN(w) && w > 0 ? w : null,
-        restSeconds: !isNaN(r) && r > 0 ? r : null,
-        rounds: !isNaN(ro) && ro > 0 ? ro : null,
-        totalDurationSeconds: !isNaN(t) && t > 0 ? t : null,
+        description: description || null,
+        restAfterSeconds: !isNaN(restAfter) && restAfter > 0 ? restAfter : null,
       };
+
+      let payload;
+      
+      if (blockType === "intervals" && intervalType) {
+        payload = {
+          ...basePayload,
+          type: blockType,
+          intervalType,
+          workSeconds: !isNaN(w) && w > 0 ? w : null,
+          restSeconds: !isNaN(r) && r > 0 ? r : null,
+          rounds: !isNaN(ro) && ro > 0 ? ro : null,
+          totalDurationSeconds: !isNaN(t) && t > 0 ? t : null,
+        };
+      } else if (blockType === "cardio") {
+        payload = {
+          ...basePayload,
+          type: blockType,
+          targetMinutes: !isNaN(targetMins) && targetMins > 0 ? targetMins : null,
+          targetZone: targetZone || null,
+        };
+      } else {
+        // warmup, strength, cooldown
+        payload = {
+          ...basePayload,
+          type: blockType,
+        };
+      }
 
       if (block) {
         const updated = await api.patch<WB>(`/coach/workouts/${templateId}/blocks/${block.id}`, payload);
@@ -88,9 +155,13 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
     }
   }
 
-  const showWorkRest = type === "tabata" || type === "hiit";
-  const showRounds = type === "tabata" || type === "hiit" || type === "emom";
-  const showTotal = type === "amrap" || type === "emom";
+  // Determine which fields to show based on block type
+  const isInterval = blockType === "intervals";
+  const isCardio = blockType === "cardio";
+  const showIntervalFields = isInterval && intervalType;
+  const showWorkRest = showIntervalFields && (intervalType === "tabata" || intervalType === "hiit");
+  const showRounds = showIntervalFields && (intervalType === "tabata" || intervalType === "hiit" || intervalType === "emom");
+  const showTotal = showIntervalFields && (intervalType === "amrap" || intervalType === "emom");
 
   return (
     <div
@@ -107,7 +178,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
               {block ? "EDITAR BLOQUE" : "NUEVO BLOQUE"}
             </div>
             <div style={{ fontSize: 16, fontWeight: 800, marginTop: 2 }}>
-              {blockTypeLabel(type)} {label ? `· ${label}` : ""}
+              {blockTypeLabel(blockType, intervalType)} {label ? `· ${label}` : ""}
             </div>
           </div>
           <button
@@ -118,124 +189,138 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
           </button>
         </div>
 
-        <div style={{ padding: 18, overflow: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
-
+        <div style={{ padding: 18, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
+          
+          {/* Block Type Selector */}
           <div>
-            <div style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Preset</div>
+            <div style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Tipo de bloque</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {([
-                { id: "tabata",    label: "Tabata",     type: "tabata" as const, work: "20", rest: "10", rounds: "8",  total: "" },
-                { id: "hiit3030",  label: "HIIT 30:30", type: "hiit"   as const, work: "30", rest: "30", rounds: "10", total: "" },
-                { id: "emom",      label: "EMOM 20min", type: "emom"   as const, work: "",   rest: "",   rounds: "20", total: "1200" },
-                { id: "amrap",     label: "AMRAP 10min",type: "amrap"  as const, work: "",   rest: "",   rounds: "",   total: "600" },
-              ]).map((p) => {
-                const isSel = type === p.type && work === p.work && rest === p.rest && rounds === p.rounds && total === p.total;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => { setType(p.type); setWork(p.work); setRest(p.rest); setRounds(p.rounds); setTotal(p.total); }}
-                    style={{
-                      padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
-                      border: `1px solid ${isSel ? "#FF8E72" : "var(--line-2)"}`,
-                      background: isSel ? "rgba(255,142,114,.12)" : "transparent",
-                      color: isSel ? "#FF8E72" : "var(--text-mute)",
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
+              {BLOCK_TYPES.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => {
+                    setBlockType(t);
+                    if (t === "intervals" && !intervalType) setIntervalType("tabata");
+                    if (t !== "intervals") setIntervalType(null);
+                  }}
+                  style={{
+                    padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                    border: `1px solid ${blockType === t ? "var(--lime)" : "var(--line-2)"}`,
+                    background: blockType === t ? "rgba(215,255,58,.12)" : "transparent",
+                    color: blockType === t ? "var(--lime)" : "var(--text-mute)",
+                  }}
+                >
+                  {blockTypeLabel(t)}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div>
-            <div style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Tipo</div>
-            <div style={{ display: "flex", gap: 6 }}>
-              {(["tabata", "hiit", "emom", "amrap"] as WB["type"][]).map((t) => {
-                const sel = type === t;
-                return (
-                  <button
-                    key={t}
-                    onClick={() => setType(t)}
-                    style={{
-                      flex: 1, height: 34, borderRadius: 10,
-                      border: `1px solid ${sel ? "var(--lime)" : "var(--line-2)"}`,
-                      background: sel ? "rgba(215,255,58,.12)" : "transparent",
-                      color: sel ? "var(--lime)" : "var(--text-mute)",
-                      fontSize: 12, fontWeight: 800, cursor: "pointer",
-                    }}
-                  >
-                    {blockTypeLabel(t)}
-                  </button>
-                );
-              })}
+          {/* Interval Type Selector (only for intervals) */}
+          {isInterval && (
+            <div>
+              <div style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Tipo de intervalo</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {INTERVAL_PRESETS.map((p) => {
+                  const isSel = intervalType === p.intervalType;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setIntervalType(p.intervalType);
+                        setWork(p.work);
+                        setRest(p.rest);
+                        setRounds(p.rounds);
+                        setTotal(p.total);
+                      }}
+                      style={{
+                        padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
+                        border: `1px solid ${isSel ? "#FF8E72" : "var(--line-2)"}`,
+                        background: isSel ? "rgba(255,142,114,.12)" : "transparent",
+                        color: isSel ? "#FF8E72" : "var(--text-mute)",
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
-          <Input label="Etiqueta (opcional)" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Finisher / Bloque A / etc" />
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {showWorkRest ? (
-              <>
-                <Input label="Trabajo (s)" value={work} onChange={(e) => setWork(e.target.value)} align="right" />
-                <Input label="Descanso (s)" value={rest} onChange={(e) => setRest(e.target.value)} align="right" />
-              </>
-            ) : (
-              <>
-                <Input label="Trabajo (s)" value={work} onChange={(e) => setWork(e.target.value)} align="right" placeholder="—" />
-                <Input label="Descanso (s)" value={rest} onChange={(e) => setRest(e.target.value)} align="right" placeholder="—" />
-              </>
-            )}
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <Input
-              label="Rondas"
-              value={rounds}
-              onChange={(e) => setRounds(e.target.value)}
-              align="right"
-              placeholder={showRounds ? "8" : "—"}
-              disabled={!showRounds}
-            />
-            <Input
-              label="Duración total (s)"
-              value={total}
-              onChange={(e) => setTotal(e.target.value)}
-              align="right"
-              placeholder={showTotal ? "600" : "—"}
-              disabled={!showTotal}
-            />
-          </div>
-
-          <div style={{ fontSize: 12, color: "var(--text-mute)" }}>
-            Resumen: <span style={{ color: "var(--text)", fontWeight: 700 }}>{blockSummary({ ...(block ?? ({} as WB)), type, label: label || null, workSeconds: work ? Number(work) : null, restSeconds: rest ? Number(rest) : null, rounds: rounds ? Number(rounds) : null, totalDurationSeconds: total ? Number(total) : null } as WB)}</span>
-          </div>
-        </div>
-
-        <div style={{ padding: 14, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div>
-            {block && (
-              <Button variant="ghost" size="sm" icon="trash" onClick={() => setConfirmDelete(true)}>
-                Eliminar
-              </Button>
-            )}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-            <Button size="sm" icon="check" disabled={saving} onClick={save}>
-              {saving ? "Guardando…" : "Guardar"}
-            </Button>
-          </div>
-        </div>
-
-        {confirmDelete && block && (
-          <ConfirmModal
-            message={`¿Eliminar el bloque "${blockTypeLabel(block.type)}${block.label ? ` · ${block.label}` : ""}"?`}
-            onConfirm={() => { setConfirmDelete(false); del(); }}
-            onCancel={() => setConfirmDelete(false)}
+          {/* Label */}
+          <Input
+            label="Nombre del bloque"
+            placeholder="Ej: Tabata · 4 ejercicios"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
           />
-        )}
+
+          {/* Description */}
+          <Input
+            label="Descripción (opcional)"
+            placeholder="Notas sobre este bloque..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+
+          {/* Interval-specific fields */}
+          {showIntervalFields && (
+            <>
+              {showWorkRest && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <Input label="Trabajo (seg)" placeholder="20" value={work} onChange={(e) => setWork(e.target.value)} />
+                  <Input label="Descanso (seg)" placeholder="10" value={rest} onChange={(e) => setRest(e.target.value)} />
+                </div>
+              )}
+              {showRounds && (
+                <Input label="Rondas" placeholder="8" value={rounds} onChange={(e) => setRounds(e.target.value)} />
+              )}
+              {showTotal && (
+                <Input label="Duración total (seg)" placeholder="600" value={total} onChange={(e) => setTotal(e.target.value)} />
+              )}
+            </>
+          )}
+
+          {/* Cardio-specific fields */}
+          {isCardio && (
+            <>
+              <Input label="Minutos objetivo" placeholder="20" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
+              <Input label="Zona objetivo (opcional)" placeholder="Ej: Zona 2, 70-80% FCm" value={targetZone} onChange={(e) => setTargetZone(e.target.value)} />
+            </>
+          )}
+
+          {/* Rest after block */}
+          <Input
+            label="Descanso después del bloque (seg, opcional)"
+            placeholder="Ej: 120"
+            value={restAfterSeconds}
+            onChange={(e) => setRestAfterSeconds(e.target.value)}
+          />
+        </div>
+
+        <div style={{ padding: "12px 18px 18px", borderTop: "1px solid var(--line)", display: "flex", gap: 8 }}>
+          {block && (
+            <Button variant="secondary" onClick={() => setConfirmDelete(true)} disabled={saving}>
+              Eliminar
+            </Button>
+          )}
+          <div style={{ flex: 1 }} />
+          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button onClick={save} disabled={saving}>
+            {block ? "Guardar" : "Crear"}
+          </Button>
+        </div>
       </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          message="¿Eliminar este bloque? Los ejercicios dentro del bloque también se eliminarán."
+          confirmLabel="Eliminar"
+          onConfirm={del}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </div>
   );
 }

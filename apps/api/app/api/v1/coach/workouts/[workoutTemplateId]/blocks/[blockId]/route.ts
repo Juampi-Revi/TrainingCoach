@@ -1,13 +1,15 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
-import { ok, unauthorized, forbidden, notFound, withHandler } from "@/lib/api-response";
+import { ok, unauthorized, forbidden, err, withHandler } from "@/lib/api-response";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string; blockId: string }> };
 
-async function ownsBlock(coachUserId: string, blockId: string, templateId: string) {
-  return prisma.workoutBlock.findFirst({
-    where: { id: blockId, workoutTemplateId: templateId, workoutTemplate: { coachUserId } },
+const INTERVAL_TYPES = ["tabata", "hiit", "emom", "amrap"] as const;
+
+async function ownsTemplate(coachUserId: string, templateId: string) {
+  return prisma.workoutTemplate.findFirst({
+    where: { id: templateId, coachUserId },
     select: { id: true },
   });
 }
@@ -18,22 +20,70 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const auth = requireRole(req, "coach");
     if (!auth.ok) return unauthorized(auth.message);
     const { workoutTemplateId, blockId } = await params;
-    const b = await ownsBlock(auth.user.sub, blockId, workoutTemplateId);
-    if (!b) return notFound("Block not found");
+    const t = await ownsTemplate(auth.user.sub, workoutTemplateId);
+    if (!t) return forbidden("Not your template");
 
     const body = await req.json().catch(() => ({}));
-    const updated = await prisma.workoutBlock.update({
+    const {
+      label,
+      description,
+      restAfterSeconds,
+      // Interval-specific
+      intervalType,
+      workSeconds,
+      restSeconds,
+      rounds,
+      totalDurationSeconds,
+      restBetweenExercisesSeconds,
+      // Cardio-specific
+      targetMinutes,
+      targetZone,
+    } = body;
+
+    // Get existing block to check type
+    const existing = await prisma.workoutBlock.findFirst({
+      where: { id: blockId, workoutTemplateId },
+    });
+    if (!existing) return err("Block not found", 404);
+
+    // Validate intervalType if changing
+    if (intervalType !== undefined && existing.type === "intervals") {
+      if (!INTERVAL_TYPES.includes(intervalType)) {
+        return err(`intervalType must be one of: ${INTERVAL_TYPES.join(", ")}`, 400);
+      }
+    }
+
+    const block = await prisma.workoutBlock.update({
       where: { id: blockId },
       data: {
-        ...(body.type !== undefined && { type: body.type }),
-        ...(body.label !== undefined && { label: body.label || null }),
-        ...(body.workSeconds !== undefined && { workSeconds: body.workSeconds ? Number(body.workSeconds) : null }),
-        ...(body.restSeconds !== undefined && { restSeconds: body.restSeconds ? Number(body.restSeconds) : null }),
-        ...(body.rounds !== undefined && { rounds: body.rounds ? Number(body.rounds) : null }),
-        ...(body.totalDurationSeconds !== undefined && { totalDurationSeconds: body.totalDurationSeconds ? Number(body.totalDurationSeconds) : null }),
+        label: label !== undefined ? label || null : undefined,
+        description: description !== undefined ? description || null : undefined,
+        restAfterSeconds:
+          restAfterSeconds !== undefined ? Number(restAfterSeconds) || null : undefined,
+        // Interval-specific
+        intervalType:
+          intervalType !== undefined && existing.type === "intervals"
+            ? intervalType
+            : undefined,
+        workSeconds: workSeconds !== undefined ? Number(workSeconds) || null : undefined,
+        restSeconds: restSeconds !== undefined ? Number(restSeconds) || null : undefined,
+        rounds: rounds !== undefined ? Number(rounds) || null : undefined,
+        totalDurationSeconds:
+          totalDurationSeconds !== undefined
+            ? Number(totalDurationSeconds) || null
+            : undefined,
+        restBetweenExercisesSeconds:
+          restBetweenExercisesSeconds !== undefined
+            ? Number(restBetweenExercisesSeconds) || null
+            : undefined,
+        // Cardio-specific
+        targetMinutes:
+          targetMinutes !== undefined ? Number(targetMinutes) || null : undefined,
+        targetZone: targetZone !== undefined ? targetZone || null : undefined,
       },
     });
-    return ok(updated);
+
+    return ok(block);
   });
 }
 
@@ -43,15 +93,34 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     const auth = requireRole(req, "coach");
     if (!auth.ok) return unauthorized(auth.message);
     const { workoutTemplateId, blockId } = await params;
-    const b = await ownsBlock(auth.user.sub, blockId, workoutTemplateId);
-    if (!b) return notFound("Block not found");
+    const t = await ownsTemplate(auth.user.sub, workoutTemplateId);
+    if (!t) return forbidden("Not your template");
 
-    // Detach exercises from block before deleting
-    await prisma.workoutExercise.updateMany({
-      where: { workoutBlockId: blockId },
-      data: { workoutBlockId: null },
+    // Check if block exists and belongs to this template
+    const block = await prisma.workoutBlock.findFirst({
+      where: { id: blockId, workoutTemplateId },
+      include: { _count: { select: { exercises: true } } },
     });
+    if (!block) return err("Block not found", 404);
+
+    // Delete block (exercises will be cascade deleted)
     await prisma.workoutBlock.delete({ where: { id: blockId } });
+
+    // Re-sort remaining blocks
+    const remaining = await prisma.workoutBlock.findMany({
+      where: { workoutTemplateId },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    await prisma.$transaction(
+      remaining.map((b, index) =>
+        prisma.workoutBlock.update({
+          where: { id: b.id },
+          data: { sortOrder: index },
+        })
+      )
+    );
+
     return ok({ deleted: true });
   });
 }

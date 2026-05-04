@@ -157,6 +157,22 @@ async function main() {
     })
   }
 
+  // Create or get a default strength block for this template
+  const existingBlock = await prisma.workoutBlock.findFirst({
+    where: { workoutTemplateId: template.id, type: 'strength' },
+    select: { id: true },
+  })
+
+  const block = existingBlock ?? await prisma.workoutBlock.create({
+    data: {
+      workoutTemplateId: template.id,
+      type: 'strength',
+      label: 'Bloque de fuerza',
+      sortOrder: 0,
+    },
+    select: { id: true },
+  })
+
   const existingWorkoutExercise = await prisma.workoutExercise.findFirst({
     where: { workoutTemplateId: template.id, exerciseId: exercise.id },
     select: { id: true },
@@ -166,6 +182,7 @@ async function main() {
     await prisma.workoutExercise.create({
       data: {
         workoutTemplateId: template.id,
+        workoutBlockId: block.id,
         exerciseId: exercise.id,
         sortOrder: 0,
         targetSets: 4,

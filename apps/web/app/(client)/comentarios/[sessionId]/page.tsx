@@ -297,7 +297,7 @@ export default function ComentariosPage() {
     ? new Date(session.completedAt).getTime() - new Date(session.performedAt).getTime()
     : null;
   const coachName = comments.find((c) => c.author.role === "coach")?.author.name ?? "Coach";
-  const workExercises = session.exercises.filter((e) => !e.isWarmup);
+  const workExercises = session.exercises.filter((e) => e.block.type !== "warmup");
   const totalSets = workExercises.reduce((acc, e) => acc + e.sets.length, 0);
   const targetSets = workExercises.reduce((acc, e) => acc + (e.target?.sets ?? 0), 0);
   const isComplete = targetSets > 0 && totalSets >= targetSets;

@@ -17,8 +17,10 @@ import { SwapSheet } from "./_components/swap-sheet";
 import { RestTimerOverlay } from "./_components/rest-timer-overlay";
 import { WarmupOverlay } from "./_components/warmup-overlay";
 import { LoggerSheet } from "./_components/logger-sheet";
+import { BlockRestScreen } from "./_components/block-rest-screen";
 import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
+import { useBlockExecution } from "./_hooks/use-block-execution";
 
 export default function SessionInProgressPage() {
   const { api } = useAuth();
@@ -55,6 +57,28 @@ export default function SessionInProgressPage() {
     deleteSet,
   } = useSetLogger({ sessionId, currentExIdx, session, queueKey, setOfflineCount, load });
 
+  // Block execution management
+  const {
+    blocks,
+    currentBlock,
+    nextBlock,
+    isResting,
+    restSecondsRemaining,
+    completedCount,
+    totalBlocks,
+    completeCurrentBlock,
+    skipRest,
+    startNextBlock,
+    tickRest,
+  } = useBlockExecution(session?.exercises ?? []);
+
+  // Rest timer effect
+  useEffect(() => {
+    if (!isResting) return;
+    const id = setInterval(tickRest, 1000);
+    return () => clearInterval(id);
+  }, [isResting, tickRest]);
+
   const [completing, setCompleting] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showReset, setShowReset] = useState(false);
@@ -84,12 +108,17 @@ export default function SessionInProgressPage() {
     setCurrentExIdx(i);
     setMediaOpen(false);
     setSwapOpen(false);
-    if (target && !target.isWarmup) {
-      if (target.block) setBlockRunnerOpen(true);
-      else openLogger(target);
-    } else {
+    // Skip logger for warmup exercises
+    if (target && target.block.type === "warmup") {
       setLoggerOpen(false);
       setBlockRunnerOpen(false);
+      return;
+    }
+    // For interval blocks, open the block runner
+    if (target && target.block.type === "intervals") {
+      setBlockRunnerOpen(true);
+    } else if (target) {
+      openLogger(target);
     }
   }
 
@@ -99,12 +128,17 @@ export default function SessionInProgressPage() {
     setMediaOpen(false);
     setSwapOpen(false);
     const target = session?.exercises[i];
-    if (target && !target.isWarmup) {
-      if (target.block) setBlockRunnerOpen(true);
-      else openLogger(target);
-    } else {
+    // Skip logger for warmup exercises
+    if (target && target.block.type === "warmup") {
       setLoggerOpen(false);
       setBlockRunnerOpen(false);
+      return;
+    }
+    // For interval blocks, open the block runner
+    if (target && target.block.type === "intervals") {
+      setBlockRunnerOpen(true);
+    } else if (target) {
+      openLogger(target);
     }
   }
 
@@ -140,11 +174,11 @@ export default function SessionInProgressPage() {
   }
 
   const ex = session.exercises[currentExIdx];
-  const warmupExercises = session.exercises.filter((e) => e.isWarmup);
-  const workExercises = session.exercises.filter((e) => !e.isWarmup);
+  const warmupExercises = session.exercises.filter((e) => e.block.type === "warmup");
+  const workExercises = session.exercises.filter((e) => e.block.type !== "warmup");
   const completedExs = workExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
-  const warmupExists = warmupExercises.length > 0 || !!session.workoutTemplate?.warmupMinutes || !!session.workoutTemplate?.warmupNotes;
-  const warmupTargetMs = session.workoutTemplate?.warmupMinutes != null ? session.workoutTemplate.warmupMinutes * 60_000 : null;
+  const warmupExists = warmupExercises.length > 0;
+  const warmupTargetMs = null; // No longer using warmupMinutes from template
   const workoutElapsedMs = workoutStartedAtMs != null ? Math.max(0, nowMs - workoutStartedAtMs) : 0;
   const warmupElapsedMs = warmupTimer.accMs + (warmupTimer.runningSince ? nowMs - warmupTimer.runningSince : 0);
   const headerExIdx = ex ? workExercises.findIndex((e) => e.id === ex.id) : -1;
@@ -311,17 +345,37 @@ export default function SessionInProgressPage() {
       {warmupExists && !warmupDone && (
         <WarmupOverlay
           elapsedMs={warmupElapsedMs} targetMs={warmupTargetMs}
-          notes={session.workoutTemplate?.warmupNotes} exercises={warmupExercises}
+          exercises={warmupExercises}
           running={warmupTimer.runningSince != null}
           onToggle={toggleWarmup} onReset={resetWarmup} onDone={finishWarmup}
         />
       )}
 
-      {blockRunnerOpen && ex?.block && (
+      {blockRunnerOpen && currentBlock && (
         <BlockRunner
-          block={ex.block} exercises={session.exercises.filter((e) => e.block?.id === ex.block!.id)}
-          sessionId={sessionId} api={api}
-          onClose={() => { setBlockRunnerOpen(false); load(); }} onSaved={load}
+          block={currentBlock.block}
+          exercises={currentBlock.exercises}
+          sessionId={sessionId}
+          api={api}
+          onClose={() => {
+            setBlockRunnerOpen(false);
+            // Mark block as complete and potentially show rest screen
+            completeCurrentBlock();
+            load();
+          }}
+          onSaved={load}
+        />
+      )}
+
+      {isResting && (
+        <BlockRestScreen
+          currentBlock={currentBlock}
+          nextBlock={nextBlock}
+          restSecondsRemaining={restSecondsRemaining}
+          totalBlocks={totalBlocks}
+          completedCount={completedCount}
+          onSkip={skipRest}
+          onStartNext={startNextBlock}
         />
       )}
 

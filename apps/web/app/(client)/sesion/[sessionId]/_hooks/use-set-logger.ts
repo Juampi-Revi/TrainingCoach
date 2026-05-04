@@ -53,7 +53,7 @@ export function useSetLogger({
   useEffect(() => {
     if (!loggerOpen || !session) return;
     const target = session.exercises[currentExIdx];
-    if (!target || target.isWarmup) return;
+    if (!target || target.block.type === "warmup") return;
     const id = setTimeout(() => {
       const existing = target.sets ?? [];
       const baseCount = Math.max(existing.length, target.target?.sets ?? 0, 1);
@@ -94,7 +94,7 @@ export function useSetLogger({
   useEffect(() => {
     if (!loggerOpen || !session) return;
     const target = session.exercises[currentExIdx];
-    if (!target || target.isWarmup) return;
+    if (!target || target.block.type === "warmup") return;
     setLastRef(null);
     api.get<LastRef | null>(`/client/exercises/${target.exercise.id}/last-set`)
       .then((r) => setLastRef(r)).catch(() => {});

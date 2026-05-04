@@ -9,7 +9,7 @@ import type { WE } from "./_types";
 import { AlternativesPanel } from "./alternatives-panel";
 import { MediaManager } from "./media-manager";
 
-export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSizes, nextGroup, onUpdate, onSetGroup, onToggleWarmup, onClose }: {
+export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSizes, nextGroup, onUpdate, onSetGroup, onClose }: {
   we: WE;
   templateId: string;
   blocks: WorkoutTemplateDetail["blocks"];
@@ -18,7 +18,6 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
   nextGroup: string;
   onUpdate: (patch: Partial<WE>) => void;
   onSetGroup: (group: string | null) => void;
-  onToggleWarmup: () => void;
   onClose: () => void;
 }) {
   const { api } = useAuth();
@@ -194,32 +193,25 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
             <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 8 }}>BLOQUE</div>
             <select
               value={localBlockId}
-              disabled={we.isWarmup}
               onChange={(e) => {
                 const v = e.target.value;
                 setLocalBlockId(v);
-                save({ workoutBlockId: v || null });
+                save({ workoutBlockId: v });
               }}
               style={{
                 width: "100%", height: 36, borderRadius: 8,
                 background: "var(--bg-2)",
-                border: `1px solid ${we.isWarmup ? "var(--line)" : "var(--line-2)"}`,
-                color: we.isWarmup ? "var(--text-dim)" : "var(--text)",
+                border: "1px solid var(--line-2)",
+                color: "var(--text)",
                 fontSize: 13, padding: "0 10px", outline: "none",
               }}
             >
-              <option value="">Sin bloque (logger normal)</option>
               {blocks.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {blockTypeLabel(b.type)}{b.label ? ` · ${b.label}` : ""} · {blockSummary(b)}
+                  {blockTypeLabel(b.type, b.intervalType)}{b.label ? ` · ${b.label}` : ""} · {blockSummary(b)}
                 </option>
               ))}
             </select>
-            {we.isWarmup && (
-              <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 6 }}>
-                Los ejercicios de calentamiento no van dentro de bloques.
-              </div>
-            )}
           </div>
         )}
 
@@ -249,30 +241,6 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
           {groupmates && (
             <div style={{ fontSize: 11, color: gc ?? "var(--text-mute)", marginTop: 6 }}>{groupmates}</div>
           )}
-        </div>
-
-        <div
-          onClick={onToggleWarmup}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, cursor: "pointer" }}
-        >
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>Marcar como calentamiento</div>
-            <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 1 }}>Va en la fase 1, sin tracking de RPE</div>
-          </div>
-          <div style={{
-            width: 36, height: 22, borderRadius: 11,
-            background: we.isWarmup ? "var(--lime)" : "var(--bg-3)",
-            border: `1px solid ${we.isWarmup ? "var(--lime)" : "var(--line-2)"}`,
-            position: "relative", transition: "background .15s", flexShrink: 0,
-          }}>
-            <div style={{
-              position: "absolute", top: 2,
-              left: we.isWarmup ? 16 : 2,
-              width: 16, height: 16, borderRadius: 8,
-              background: we.isWarmup ? "#0B0B0C" : "var(--text-mute)",
-              transition: "left .15s",
-            }} />
-          </div>
         </div>
 
         <div>

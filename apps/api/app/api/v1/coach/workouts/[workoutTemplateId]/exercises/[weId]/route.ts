@@ -9,7 +9,7 @@ type Ctx = { params: Promise<{ workoutTemplateId: string; weId: string }> };
 async function verifyOwner(workoutTemplateId: string, weId: string, coachUserId: string) {
   return prisma.workoutExercise.findFirst({
     where: { id: weId, workoutTemplateId, workoutTemplate: { coachUserId } },
-    select: { id: true },
+    select: { id: true, workoutBlockId: true },
   });
 }
 
@@ -19,7 +19,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (!auth.ok) return unauthorized(auth.message);
 
     const { workoutTemplateId, weId } = await params;
-    if (!(await verifyOwner(workoutTemplateId, weId, auth.user.sub))) return forbidden();
+    const we = await verifyOwner(workoutTemplateId, weId, auth.user.sub);
+    if (!we) return forbidden();
 
     const raw = await req.json().catch(() => ({}));
 
@@ -28,6 +29,24 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       return err(parsed.error.issues[0]?.message ?? "Invalid input", 400);
     }
     const body = parsed.data;
+
+    // If moving to a different block, validate the new block exists
+    if (body.workoutBlockId !== undefined && body.workoutBlockId !== we.workoutBlockId) {
+      const block = await prisma.workoutBlock.findFirst({
+        where: { id: body.workoutBlockId, workoutTemplateId },
+      });
+      if (!block) return err("Target block not found", 404);
+
+      // If sortOrder not provided, place at the end of the new block
+      if (body.sortOrder === undefined) {
+        const lastInBlock = await prisma.workoutExercise.findFirst({
+          where: { workoutBlockId: body.workoutBlockId },
+          orderBy: { sortOrder: "desc" },
+          select: { sortOrder: true },
+        });
+        body.sortOrder = (lastInBlock?.sortOrder ?? -1) + 1;
+      }
+    }
 
     const updated = await prisma.workoutExercise.update({
       where: { id: weId },
@@ -42,7 +61,6 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         ...(body.notes !== undefined && { notes: body.notes }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
         ...(body.supersetGroup !== undefined && { supersetGroup: body.supersetGroup }),
-        ...(body.isWarmup !== undefined && { isWarmup: body.isWarmup }),
         ...(body.groupNote !== undefined && { groupNote: body.groupNote }),
       },
       include: { exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } } },
@@ -52,7 +70,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       id: updated.id,
       sortOrder: updated.sortOrder,
       supersetGroup: updated.supersetGroup ?? null,
-      isWarmup: updated.isWarmup ?? false,
+      workoutBlockId: updated.workoutBlockId,
       exercise: updated.exercise,
       targetSets: updated.targetSets,
       targetReps: updated.targetReps,

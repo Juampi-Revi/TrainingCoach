@@ -97,7 +97,7 @@ function SessionDetailInline({ detail, loading, onMessages }: {
   }
   if (!detail) return null;
 
-  const workExercises = detail.exercises.filter((e) => !e.isWarmup);
+  const workExercises = detail.exercises.filter((e) => e.block.type !== "warmup");
 
   return (
     <div style={{ paddingBottom: 12 }}>

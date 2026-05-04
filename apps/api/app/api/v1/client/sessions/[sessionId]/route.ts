@@ -19,7 +19,7 @@ export async function GET(
       where: { id: sessionId, clientUserId: auth.user.sub },
       include: {
         workoutTemplate: {
-          select: { id: true, title: true, description: true, warmupNotes: true, warmupMinutes: true, tags: true },
+          select: { id: true, title: true, description: true, tags: true },
         },
         exercises: {
           orderBy: { sortOrder: "asc" },
@@ -27,9 +27,8 @@ export async function GET(
             workoutExercise: {
               select: {
                 supersetGroup: true,
-                isWarmup: true,
                 workoutBlockId: true,
-                workoutBlock: { select: { id: true, type: true, label: true, workSeconds: true, restSeconds: true, rounds: true, totalDurationSeconds: true } },
+                workoutBlock: { select: { id: true, type: true, label: true, description: true, restAfterSeconds: true, intervalType: true, workSeconds: true, restSeconds: true, rounds: true, totalDurationSeconds: true, restBetweenExercisesSeconds: true, targetMinutes: true, targetZone: true, sortOrder: true } },
                 targetSets: true,
                 targetReps: true,
                 durationSeconds: true,
@@ -85,16 +84,22 @@ export async function GET(
         id: ex.id,
         sortOrder: ex.sortOrder,
         supersetGroup: ex.workoutExercise?.supersetGroup ?? null,
-        isWarmup: ex.workoutExercise?.isWarmup ?? false,
         block: ex.workoutExercise?.workoutBlock
           ? {
               id: ex.workoutExercise.workoutBlock.id,
               type: ex.workoutExercise.workoutBlock.type,
               label: ex.workoutExercise.workoutBlock.label,
+              description: ex.workoutExercise.workoutBlock.description,
+              sortOrder: ex.workoutExercise.workoutBlock.sortOrder,
+              restAfterSeconds: ex.workoutExercise.workoutBlock.restAfterSeconds,
+              intervalType: ex.workoutExercise.workoutBlock.intervalType,
               workSeconds: ex.workoutExercise.workoutBlock.workSeconds,
               restSeconds: ex.workoutExercise.workoutBlock.restSeconds,
               rounds: ex.workoutExercise.workoutBlock.rounds,
               totalDurationSeconds: ex.workoutExercise.workoutBlock.totalDurationSeconds,
+              restBetweenExercisesSeconds: ex.workoutExercise.workoutBlock.restBetweenExercisesSeconds,
+              targetMinutes: ex.workoutExercise.workoutBlock.targetMinutes,
+              targetZone: ex.workoutExercise.workoutBlock.targetZone,
             }
           : null,
         exercise: {

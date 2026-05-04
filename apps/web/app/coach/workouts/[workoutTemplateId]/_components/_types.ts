@@ -1,11 +1,10 @@
-import type { WorkoutTemplateDetail } from "@regen/types";
+import type { WorkoutTemplateDetail, WorkoutBlockSummary } from "@regen/types";
 
 export interface WE {
   id: string;
   sortOrder: number;
   supersetGroup: string | null;
-  isWarmup: boolean;
-  workoutBlockId: string | null;
+  workoutBlockId: string;
   exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl?: string | null; youtubeUrl?: string | null; isSystem?: boolean };
   targetSets: number | null;
   targetReps: string | null;
@@ -18,7 +17,7 @@ export interface WE {
   alternativesCount?: number;
 }
 
-export type WB = WorkoutTemplateDetail["blocks"][number] & { sortOrder?: number };
+export type WB = WorkoutBlockSummary & { sortOrder?: number };
 
 export interface ExerciseOption {
   id: string;

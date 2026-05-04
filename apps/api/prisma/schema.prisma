@@ -136,9 +136,7 @@ model WorkoutTemplate {
   type        String   @default("strength")
   title       String
   description String?
-  warmupNotes   String?
-  warmupMinutes Int?
-  tags          String[] @default([])
+  tags        String[] @default([])
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -156,17 +154,28 @@ model WorkoutTemplate {
 }
 
 model WorkoutBlock {
-  id                   String   @id @default(uuid())
-  workoutTemplateId    String
-  sortOrder            Int      @default(0)
-  type                 String   // 'tabata' | 'hiit' | 'emom' | 'amrap'
-  label                String?
-  workSeconds          Int?     // seconds of work per interval (tabata/hiit)
-  restSeconds          Int?     // seconds of rest between intervals
-  rounds               Int?     // number of rounds (tabata/hiit/emom)
-  totalDurationSeconds Int?     // total block time in seconds (amrap/emom)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                          String   @id @default(uuid())
+  workoutTemplateId           String
+  sortOrder                   Int      @default(0)
+  type                        String   // 'warmup' | 'strength' | 'intervals' | 'cardio' | 'cooldown'
+  label                       String?
+  description                 String?  // coach notes about this block
+  restAfterSeconds            Int?     // rest after completing this block (before next block)
+
+  // ── Interval-specific config (type = 'intervals') ──
+  intervalType                String?  // 'tabata' | 'hiit' | 'emom' | 'amrap'
+  workSeconds                 Int?     // seconds of work per interval
+  restSeconds                 Int?     // seconds of rest between intervals
+  rounds                      Int?     // number of rounds
+  totalDurationSeconds        Int?     // total block time (amrap/emom)
+  restBetweenExercisesSeconds Int?     // rest between exercises within interval block
+
+  // ── Cardio-specific config (type = 'cardio') ──
+  targetMinutes               Int?     // target duration in minutes
+  targetZone                  String?  // target zone (e.g., "zona 2", "70-80% FCm")
+
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 
   workoutTemplate WorkoutTemplate  @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
   exercises       WorkoutExercise[]
@@ -223,15 +232,14 @@ model WorkoutExercise {
   exerciseId        String
   sortOrder         Int      @default(0)
   supersetGroup     String?  // 'A' | 'B' | 'C' ... — groups exercises into biseries/triseries/circuits
-  isWarmup          Boolean  @default(false)
-  workoutBlockId    String?
+  workoutBlockId    String   // ALL exercises belong to a block (warmup/strength/intervals/cooldown)
   targetSets        Int?
   targetReps        String?
   durationSeconds   Int?     // if set, exercise is timed (replaces reps)
   targetLoadNote    String?
   intensityType     String?  // 'rpe' | 'rir' | 'none'
   intensityTarget   Decimal?
-  restSeconds       Int?
+  restSeconds       Int?     // rest after this exercise (within the block)
   tempo             String?
   notes             String?
   groupNote         String?  // coach note shown next to superset group label (first exercise of group only)
@@ -240,12 +248,13 @@ model WorkoutExercise {
 
   workoutTemplate        WorkoutTemplate              @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
   exercise               Exercise                     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
-  workoutBlock           WorkoutBlock?                @relation(fields: [workoutBlockId], references: [id], onDelete: SetNull)
+  workoutBlock           WorkoutBlock                 @relation(fields: [workoutBlockId], references: [id], onDelete: Cascade)
   alternatives           WorkoutExerciseAlternative[]
   workoutSessionExercises WorkoutSessionExercise[]
 
   @@index([workoutTemplateId])
   @@index([exerciseId])
+  @@index([workoutBlockId])
 }
 
 model WorkoutExerciseAlternative {

@@ -6,17 +6,31 @@ export type BillingStatus = "good" | "due";
 export type SessionStatus = "in_progress" | "completed" | "discarded";
 export type PlanStatus = "draft" | "published" | "archived";
 export type AssignmentStatus = "active" | "paused" | "finished";
-export type BlockType = "tabata" | "hiit" | "emom" | "amrap";
+export type BlockType = "warmup" | "strength" | "intervals" | "cardio" | "cooldown";
+export type IntervalType = "tabata" | "hiit" | "emom" | "amrap";
 
 export interface WorkoutBlockSummary {
   id: string;
   type: BlockType;
   label: string | null;
-  sortOrder?: number;
+  description: string | null;
+  sortOrder: number;
+  restAfterSeconds: number | null; // rest after completing this block
+
+  // Interval-specific (type = 'intervals')
+  intervalType: IntervalType | null;
   workSeconds: number | null;
   restSeconds: number | null;
   rounds: number | null;
   totalDurationSeconds: number | null;
+  restBetweenExercisesSeconds: number | null;
+
+  // Cardio-specific (type = 'cardio')
+  targetMinutes: number | null;
+  targetZone: string | null;
+
+  // Metadata
+  exerciseCount: number;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -122,8 +136,6 @@ export interface WorkoutTemplateDetail {
   id: string;
   title: string;
   description: string | null;
-  warmupNotes: string | null;
-  warmupMinutes: number | null;
   tags: string[];
   type: string;
   blocks: WorkoutBlockSummary[];
@@ -131,8 +143,7 @@ export interface WorkoutTemplateDetail {
     id: string;
     sortOrder: number;
     supersetGroup: string | null;
-    isWarmup: boolean;
-    workoutBlockId: string | null;
+    workoutBlockId: string;
     exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean };
     targetSets: number | null;
     targetReps: string | null;
@@ -153,8 +164,7 @@ export interface SessionExercise {
   id: string;
   sortOrder: number;
   supersetGroup: string | null;
-  isWarmup: boolean;
-  block: WorkoutBlockSummary | null;
+  block: WorkoutBlockSummary;
   exercise: { id: string; name: string; primaryMuscle: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null };
   media: { id: string; url: string; mediaType: string }[];
   alternatives: { exerciseId: string; name: string; primaryMuscle: string | null }[];
@@ -169,7 +179,7 @@ export interface SessionDetail {
   completedAt: string | null;
   energyRating: number | null;
   sessionNotes: string | null;
-  workoutTemplate: { id: string; title: string; description: string | null; warmupNotes: string | null; warmupMinutes: number | null; tags: string[] } | null;
+  workoutTemplate: { id: string; title: string; description: string | null; tags: string[] } | null;
   exercises: SessionExercise[];
 }
 

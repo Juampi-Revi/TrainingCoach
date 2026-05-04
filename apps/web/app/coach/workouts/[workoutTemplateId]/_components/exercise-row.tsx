@@ -96,7 +96,6 @@ export function ExerciseRow({ we, selected, onSelect, onMoveUp, onMoveDown, onDe
           <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{we.exercise.name}</div>
           <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 2 }}>
             {muscleLabel ? muscleLabel.toUpperCase() : "—"}
-            {we.isWarmup && <span style={{ color: "var(--warn)", marginLeft: 6 }}>· CALENT.</span>}
           </div>
         </div>
 

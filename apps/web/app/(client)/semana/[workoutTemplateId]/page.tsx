@@ -123,9 +123,18 @@ export default function WorkoutDetailPage() {
     return <div style={{ minHeight: "100dvh", background: "var(--bg)" }}><StateBlock kind="error" title="No se pudo cargar" body={error ?? ""} /></div>;
   }
 
-  const workoutExercises = data.exercises.filter((e) => !e.isWarmup);
-  const warmupExercises = data.exercises.filter((e) => e.isWarmup);
-  const hasWarmup = !!(data.warmupNotes || data.warmupMinutes || warmupExercises.length > 0);
+  // Create a map of blockId -> block for quick lookup
+  const blockMap = new Map(data.blocks.map((b) => [b.id, b]));
+  
+  const workoutExercises = data.exercises.filter((e) => {
+    const block = blockMap.get(e.workoutBlockId);
+    return block?.type !== "warmup";
+  });
+  const warmupExercises = data.exercises.filter((e) => {
+    const block = blockMap.get(e.workoutBlockId);
+    return block?.type === "warmup";
+  });
+  const hasWarmup = warmupExercises.length > 0;
 
   // Build superset groups
   const groups: Array<{ group: string | null; items: WorkoutEx[] }> = [];
@@ -198,14 +207,11 @@ export default function WorkoutDetailPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <Icon name="timer" size={14} color="var(--warn)" />
               <span className="ta-mono" style={{ fontSize: 9, color: "var(--warn)", letterSpacing: ".1em", fontWeight: 700 }}>
-                CALENTAMIENTO{data.warmupMinutes ? ` · ${data.warmupMinutes} MIN` : ""}
+                CALENTAMIENTO
               </span>
             </div>
-            {data.warmupNotes && (
-              <div style={{ fontSize: 12, color: "var(--text-mute)", lineHeight: 1.5 }}>{data.warmupNotes}</div>
-            )}
             {warmupExercises.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: data.warmupNotes ? 8 : 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {warmupExercises.map((we) => (
                   <div key={we.id} style={{ fontSize: 12, color: "var(--text-mute)", paddingLeft: 4 }}>
                     · {we.exercise.name}{we.targetSets && we.targetReps ? ` ${we.targetSets}×${we.targetReps}` : ""}
