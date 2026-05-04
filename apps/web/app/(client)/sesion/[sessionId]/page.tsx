@@ -174,8 +174,8 @@ export default function SessionInProgressPage() {
   }
 
   const ex = session.exercises[currentExIdx];
-  const warmupExercises = session.exercises.filter((e) => e.block.type === "warmup");
-  const workExercises = session.exercises.filter((e) => e.block.type !== "warmup");
+  const warmupExercises = session.exercises.filter((e) => e.block?.type === "warmup");
+  const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
   const completedExs = workExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
   const warmupExists = warmupExercises.length > 0;
   const warmupTargetMs = null; // No longer using warmupMinutes from template

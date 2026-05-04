@@ -11,18 +11,19 @@ export interface BlockExecutionState {
 }
 
 export function useBlockExecution(exercises: SessionExercise[]) {
-  // Group exercises by block
+  // Group exercises by block (filter out exercises without blocks)
   const blocks = useMemo(() => {
     const blockMap = new Map<string, { block: WorkoutBlockSummary; exercises: SessionExercise[] }>();
-    
+
     for (const ex of exercises) {
+      if (!ex.block) continue; // Skip exercises without blocks
       const blockId = ex.block.id;
       if (!blockMap.has(blockId)) {
         blockMap.set(blockId, { block: ex.block, exercises: [] });
       }
       blockMap.get(blockId)!.exercises.push(ex);
     }
-    
+
     // Sort blocks by sortOrder and return
     return Array.from(blockMap.values())
       .sort((a, b) => a.block.sortOrder - b.block.sortOrder);
