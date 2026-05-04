@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Icon } from "@/components/ui";
 import type { WorkoutBlockSummary } from "@regen/types";
 import { blockTypeLabel, BLOCK_COLORS } from "@/lib/constants";
+import { useSounds } from "../_hooks/use-sounds";
 
 interface BlockRestScreenProps {
   currentBlock: { block: WorkoutBlockSummary } | null;
@@ -24,13 +25,21 @@ export function BlockRestScreen({
   onSkip,
   onStartNext,
 }: BlockRestScreenProps) {
+  const { playCountdown, playRestComplete } = useSounds();
+
   // Auto-start next block when rest is over
   useEffect(() => {
     if (restSecondsRemaining <= 0) {
+      playRestComplete();
       const t = setTimeout(onStartNext, 500);
       return () => clearTimeout(t);
     }
-  }, [restSecondsRemaining, onStartNext]);
+  }, [restSecondsRemaining, onStartNext, playRestComplete]);
+
+  // Play countdown beeps for last 3 seconds
+  useEffect(() => {
+    playCountdown(restSecondsRemaining);
+  }, [restSecondsRemaining, playCountdown]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);

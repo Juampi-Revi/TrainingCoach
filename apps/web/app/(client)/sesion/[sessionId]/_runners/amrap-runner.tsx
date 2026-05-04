@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@/components/ui";
 import type { WorkoutBlockSummary, SessionExercise } from "@regen/types";
 import { MUSCLE_LABEL } from "@/lib/constants";
+import { useSounds } from "../_hooks/use-sounds";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,8 @@ export function AmrapRunner({
 }: AmrapRunnerProps) {
   const totalSecs = block.totalDurationSeconds ?? 600;
 
+  const { playStart, playComplete, playCountdown } = useSounds();
+
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
   const [seconds, setSeconds] = useState(totalSecs);
@@ -60,6 +63,26 @@ export function AmrapRunner({
   const [saving, setSaving] = useState(false);
 
   const savingRef = useRef(false);
+
+  // Play sound when timer starts
+  useEffect(() => {
+    if (started && !paused) {
+      playStart();
+    }
+  }, [started, paused, playStart]);
+
+  // Play countdown beeps for last 3 seconds
+  useEffect(() => {
+    if (!started || paused || done) return;
+    playCountdown(seconds);
+  }, [seconds, started, paused, done, playCountdown]);
+
+  // Play complete sound when done
+  useEffect(() => {
+    if (done) {
+      playComplete();
+    }
+  }, [done, playComplete]);
 
   const finalize = useCallback(
     async (currentChecked: Set<string>, currentCompletions: Record<string, number>) => {

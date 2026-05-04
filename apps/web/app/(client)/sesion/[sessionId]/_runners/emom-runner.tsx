@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui";
 import type { WorkoutBlockSummary, SessionExercise } from "@regen/types";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import { CircleTimer } from "./circle-timer";
+import { useSounds } from "../_hooks/use-sounds";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,8 @@ export function EmomRunner({
     block.rounds ??
     (block.totalDurationSeconds ? Math.floor(block.totalDurationSeconds / 60) : 1);
 
+  const { playStart, playComplete, playBeep, playCountdown } = useSounds();
+
   const [setsCount, setSetsCount] = useState<Record<string, number>>(
     () => Object.fromEntries(exercises.map((ex) => [ex.id, ex.sets.length]))
   );
@@ -60,6 +63,33 @@ export function EmomRunner({
 
   const exIdx = (minute - 1) % exercises.length;
   const currentEx = exercises[exIdx];
+
+  // Play sound when timer starts
+  useEffect(() => {
+    if (started && !paused) {
+      playStart();
+    }
+  }, [started, paused, playStart]);
+
+  // Play beep at the start of each minute
+  useEffect(() => {
+    if (started && !paused && seconds === minuteSeconds && minute > 1) {
+      playBeep(2);
+    }
+  }, [minute, started, paused, seconds, minuteSeconds, playBeep]);
+
+  // Play countdown beeps for last 3 seconds
+  useEffect(() => {
+    if (!started || paused || done) return;
+    playCountdown(seconds);
+  }, [seconds, started, paused, done, playCountdown]);
+
+  // Play complete sound when done
+  useEffect(() => {
+    if (done) {
+      playComplete();
+    }
+  }, [done, playComplete]);
 
   useEffect(() => {
     const target = currentEx.target?.reps ?? "";

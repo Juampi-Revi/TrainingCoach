@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui";
 import type { WorkoutBlockSummary, SessionExercise } from "@regen/types";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import { CircleTimer } from "./circle-timer";
+import { useSounds } from "../_hooks/use-sounds";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,8 @@ export function TabataRunner({
   const workSecs = block.workSeconds ?? 20;
   const restSecs = block.restSeconds ?? 10;
 
+  const { playStart, playComplete, playWorkPhase, playRestPhase, playCountdown } = useSounds();
+
   const [setsCount, setSetsCount] = useState<Record<string, number>>(
     () => Object.fromEntries(exercises.map((ex) => [ex.id, ex.sets.length]))
   );
@@ -57,6 +60,36 @@ export function TabataRunner({
   const [done, setDone] = useState(false);
 
   const savingRef = useRef(false);
+
+  // Play sound when timer starts
+  useEffect(() => {
+    if (started && !paused) {
+      playStart();
+    }
+  }, [started, paused, playStart]);
+
+  // Play sound when phase changes
+  useEffect(() => {
+    if (!started || done) return;
+    if (phase === "work") {
+      playWorkPhase();
+    } else if (phase === "rest") {
+      playRestPhase();
+    }
+  }, [phase, started, done, playWorkPhase, playRestPhase]);
+
+  // Play countdown beeps for last 3 seconds
+  useEffect(() => {
+    if (!started || paused || done) return;
+    playCountdown(seconds);
+  }, [seconds, started, paused, done, playCountdown]);
+
+  // Play complete sound when done
+  useEffect(() => {
+    if (done) {
+      playComplete();
+    }
+  }, [done, playComplete]);
 
   const currentEx = exercises[exIdx];
 
