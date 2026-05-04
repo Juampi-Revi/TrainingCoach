@@ -320,7 +320,15 @@ export default function SessionInProgressPage() {
                   <Button size="xl" variant="secondary" style={{ width: 56 }} onClick={() => goToEx(nextRealIdx)} icon="chevR" />
                 )}
                 <Button size="xl" icon={ex?.block ? "timer" : "book"} style={{ flex: 1, fontSize: 16 }} disabled={!ex}
-                  onClick={() => { if (!ex) return; if (ex.block) setBlockRunnerOpen(true); else openLogger(ex); }}
+                  onClick={() => {
+                    if (!ex) return;
+                    if (ex.block) {
+                      setCurrentBlockId(ex.block.id);
+                      setBlockRunnerOpen(true);
+                    } else {
+                      openLogger(ex);
+                    }
+                  }}
                 >
                   {ex?.block ? "Iniciar bloque" : "Registrar series"}
                 </Button>
@@ -369,6 +377,7 @@ export default function SessionInProgressPage() {
               sessionId={sessionId}
               api={api}
               onClose={() => {
+                const completedBlockId = currentBlockId || currentBlock?.block.id;
                 setBlockRunnerOpen(false);
                 setCurrentBlockId(null);
                 // Refresh session data to show completed work
