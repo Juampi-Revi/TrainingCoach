@@ -88,6 +88,7 @@ export default function SessionInProgressPage() {
   const [swapOpen, setSwapOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [blockRunnerOpen, setBlockRunnerOpen] = useState(false);
+  const [currentBlockId, setCurrentBlockId] = useState<string | null>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   useEffect(() => {
@@ -274,6 +275,7 @@ export default function SessionInProgressPage() {
         warmupExists={warmupExists} warmupDone={warmupDone} warmupTargetMs={warmupTargetMs}
         onSelectEx={goToEx} onAddEx={() => setShowPicker(true)}
         onToggleWarmup={() => setWarmupDone(false)}
+        onStartBlock={(block) => { setCurrentBlockId(block.id); setBlockRunnerOpen(true); }}
       />
 
       <div style={{ padding: "4px 16px 8px" }}>
@@ -351,20 +353,32 @@ export default function SessionInProgressPage() {
         />
       )}
 
-      {blockRunnerOpen && currentBlock && (
-        <BlockRunner
-          block={currentBlock.block}
-          exercises={currentBlock.exercises}
-          sessionId={sessionId}
-          api={api}
-          onClose={() => {
-            setBlockRunnerOpen(false);
-            // Mark block as complete and potentially show rest screen
-            completeCurrentBlock();
-            load();
-          }}
-          onSaved={load}
-        />
+      {blockRunnerOpen && (
+        (() => {
+          // Find the block to run - either selected by user or current from execution flow
+          const blockToRun = currentBlockId 
+            ? blocks.find(b => b.block.id === currentBlockId)
+            : currentBlock;
+          
+          if (!blockToRun) return null;
+          
+          return (
+            <BlockRunner
+              block={blockToRun.block}
+              exercises={blockToRun.exercises}
+              sessionId={sessionId}
+              api={api}
+              onClose={() => {
+                setBlockRunnerOpen(false);
+                setCurrentBlockId(null);
+                // Mark block as complete and potentially show rest screen
+                completeCurrentBlock();
+                load();
+              }}
+              onSaved={load}
+            />
+          );
+        })()
       )}
 
       {isResting && (
