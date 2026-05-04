@@ -258,7 +258,7 @@ export default function SessionInProgressPage() {
         </div>
       )}
 
-      {ex && !loggerOpen && (
+      {ex && !loggerOpen && ex.block?.type !== "strength" && (
         <div style={{ padding: "10px 16px 0" }}>
           <button onClick={() => openLogger(ex)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--bg-1)", cursor: "pointer", color: "var(--text)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
