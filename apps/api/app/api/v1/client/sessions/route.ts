@@ -32,14 +32,14 @@ export async function GET(req: NextRequest) {
         exercises: {
           select: {
             sets: { select: { reps: true, weight: true } },
-            workoutExercise: { select: { targetSets: true, isWarmup: true } },
+            workoutExercise: { select: { targetSets: true, workoutBlock: { select: { type: true } } } },
           },
         },
       },
     });
 
     const items = sessions.map((s) => {
-      const workExercises = s.exercises.filter((e) => !e.workoutExercise?.isWarmup);
+      const workExercises = s.exercises.filter((e) => e.workoutExercise?.workoutBlock?.type !== "warmup");
       return {
         id: s.id,
         status: s.status,
