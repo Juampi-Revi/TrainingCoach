@@ -371,8 +371,7 @@ export default function SessionInProgressPage() {
               onClose={() => {
                 setBlockRunnerOpen(false);
                 setCurrentBlockId(null);
-                // Mark block as complete and potentially show rest screen
-                completeCurrentBlock();
+                // Refresh session data to show completed work
                 load();
               }}
               onSaved={load}
