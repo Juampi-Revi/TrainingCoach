@@ -178,6 +178,9 @@ export function TabataRunner({
                   {MUSCLE_LABEL[muscle] ?? muscle}
                 </div>
               )}
+              <div className="ta-mono" style={{ fontSize: 14, fontWeight: 700, color: "var(--lime)", marginTop: 8 }}>
+                RONDA {round} / {totalRounds}
+              </div>
             </div>
           </div>
 
