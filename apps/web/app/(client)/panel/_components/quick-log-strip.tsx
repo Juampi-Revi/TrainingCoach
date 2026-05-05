@@ -8,7 +8,11 @@ interface QuickLogStripProps {
   workoutsCompleted: number;
   workoutsTarget: number | null;
   foodCount: number;
+  stepsCount: number | null;
+  sleepMinutes: number | null;
   onLogFood: () => void;
+  onLogSteps: () => void;
+  onLogSleep: () => void;
 }
 
 // Simple SVG icons
@@ -29,19 +33,20 @@ function BookIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-function FlameIcon({ size = 20 }: { size?: number }) {
+function FootprintIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+      <path d="M12 2c2 0 3 2 3 4s-1 4-3 4-3-2-3-4 1-4 3-4z" />
+      <path d="M7 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" />
+      <path d="M17 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" />
     </svg>
   );
 }
 
-function HomeIcon({ size = 20 }: { size?: number }) {
+function MoonIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
     </svg>
   );
 }
@@ -58,10 +63,16 @@ export function QuickLogStrip({
   workoutsCompleted,
   workoutsTarget,
   foodCount,
+  stepsCount,
+  sleepMinutes,
   onLogFood,
+  onLogSteps,
+  onLogSleep,
 }: QuickLogStripProps) {
   const target = workoutsTarget ?? 4;
   const workoutsDone = workoutsCompleted >= target;
+  const hasSteps = stepsCount != null && stepsCount > 0;
+  const hasSleep = sleepMinutes != null && sleepMinutes > 0;
 
   return (
     <div className="quick-log-container">
@@ -83,21 +94,22 @@ export function QuickLogStrip({
           onClick={onLogFood}
         />
 
-        {/* Suplementos - disabled */}
+        {/* Pasos */}
         <QuickLogButton
-          icon={<FlameIcon />}
-          label="Pastilla"
-          badge="1"
-          disabled
-          onClick={() => {}}
+          icon={<FootprintIcon />}
+          label="Pasos"
+          done={hasSteps}
+          badge={hasSteps ? (stepsCount! > 999 ? `${(stepsCount! / 1000).toFixed(1)}k` : String(stepsCount)) : undefined}
+          onClick={onLogSteps}
         />
 
-        {/* Sueño - disabled */}
+        {/* Sueño */}
         <QuickLogButton
-          icon={<HomeIcon />}
+          icon={<MoonIcon />}
           label="Sueño"
-          disabled
-          onClick={() => {}}
+          done={hasSleep}
+          badge={hasSleep ? `${Math.floor(sleepMinutes! / 60)}h` : undefined}
+          onClick={onLogSleep}
         />
       </div>
 

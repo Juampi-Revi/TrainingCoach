@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
 
     const { stepsAvg, sleepMinutesAvg, energyAvg } = calculateAverages(healthEntries, sessions);
 
-    const { dailySteps, dailySleepMinutes, dailyEnergy } = buildDailyArrays(
+    const { dailySteps, dailySleepMinutes, dailyEnergy, dailyWorkouts } = buildDailyArrays(
       healthEntries,
       sessions,
       weekStart,
@@ -184,6 +184,7 @@ export async function GET(req: NextRequest) {
       dailySteps,
       dailySleepMinutes,
       dailyEnergy,
+      dailyWorkouts,
       foodGood,
       foodRegular,
       foodPoor,

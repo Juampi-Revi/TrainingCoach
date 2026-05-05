@@ -37,11 +37,26 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         period: true,
         startDate: true,
         endDate: true,
+        shareWithCoach: true,
         createdAt: true,
       },
     });
 
-    return ok({ goals });
+    const shared =
+      goals.length === 0 || goals.some((g) => g.shareWithCoach);
+
+    if (!shared) return ok({ goals: [], shared: false });
+
+    return ok({
+      goals: goals.map((g) => ({
+        ...g,
+        targetNumber: g.targetNumber ? String(g.targetNumber) : null,
+        startDate: g.startDate.toISOString(),
+        endDate: g.endDate?.toISOString() ?? null,
+        createdAt: g.createdAt.toISOString(),
+      })),
+      shared: true,
+    });
   });
 }
 

@@ -17,6 +17,7 @@ model User {
   email        String   @unique
   passwordHash String
   displayName  String?
+  avatarUrl    String?
   billingStatus       String    @default("good") // 'good' | 'due'
   passwordResetToken  String?   @unique
   passwordResetExpiry DateTime?
@@ -43,6 +44,9 @@ model User {
   foodCoachCommentsAsCoach FoodCoachComment[] @relation("FoodCoachCommentCoach")
   healthGoals           HealthGoal[]
   notifications         Notification[]
+  pushSubscriptions     PushSubscription[]
+  badges                UserBadge[]
+  healthDataSyncs       HealthDataSync[]
 }
 
 model CoachClient {
@@ -384,18 +388,19 @@ model ChatMessage {
 }
 
 model BodyMetricEntry {
-  id           String   @id @default(uuid())
-  clientUserId String
-  measuredAt   DateTime @db.Date
-  weightKg     Decimal?
-  waistCm      Decimal?
-  chestCm      Decimal?
-  hipsCm       Decimal?
-  armCm        Decimal?
-  thighCm      Decimal?
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(uuid())
+  clientUserId   String
+  measuredAt     DateTime @db.Date
+  weightKg       Decimal?
+  waistCm        Decimal?
+  chestCm        Decimal?
+  hipsCm         Decimal?
+  armCm          Decimal?
+  thighCm        Decimal?
+  notes          String?
+  shareWithCoach Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
 
@@ -508,20 +513,67 @@ model FoodCoachComment {
 }
 
 model HealthGoal {
-  id           String   @id @default(uuid())
-  clientUserId String
-  kind         String
-  targetNumber Decimal?
-  targetInt    Int?
-  unit         String
-  period       String
-  startDate    DateTime @db.Date
-  endDate      DateTime? @db.Date
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String    @id @default(uuid())
+  clientUserId     String
+  kind             String
+  targetNumber     Decimal?
+  targetInt        Int?
+  unit             String
+  period           String
+  startDate        DateTime  @db.Date
+  endDate          DateTime? @db.Date
+  shareWithCoach   Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
 
   @@index([clientUserId, startDate(sort: Desc)])
   @@index([clientUserId, kind])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserBadge {
+  id          String   @id @default(uuid())
+  userId      String
+  badgeId     String
+  unlockedAt  DateTime @default(now())
+  viewed      Boolean  @default(false) // Track if user has seen the badge
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+model HealthDataSync {
+  id              String   @id @default(uuid())
+  userId          String
+  provider        String   // 'google_fit' | 'apple_health' | 'garmin' | 'fitbit'
+  providerUserId  String?
+  accessToken     String?
+  refreshToken    String?
+  tokenExpiresAt  DateTime?
+  lastSyncAt      DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
 }

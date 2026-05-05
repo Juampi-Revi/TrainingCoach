@@ -51,6 +51,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
           armCm: true,
           thighCm: true,
           notes: true,
+          shareWithCoach: true,
         },
       }),
       prisma.healthCoachNote.findMany({
@@ -67,19 +68,27 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       }),
     ]);
 
+    const metricsShared =
+      metrics.length === 0 || metrics.some((m) => m.shareWithCoach);
+
+    const mappedMetrics = metricsShared
+      ? metrics.map((m) => ({
+          id: m.id,
+          measuredAt: m.measuredAt,
+          weightKg: m.weightKg ? String(m.weightKg) : null,
+          waistCm: m.waistCm ? String(m.waistCm) : null,
+          chestCm: m.chestCm ? String(m.chestCm) : null,
+          hipsCm: m.hipsCm ? String(m.hipsCm) : null,
+          armCm: m.armCm ? String(m.armCm) : null,
+          thighCm: m.thighCm ? String(m.thighCm) : null,
+          notes: m.notes,
+        }))
+      : [];
+
     return ok({
       entries,
-      metrics: metrics.map((m) => ({
-        id: m.id,
-        measuredAt: m.measuredAt,
-        weightKg: m.weightKg ? String(m.weightKg) : null,
-        waistCm: m.waistCm ? String(m.waistCm) : null,
-        chestCm: m.chestCm ? String(m.chestCm) : null,
-        hipsCm: m.hipsCm ? String(m.hipsCm) : null,
-        armCm: m.armCm ? String(m.armCm) : null,
-        thighCm: m.thighCm ? String(m.thighCm) : null,
-        notes: m.notes,
-      })),
+      metrics: mappedMetrics,
+      metricsShared,
       coachNotes: notes.map((n) => ({
         id: n.id,
         day: n.day,

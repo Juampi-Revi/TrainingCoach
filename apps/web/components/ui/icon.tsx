@@ -3,11 +3,13 @@ import type { CSSProperties } from "react";
 export type IconName =
   | "search" | "plus" | "check" | "chevR" | "chevL" | "chevD" | "chevUp"
   | "play" | "pause" | "timer" | "reset" | "flame" | "dumbbell"
-  | "user" | "users" | "calendar" | "chart" | "msg" | "bell"
+  | "user" | "users" | "calendar" | "chart" | "msg" | "bell" | "bellOff"
   | "alert" | "edit" | "trash" | "filter" | "more" | "x" | "logo"
   | "send" | "home" | "history" | "settings" | "star" | "book"
   | "eye" | "eyeOff" | "lock" | "sun" | "moon"
-  | "image" | "repeat";
+  | "image" | "repeat" | "footprint" | "target" | "refresh"
+  | "scale" | "ruler" | "chest" | "hips" | "arm" | "leg"
+  | "heart" | "watch" | "activity" | "info";
 
 interface IconProps {
   name: IconName;
@@ -37,6 +39,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   chart:    <><path d="M3 3v18h18" /><path d="M7 14l4-5 3 3 5-7" /></>,
   msg:      <path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12z" />,
   bell:     <><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8z" /><path d="M10 21a2 2 0 0 0 4 0" /></>,
+  bellOff:  <><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8z" /><path d="M10 21a2 2 0 0 0 4 0" /><path d="M1 1l22 22" /></>,
   alert:    <><path d="M12 2L1 21h22L12 2z" /><path d="M12 9v5M12 18h.01" /></>,
   edit:     <><path d="M4 20h4L20 8l-4-4L4 16v4z" /><path d="M14 6l4 4" /></>,
   trash:    <><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></>,
@@ -57,6 +60,19 @@ const PATHS: Record<IconName, React.ReactNode> = {
   moon:     <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
   image:    <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>,
   repeat:   <><path d="M17 2l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></>,
+  footprint: <><path d="M12 2c2 0 3 2 3 4s-1 4-3 4-3-2-3-4 1-4 3-4z" /><path d="M7 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" /><path d="M17 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" /><path d="M9 18c1 0 2 1 2 2.5s-1 2.5-2 2.5-2-1-2-2.5 1-2.5 2-2.5z" /><path d="M15 18c1 0 2 1 2 2.5s-1 2.5-2 2.5-2-1-2-2.5 1-2.5 2-2.5z" /></>,
+  target:   <><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>,
+  refresh:  <><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3" /><path d="M21 6v3h-3" /><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3" /><path d="M3 18v-3h3" /></>,
+  scale:    <><rect x="4" y="6" width="16" height="12" rx="2" /><path d="M4 10h16" /><circle cx="12" cy="13" r="2" /></>,
+  ruler:    <><path d="M4 6h16v12H4z" /><path d="M4 10h16" /><path d="M7 10v4M11 10v2M15 10v4" /></>,
+  chest:    <><path d="M4 12c2-3 6-4 8-4s6 1 8 4" /><path d="M12 8v8M7 10v4M17 10v4" /></>,
+  hips:     <><path d="M4 8c2 4 6 6 8 6s6-2 8-6" /><path d="M4 8v8M20 8v8" /><path d="M8 14h8" /></>,
+  arm:      <><path d="M6 6h12v12H6z" opacity="0.2" /><path d="M7 12h10M9 8v8M15 8v8" /></>,
+  leg:      <><path d="M8 4h8v16H8z" opacity="0.2" /><path d="M8 12h8M10 4v16M14 4v16" /></>,
+  heart:    <><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></>,
+  watch:    <><rect x="6" y="4" width="12" height="16" rx="4" /><path d="M12 8v8M9 12h6" /></>,
+  activity: <><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></>,
+  info:     <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></>,
 };
 
 export function Icon({ name, size = 18, color = "currentColor", style, className }: IconProps) {

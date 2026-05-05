@@ -48,7 +48,10 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       }),
     ]);
 
-    const sumSteps = healthEntries.reduce((acc, e) => acc + (e.steps ?? 0), 0);
+    const stepsEntries = healthEntries.filter((e) => e.steps != null);
+    const sumSteps = stepsEntries.reduce((acc, e) => acc + (e.steps ?? 0), 0);
+    const stepsAvg = stepsEntries.length ? Math.round(sumSteps / stepsEntries.length) : null;
+    
     const sleepVals = healthEntries.map((e) => e.sleepMinutes).filter((v): v is number => typeof v === "number");
     const avgSleepMinutes = sleepVals.length ? Math.round(sleepVals.reduce((a, b) => a + b, 0) / sleepVals.length) : null;
     const sportMinutes = healthEntries.reduce((acc, e) => acc + (e.sportMinutes ?? 0), 0);
@@ -59,8 +62,9 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     return ok({
       range: { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10), days },
       health: {
-        daysWithEntry: healthEntries.length,
+        daysWithData: stepsEntries.length,
         stepsTotal: sumSteps,
+        stepsAvg,
         sleepAvgMinutes: avgSleepMinutes,
         sportMinutesTotal: sportMinutes,
       },

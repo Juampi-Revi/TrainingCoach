@@ -1,156 +1,357 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
-import { useToast } from "@/lib/toast";
-import { Avatar, Button, Icon } from "@/components/ui";
+import { Avatar, Icon } from "@/components/ui";
+import { PushNotificationSettings } from "./_components/push-notification-settings";
 
 export default function CuentaPage() {
-  const { user, logout, refreshUser, api } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
-  const toast = useToast();
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [nameInput, setNameInput] = useState(user?.name ?? "");
-  const [saving, setSaving] = useState(false);
+
+  const name = user?.name ?? user?.email ?? "Usuario";
 
   function handleLogout() {
     logout();
     router.replace("/login");
   }
 
-  async function saveName() {
-    if (saving) return;
-    setSaving(true);
-    try {
-      await api.patch("/auth/me", { name: nameInput.trim() || null });
-      await refreshUser();
-      setEditing(false);
-      toast.success("Nombre actualizado");
-    } catch {
-      toast.error("No se pudo guardar");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const name = user?.name ?? user?.email ?? "Usuario";
-
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 100 }}>
-      <div style={{ padding: "48px 20px 24px" }}>
-        <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>Mi cuenta</div>
+    <div className="cuenta-page">
+      {/* Header */}
+      <div className="cuenta-header">
+        <div className="cuenta-title">Mi cuenta</div>
+        <div className="cuenta-subtitle">Configuración y gestión de perfil</div>
       </div>
 
-      {/* Profile card */}
-      <div style={{ padding: "0 20px 24px" }}>
-        <div
-          style={{
-            padding: 16,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 14,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: editing ? 16 : 0 }}>
-            <Avatar name={name} size={56} tone="var(--lime)" textColor="#0B0B0C" />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-.01em" }}>{name}</div>
-              <div style={{ fontSize: 13, color: "var(--text-mute)", marginTop: 2 }}>{user?.email}</div>
-            </div>
-            {!editing && (
-              <button
-                onClick={() => { setNameInput(user?.name ?? ""); setEditing(true); }}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: "var(--text-mute)", display: "flex", alignItems: "center" }}
-                title="Editar nombre"
-              >
-                <Icon name="edit" size={15} color="var(--text-mute)" />
-              </button>
-            )}
+      {/* Profile Section */}
+      <div className="cuenta-section">
+        <div className="profile-banner" onClick={() => router.push("/cuenta/perfil")}>
+          <Avatar name={name} src={user?.avatarUrl} size={64} tone="var(--lime)" textColor="#0B0B0C" />
+          <div className="profile-info">
+            <div className="profile-name">{name}</div>
+            <div className="profile-email">{user?.email}</div>
           </div>
-
-          {editing && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div
-                style={{
-                  display: "flex", alignItems: "center",
-                  background: "var(--bg-2)", border: "1px solid var(--lime)",
-                  borderRadius: 10, padding: "0 12px", height: 44,
-                }}
-              >
-                <input
-                  autoFocus
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditing(false); }}
-                  placeholder="Tu nombre…"
-                  style={{
-                    flex: 1, background: "transparent", border: "none", outline: "none",
-                    fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--text)", fontWeight: 600,
-                  }}
-                />
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Button variant="secondary" size="sm" onClick={() => setEditing(false)} disabled={saving} style={{ flex: 1 }}>
-                  Cancelar
-                </Button>
-                <Button size="sm" onClick={saveName} disabled={saving} style={{ flex: 1 }}>
-                  {saving ? "Guardando…" : "Guardar"}
-                </Button>
-              </div>
-            </div>
-          )}
+          <Icon name="chevR" size={20} color="var(--text-dim)" />
         </div>
       </div>
 
-      {/* Actions */}
-      <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <Button
-          size="lg"
-          variant="outline"
-          block
-          style={{ justifyContent: "flex-start" }}
-          onClick={() => router.push("/progreso")}
-        >
-          Ver mi progreso
-        </Button>
+      {/* Push Notifications */}
+      <div className="cuenta-section">
+        <div className="section-label">Notificaciones</div>
+        <PushNotificationSettings />
+      </div>
 
-        {/* Theme toggle */}
-        <div
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "14px 16px", background: "var(--bg-1)",
-            border: "1px solid var(--line)", borderRadius: 12,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Apariencia</div>
-            <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-              {theme === "dark" ? "Modo oscuro" : "Modo claro"}
-            </div>
-          </div>
-          <button
-            onClick={toggle}
-            className="ta-btn"
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 12px", borderRadius: 8,
-              border: "1px solid var(--line-2)", background: "var(--bg-2)",
-              color: "var(--text)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-            }}
-          >
-            <Icon name={theme === "dark" ? "sun" : "moon"} size={15} />
-            {theme === "dark" ? "Modo claro" : "Modo oscuro"}
+      {/* Menu Grid */}
+      <div className="cuenta-section">
+        <div className="section-label">Configuración</div>
+        <div className="menu-grid">
+          <button onClick={() => router.push("/cuenta/metas")} className="menu-item">
+            <div className="menu-item-icon"><Icon name="edit" size={22} color="var(--lime)" /></div>
+            <div><div className="menu-item-label">Metas de salud</div><div className="menu-item-desc">Pasos, sueño y entrenamientos</div></div>
+          </button>
+          <button onClick={() => router.push("/cuenta/mediciones")} className="menu-item">
+            <div className="menu-item-icon"><Icon name="chart" size={22} color="var(--lime)" /></div>
+            <div><div className="menu-item-label">Mediciones</div><div className="menu-item-desc">Peso y medidas corporales</div></div>
+          </button>
+          <button disabled className="menu-item disabled">
+            <div className="menu-item-icon" style={{ background: 'var(--bg-2)', opacity: 0.5 }}><Icon name="star" size={22} color="var(--text-mute)" /></div>
+            <div><div className="menu-item-label" style={{ color: 'var(--text-mute)' }}>Logros</div><div className="menu-item-desc" style={{ color: 'var(--text-mute)' }}>Próximamente</div></div>
+          </button>
+          <button onClick={toggle} className="menu-item">
+            <div className="menu-item-icon"><Icon name={theme === "dark" ? "sun" : "moon"} size={22} color="var(--lime)" /></div>
+            <div><div className="menu-item-label">Apariencia</div><div className="menu-item-desc">{theme === "dark" ? "Modo oscuro" : "Modo claro"}</div></div>
           </button>
         </div>
-
-        <Button size="lg" variant="danger" block style={{ justifyContent: "flex-start" }} onClick={handleLogout}>
-          Cerrar sesión
-        </Button>
       </div>
 
+      {/* Logout Section */}
+      <div className="cuenta-section">
+        <button onClick={handleLogout} className="logout-button">
+          <Icon name="x" size={18} color="var(--danger)" />
+          Cerrar sesión
+        </button>
+      </div>
+
+      <style jsx>{`
+        .cuenta-page {
+          min-height: 100dvh;
+          background: var(--bg);
+          padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        }
+
+        .cuenta-header {
+          padding: 20px 16px 16px;
+        }
+
+        .cuenta-title {
+          font-size: 20px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+
+        .cuenta-subtitle {
+          font-size: 12px;
+          color: var(--text-mute);
+          margin-top: 4px;
+        }
+
+        .cuenta-section {
+          padding: 0 16px 16px;
+          margin-top: 8px;
+        }
+
+        .cuenta-section:first-of-type {
+          margin-top: 16px;
+        }
+
+        .section-label {
+          font-family: var(--font-mono);
+          font-size: 9px;
+          color: var(--text-mute);
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          margin-bottom: 10px;
+        }
+
+        .profile-banner {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          background: var(--bg-1);
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .profile-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .profile-name {
+          font-size: 16px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .profile-email {
+          font-size: 13px;
+          color: var(--text-mute);
+          margin-top: 2px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .menu-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+        }
+
+        .menu-item {
+          background: var(--bg-1);
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.2s ease;
+          height: 100%;
+          min-height: 120px;
+        }
+
+        .menu-item-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: rgba(215, 255, 58, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .menu-item-label {
+          font-family: var(--font-mono);
+          font-size: 9px;
+          color: var(--text-mute);
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .menu-item-desc {
+          font-size: 15px;
+          color: var(--text);
+          font-weight: 600;
+          letter-spacing: -0.01em;
+          line-height: 1.3;
+        }
+
+        .logout-button {
+          width: 100%;
+          padding: 16px 20px;
+          background: transparent;
+          border: 1px solid var(--danger);
+          border-radius: 12px;
+          color: var(--danger);
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .menu-item:hover {
+          background: var(--bg-2);
+          border-color: var(--lime);
+          transform: translateY(-2px);
+        }
+
+        .profile-banner:hover {
+          background: var(--bg-2);
+          border-color: var(--lime);
+        }
+
+        .logout-button:hover {
+          background: rgba(255, 91, 91, 0.1);
+        }
+
+        .menu-item.disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .menu-item.disabled:hover {
+          background: var(--bg-1);
+          border-color: var(--line);
+          transform: none;
+        }
+
+        @media (min-width: 768px) {
+          .cuenta-page {
+            padding-bottom: 32px;
+          }
+
+          .cuenta-header {
+            padding: 48px 28px 24px;
+            border-bottom: 1px solid var(--line);
+          }
+
+          .cuenta-title {
+            font-size: 28px;
+          }
+
+          .cuenta-subtitle {
+            font-size: 14px;
+            margin-top: 6px;
+          }
+
+          .cuenta-section {
+            padding: 0 28px 24px;
+            margin-top: 12px;
+          }
+
+          .cuenta-section:first-of-type {
+            margin-top: 32px;
+          }
+
+          .section-label {
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            margin-bottom: 16px;
+          }
+
+          .profile-banner {
+            padding: 24px;
+            border-radius: 16px;
+            gap: 20px;
+          }
+
+          .profile-name {
+            font-size: 18px;
+          }
+
+          .profile-email {
+            font-size: 14px;
+          }
+
+          .menu-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+          }
+
+          .menu-item {
+            padding: 24px;
+            border-radius: 18px;
+            min-height: 160px;
+          }
+
+          .menu-item-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(215, 255, 58, 0.15);
+          }
+
+          .menu-item-label {
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            margin-bottom: 10px;
+          }
+
+          .menu-item-desc {
+            font-size: 17px;
+          }
+
+          .logout-button {
+            max-width: 300px;
+            margin: 0 auto;
+            padding: 14px 24px;
+          }
+        }
+
+        @media (min-width: 1200px) {
+          .cuenta-header {
+            padding: 48px 48px 24px;
+          }
+
+          .cuenta-section {
+            padding: 0 48px 24px;
+            margin-top: 16px;
+          }
+
+          .cuenta-section:first-of-type {
+            margin-top: 40px;
+          }
+
+          .menu-grid {
+            gap: 20px;
+          }
+
+          .menu-item {
+            padding: 28px;
+            min-height: 180px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

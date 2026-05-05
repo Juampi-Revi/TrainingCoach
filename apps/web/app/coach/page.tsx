@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Avatar, Badge, Button, Card, Icon, KPI, Progress, StateBlock, Table } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
+import { StudentFilters } from "./_components/student-filters";
+import { EnhancedStudentList } from "./_components/enhanced-student-list";
 import type { CoachClientSummary } from "@regen/types";
 
 const DAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -14,7 +16,9 @@ export default function CoachDashboardPage() {
   const { api, user } = useAuth();
   const router = useRouter();
   const [clients, setClients] = useState<CoachClientSummary[]>([]);
+  const [filteredClients, setFilteredClients] = useState<CoachClientSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"alerts" | "all">("alerts");
   const today = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
 
   useEffect(() => {
@@ -96,51 +100,66 @@ export default function CoachDashboardPage() {
           <StateBlock kind="loading" title="Cargando alumnos…" />
         ) : (
           <div className="coach-two-col">
-            {/* Alerts table */}
+            {/* Main content area */}
             <div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 600 }}>Alumnos con alertas</div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconRight="chevR"
-                  onClick={() => router.push("/coach/alumnos")}
+              {/* Tabs */}
+              <div className="dashboard-tabs">
+                <button
+                  className={`tab ${activeTab === "alerts" ? "active" : ""}`}
+                  onClick={() => setActiveTab("alerts")}
                 >
-                  Ver todos
-                </Button>
+                  <Icon name="alert" size={16} color={activeTab === "alerts" ? "var(--text)" : "var(--text-mute)"} />
+                  Alertas
+                  {inactiveClients.length > 0 && (
+                    <span className="tab-badge">{inactiveClients.length}</span>
+                  )}
+                </button>
+                <button
+                  className={`tab ${activeTab === "all" ? "active" : ""}`}
+                  onClick={() => setActiveTab("all")}
+                >
+                  <Icon name="users" size={16} color={activeTab === "all" ? "var(--text)" : "var(--text-mute)"} />
+                  Todos los alumnos
+                </button>
               </div>
-              {alertRows.length === 0 ? (
-                <div
-                  style={{
-                    padding: 24,
-                    textAlign: "center",
-                    color: "var(--text-mute)",
-                    fontSize: 13,
-                    background: "var(--bg-1)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 12,
-                  }}
-                >
-                  Todos tus alumnos están al día
+
+              {/* Tab content */}
+              {activeTab === "alerts" ? (
+                <div>
+                  {alertRows.length === 0 ? (
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: "var(--text-mute)",
+                        fontSize: 13,
+                        background: "var(--bg-1)",
+                        border: "1px solid var(--line)",
+                        borderRadius: 12,
+                      }}
+                    >
+                      Todos tus alumnos están al día
+                    </div>
+                  ) : (
+                    <Table
+                      cols={[
+                        { key: "name", label: "Alumno", w: "2fr" },
+                        { key: "plan", label: "Plan", w: "2fr" },
+                        { key: "last", label: "Última ses.", w: "1.2fr", mono: true, mute: true },
+                        { key: "alert", label: "Alerta", w: "1.4fr" },
+                      ]}
+                      rows={alertRows}
+                      onRowClick={(i) => router.push(`/coach/alumnos/${inactiveClients[i]?.id}`)}
+                    />
+                  )}
                 </div>
               ) : (
-                <Table
-                  cols={[
-                    { key: "name", label: "Alumno", w: "2fr" },
-                    { key: "plan", label: "Plan", w: "2fr" },
-                    { key: "last", label: "Última ses.", w: "1.2fr", mono: true, mute: true },
-                    { key: "alert", label: "Alerta", w: "1.4fr" },
-                  ]}
-                  rows={alertRows}
-                  onRowClick={(i) => router.push(`/coach/alumnos/${inactiveClients[i]?.id}`)}
-                />
+                <div>
+                  <StudentFilters students={clients} onFilterChange={setFilteredClients} />
+                  <div style={{ marginTop: 20 }}>
+                    <EnhancedStudentList students={filteredClients} />
+                  </div>
+                </div>
               )}
             </div>
 
@@ -277,6 +296,63 @@ export default function CoachDashboardPage() {
           </div>
         )}
       </div>
+
+      <style jsx>{`
+        .dashboard-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 20px;
+          border-bottom: 1px solid var(--line);
+          padding-bottom: 12px;
+        }
+
+        .tab {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 16px;
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          color: var(--text-mute);
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+          background: var(--bg-1);
+          color: var(--text);
+        }
+
+        .tab.active {
+          background: var(--bg-1);
+          color: var(--text);
+        }
+
+        .tab-badge {
+          background: var(--danger);
+          color: white;
+          font-size: 11px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 10px;
+          margin-left: 4px;
+        }
+
+        @media (min-width: 768px) {
+          .dashboard-tabs {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+          }
+
+          .tab {
+            padding: 12px 20px;
+            font-size: 15px;
+          }
+        }
+      `}</style>
     </DesktopShell>
   );
 }

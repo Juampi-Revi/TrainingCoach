@@ -153,10 +153,12 @@ export function buildDailyArrays(
   dailySteps: (number | null)[];
   dailySleepMinutes: (number | null)[];
   dailyEnergy: (number | null)[];
+  dailyWorkouts: number[];
 } {
   const dailySteps: (number | null)[] = Array(7).fill(null);
   const dailySleepMinutes: (number | null)[] = Array(7).fill(null);
   const dailyEnergy: (number | null)[] = Array(7).fill(null);
+  const dailyWorkouts: number[] = Array(7).fill(0);
 
   // Map health entries to day index (0=Mon, 6=Sun)
   for (const entry of healthEntries) {
@@ -170,25 +172,29 @@ export function buildDailyArrays(
     }
   }
 
-  // Map session energy ratings to day index
+  // Map session energy ratings and workout counts to day index
   for (const session of sessions) {
-    if (session.energyRating === null) continue;
     const sessionDate = new Date(session.performedAt);
     const dayDiff = Math.floor(
       (sessionDate.getTime() - weekStart.getTime()) / (24 * 60 * 60 * 1000),
     );
     if (dayDiff >= 0 && dayDiff < 7) {
-      // If multiple sessions on same day, use the average
-      const existing = dailyEnergy[dayDiff];
-      if (existing === null) {
-        dailyEnergy[dayDiff] = session.energyRating;
-      } else {
-        dailyEnergy[dayDiff] = Math.round((existing + session.energyRating) / 2);
+      // Count workouts per day
+      dailyWorkouts[dayDiff] += 1;
+
+      // Energy: if multiple sessions on same day, use the average
+      if (session.energyRating !== null) {
+        const existing = dailyEnergy[dayDiff];
+        if (existing === null) {
+          dailyEnergy[dayDiff] = session.energyRating;
+        } else {
+          dailyEnergy[dayDiff] = Math.round((existing + session.energyRating) / 2);
+        }
       }
     }
   }
 
-  return { dailySteps, dailySleepMinutes, dailyEnergy };
+  return { dailySteps, dailySleepMinutes, dailyEnergy, dailyWorkouts };
 }
 
 // ─── Average calculations ─────────────────────────────────────────────────────

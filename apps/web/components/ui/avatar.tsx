@@ -2,19 +2,38 @@ import type { CSSProperties } from "react";
 
 interface AvatarProps {
   name?: string;
+  src?: string | null;
   size?: number;
   tone?: string;
   textColor?: string;
   style?: CSSProperties;
 }
 
-export function Avatar({ name = "?", size = 32, tone, textColor, style }: AvatarProps) {
+export function Avatar({ name = "?", src, size = 32, tone, textColor, style }: AvatarProps) {
   const initials = name
     .split(" ")
     .map((n) => n[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          flexShrink: 0,
+          border: "1px solid var(--line-2)",
+          ...style,
+        }}
+      />
+    );
+  }
 
   return (
     <div

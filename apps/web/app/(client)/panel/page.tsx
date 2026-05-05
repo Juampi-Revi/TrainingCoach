@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import type { ClientDashboard } from "@regen/types";
 import {
   ScoreHeader,
@@ -13,6 +14,9 @@ import {
   SleepRing,
   EnergyBars,
   NutritionStack,
+  WeekHeatmap,
+  MonthSummary,
+  QuickHealthModal,
 } from "./_components";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,28 +51,109 @@ function calculateTrend(dailySteps: (number | null)[]): string | undefined {
   return `${pct >= 0 ? "+" : ""}${Math.round(pct)}%`;
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface TodayData {
+  date: string;
+  steps: number | null;
+  sleepMinutes: number | null;
+  energyRating: number | null;
+  workoutsToday: number;
+  food: Array<{
+    id: string;
+    loggedAt: string;
+    mealType: "breakfast" | "lunch" | "dinner" | "snack" | null;
+    quality: "good" | "regular" | "poor" | null;
+    text: string | null;
+  }>;
+}
+
+interface HealthGoal {
+  id: string;
+  kind: string;
+  targetInt: number | null;
+  targetNumber: string | null;
+  unit: string;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PanelPage() {
   const router = useRouter();
   const { api } = useAuth();
+  const toast = useToast();
   const [data, setData] = useState<ClientDashboard | null>(null);
+  const [todayData, setTodayData] = useState<TodayData | null>(null);
+  const [goals, setGoals] = useState<HealthGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState<"steps" | "sleep" | null>(null);
 
-  const load = useCallback(async () => {
+  const loadDashboard = useCallback(async () => {
     try {
       const res = await api.get<ClientDashboard>("/client/dashboard");
       setData(res);
     } catch {
       // silent
-    } finally {
-      setLoading(false);
     }
   }, [api]);
 
+  const loadToday = useCallback(async () => {
+    try {
+      const res = await api.get<TodayData>("/client/today");
+      setTodayData(res);
+    } catch {
+      // silent
+    }
+  }, [api]);
+
+  const loadGoals = useCallback(async () => {
+    try {
+      const res = await api.get<{ goals: HealthGoal[] }>("/client/goals");
+      setGoals(res.goals || []);
+    } catch {
+      // silent
+    }
+  }, [api]);
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([loadDashboard(), loadToday(), loadGoals()]);
+    setLoading(false);
+  }, [loadDashboard, loadToday, loadGoals]);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    loadAll();
+  }, [loadAll]);
+
+  async function handleSaveSteps(data: { date: string; value: number }) {
+    try {
+      await api.post("/client/health", {
+        day: data.date,
+        steps: data.value,
+      });
+      toast.success("Pasos registrados");
+      loadToday();
+      loadDashboard();
+    } catch (e) {
+      toast.error("Error al guardar");
+      throw e;
+    }
+  }
+
+  async function handleSaveSleep(data: { date: string; value: number }) {
+    try {
+      await api.post("/client/health", {
+        day: data.date,
+        sleepMinutes: Math.round(data.value * 60),
+      });
+      toast.success("Sueño registrado");
+      loadToday();
+      loadDashboard();
+    } catch (e) {
+      toast.error("Error al guardar");
+      throw e;
+    }
+  }
 
   if (loading) {
     return (
@@ -101,6 +186,10 @@ export default function PanelPage() {
   const trend = calculateTrend(d?.dailySteps ?? []);
   const sleepHours = d?.sleepMinutesAvg ? d.sleepMinutesAvg / 60 : null;
 
+  // Goals for heatmap
+  const stepsGoal = goals.find((g) => g.kind === "steps")?.targetInt ?? 8000;
+  const sleepGoalMinutes = goals.find((g) => g.kind === "sleep")?.targetInt ?? 480;
+
   return (
     <div className="panel-page">
       {/* Header Section */}
@@ -115,7 +204,7 @@ export default function PanelPage() {
         </div>
       </div>
 
-      {/* Score Section - Full Width, más separado del header */}
+      {/* Score Section */}
       <div className="panel-section panel-section-score">
         {d && (
           <ScoreHeader
@@ -132,12 +221,16 @@ export default function PanelPage() {
 
       {/* Quick Log Section */}
       <div className="panel-section">
-        {d && (
+        {d && todayData && (
           <QuickLogStrip
             workoutsCompleted={d.workoutsCompleted}
             workoutsTarget={d.workoutsTarget}
-            foodCount={foodCount}
+            foodCount={todayData.food.length}
+            stepsCount={todayData.steps}
+            sleepMinutes={todayData.sleepMinutes}
             onLogFood={() => router.push("/comida")}
+            onLogSteps={() => setModalOpen("steps")}
+            onLogSleep={() => setModalOpen("sleep")}
           />
         )}
       </div>
@@ -200,7 +293,7 @@ export default function PanelPage() {
         </div>
       </div>
 
-      {/* Secondary Stats Section - Energía y Nutrición (más anchas) */}
+      {/* Secondary Stats Section - Energía y Nutrición */}
       <div className="panel-section">
         <div className="stats-grid-secondary">
           {/* ENERGÍA */}
@@ -238,6 +331,52 @@ export default function PanelPage() {
           )}
         </div>
       </div>
+
+      {/* Week Heatmap + Month Summary Section */}
+      <div className="panel-section">
+        <div className="heatmap-summary-grid">
+          {d && (
+            <>
+              <WeekHeatmap
+                weekStart={d.weekStart}
+                dailySteps={d.dailySteps}
+                dailySleepMinutes={d.dailySleepMinutes}
+                dailyWorkouts={d.dailyWorkouts}
+                goals={{ steps: stepsGoal, sleepMinutes: sleepGoalMinutes }}
+              />
+              <MonthSummary
+                activeDays={d.dailySteps.filter(s => s !== null && s > 0).length}
+                totalDays={d.dailySteps.length}
+                stepsTotal={d.dailySteps.reduce((a: number, b) => a + (b || 0), 0)}
+                sleepAvgMinutes={(() => {
+                  const sleepValues = d.dailySleepMinutes.filter((s): s is number => s !== null);
+                  return sleepValues.length > 0 
+                    ? Math.round(sleepValues.reduce((a, b) => a + b, 0) / sleepValues.length)
+                    : 0;
+                })()}
+                workoutsTotal={d.dailyWorkouts.reduce((a: number, b) => a + b, 0)}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      <QuickHealthModal
+        type="steps"
+        isOpen={modalOpen === "steps"}
+        onClose={() => setModalOpen(null)}
+        onSave={handleSaveSteps}
+        currentValue={todayData?.steps}
+      />
+
+      <QuickHealthModal
+        type="sleep"
+        isOpen={modalOpen === "sleep"}
+        onClose={() => setModalOpen(null)}
+        onSave={handleSaveSleep}
+        currentValue={todayData?.sleepMinutes}
+      />
 
       <style jsx>{`
         .panel-page {
@@ -288,6 +427,13 @@ export default function PanelPage() {
 
         /* Grid secundario - Energía y Nutrición (más anchas, debajo) */
         .stats-grid-secondary {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        /* Grid heatmap + month summary */
+        .heatmap-summary-grid {
           display: grid;
           grid-template-columns: 1fr;
           gap: 12px;
@@ -399,6 +545,12 @@ export default function PanelPage() {
 
           /* Grid secundario: 2 columnas (Energía y Nutrición lado a lado) */
           .stats-grid-secondary {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+
+          /* Grid heatmap + month summary: 2 columnas */
+          .heatmap-summary-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
           }

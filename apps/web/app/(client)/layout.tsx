@@ -10,14 +10,13 @@ import type { IconName } from "@/components/ui";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003/api/v1";
 
-type NavId = "home" | "panel" | "history" | "messages" | "notifications" | "chart" | "me";
+type NavId = "home" | "panel" | "history" | "messages" | "notifications" | "me";
 const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string; mobileHide?: true }> = [
   { id: "home",          icon: "home",    label: "Semana",    href: "/semana"    },
   { id: "panel",         icon: "chart",   label: "Mi panel",  href: "/panel"     },
   { id: "history",       icon: "history", label: "Historial", href: "/historial" },
   { id: "messages",      icon: "msg",     label: "Mensajes",  href: "/mensajes"  },
   { id: "notifications", icon: "bell",    label: "Notificaciones", href: "/notificaciones", mobileHide: true },
-  { id: "chart",         icon: "chart",   label: "Progreso",  href: "/progreso",  mobileHide: true },
   { id: "me",            icon: "user",    label: "Cuenta",    href: "/cuenta"    },
 ];
 
@@ -28,7 +27,6 @@ function useActiveNav(): NavId {
   if (p.startsWith("/historial")) return "history";
   if (p.startsWith("/mensajes") || p.startsWith("/comentarios")) return "messages";
   if (p.startsWith("/notificaciones")) return "notifications";
-  if (p.startsWith("/progreso")) return "chart";
   if (p.startsWith("/cuenta")) return "me";
   return "home";
 }

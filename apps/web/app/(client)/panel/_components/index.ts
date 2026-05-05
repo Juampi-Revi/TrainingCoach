@@ -9,3 +9,6 @@ export { MiniBars } from "./mini-bars";
 export { SleepRing } from "./sleep-ring";
 export { EnergyBars } from "./energy-bars";
 export { NutritionStack } from "./nutrition-stack";
+export { WeekHeatmap } from "./week-heatmap";
+export { MonthSummary } from "./month-summary";
+export { QuickHealthModal } from "./quick-health-modal";

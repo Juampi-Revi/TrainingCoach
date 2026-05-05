@@ -54,6 +54,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
+  avatarUrl: string | null;
   role: UserRole;
   billingStatus: BillingStatus;
 }
@@ -312,10 +313,30 @@ export interface ClientDashboard {
   dailySteps: (number | null)[];
   dailySleepMinutes: (number | null)[];
   dailyEnergy: (number | null)[];
+  dailyWorkouts: number[];
   // Nutrición
   foodGood: number;
   foodRegular: number;
   foodPoor: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Client — Today (Mi Panel: datos del día actual)
+// ─────────────────────────────────────────────────────────────
+export interface ClientToday {
+  date: string;
+  steps: number | null;
+  sleepMinutes: number | null;
+  energyRating: number | null;
+  workoutsToday: number;
+  healthEntryId: string | null;
+  food: Array<{
+    id: string;
+    loggedAt: string;
+    mealType: "breakfast" | "lunch" | "snack" | "dinner" | null;
+    quality: "good" | "regular" | "poor" | null;
+    text: string | null;
+  }>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -368,4 +389,65 @@ export interface CreatePlanRequest {
   notes?: string;
   weeksCount?: number;
   periodDays?: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Client — Goals & Body Metrics
+// ─────────────────────────────────────────────────────────────
+export interface HealthGoalItem {
+  id: string;
+  kind: string;
+  targetInt: number | null;
+  targetNumber: string | null;
+  unit: string;
+  period: string;
+  startDate: string;
+  endDate: string | null;
+  shareWithCoach: boolean;
+  createdAt: string;
+}
+
+export interface GoalsResponse {
+  goals: HealthGoalItem[];
+  hasCoach: boolean;
+}
+
+export interface BodyMetricItem {
+  id: string;
+  measuredAt: string;
+  weightKg: string | null;
+  waistCm: string | null;
+  chestCm: string | null;
+  hipsCm: string | null;
+  armCm: string | null;
+  thighCm: string | null;
+  notes: string | null;
+  shareWithCoach: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Coach — Daily Log & Coach-specific responses
+// ─────────────────────────────────────────────────────────────
+export interface CoachDailyLogEntry {
+  date: string;
+  steps: number | null;
+  sleepMinutes: number | null;
+  workoutsCompleted: number;
+  foodCount: number;
+  notes: string | null;
+  food: Array<{ id: string; mealType: string | null; quality: string | null; text: string | null }>;
+}
+
+export interface CoachDailyLogResponse {
+  entries: CoachDailyLogEntry[];
+  goalsForColoring: {
+    stepsTarget: number;
+    sleepTargetMinutes: number;
+    shared: boolean;
+  };
+}
+
+export interface CoachGoalsResponse {
+  goals: HealthGoalItem[];
+  shared: boolean;
 }

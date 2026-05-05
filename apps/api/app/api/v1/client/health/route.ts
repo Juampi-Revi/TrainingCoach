@@ -1,124 +1,85 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
-import { ok, unauthorized, withHandler } from "@/lib/api-response";
+import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
 
-function clampInt(v: unknown, min: number, max: number): number | null {
-  if (v === null || v === undefined || v === "") return null;
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n)) return null;
-  const i = Math.trunc(n);
-  if (i < min) return min;
-  if (i > max) return max;
-  return i;
-}
-
+// GET - Obtener entradas de salud en un rango de fechas
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "client");
     if (!auth.ok) return unauthorized(auth.message);
 
-    const sp = req.nextUrl.searchParams;
-    const take = Math.min(60, Math.max(1, parseInt(sp.get("take") ?? "14", 10) || 14));
+    const { searchParams } = new URL(req.url);
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    if (!startDate || !endDate) {
+      return err("startDate y endDate requeridos", 400);
+    }
 
     const entries = await prisma.dailyHealthEntry.findMany({
-      where: { clientUserId: auth.user.sub },
-      orderBy: { day: "desc" },
-      take,
+      where: {
+        clientUserId: auth.user.sub,
+        day: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
+        },
+      },
       select: {
         id: true,
         day: true,
         steps: true,
         sleepMinutes: true,
-        sportType: true,
-        sportMinutes: true,
-        notes: true,
       },
+      orderBy: { day: "asc" },
     });
 
-    const days = entries.map((e) => e.day);
-    const coachNotes = days.length
-      ? await prisma.healthCoachNote.findMany({
-          where: { clientUserId: auth.user.sub, day: { in: days } },
-          orderBy: { createdAt: "asc" },
-          select: {
-            id: true,
-            day: true,
-            text: true,
-            createdAt: true,
-            coach: { select: { id: true, displayName: true, email: true } },
-          },
-        })
-      : [];
-
-    const notesByDay = new Map<string, typeof coachNotes>();
-    for (const n of coachNotes) {
-      const k = n.day.toISOString().slice(0, 10);
-      const prev = notesByDay.get(k) ?? [];
-      prev.push(n);
-      notesByDay.set(k, prev);
-    }
-
-    return ok({
-      entries: entries.map((e) => {
-        const dayKey = e.day.toISOString().slice(0, 10);
-        const notes = notesByDay.get(dayKey) ?? [];
-        return {
-          id: e.id,
-          day: e.day,
-          steps: e.steps,
-          sleepMinutes: e.sleepMinutes,
-          sportType: e.sportType,
-          sportMinutes: e.sportMinutes,
-          notes: e.notes,
-          coachNotes: notes.map((n) => ({
-            id: n.id,
-            day: n.day,
-            text: n.text,
-            createdAt: n.createdAt,
-            coach: { id: n.coach.id, name: n.coach.displayName ?? n.coach.email },
-          })),
-        };
-      }),
-    });
+    return ok({ entries });
   });
 }
 
+// POST - Crear o actualizar entrada de salud del día
 export async function POST(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "client");
     if (!auth.ok) return unauthorized(auth.message);
 
-    const body = await req.json().catch(() => ({}));
-    const dayIso = typeof body.day === "string" ? body.day : new Date().toISOString().slice(0, 10);
-    const day = new Date(dayIso);
+    const body = await req.json();
+    const { day, steps, sleepMinutes } = body;
 
-    const steps = clampInt(body.steps, 0, 250_000);
-    const sleepMinutes = clampInt(
-      body.sleepMinutes ?? (body.sleepHours != null ? Number(body.sleepHours) * 60 : null),
-      0,
-      24 * 60,
-    );
-    const sportMinutes = clampInt(body.sportMinutes, 0, 24 * 60);
-    const sportType = typeof body.sportType === "string" && body.sportType.trim() ? body.sportType.trim() : null;
-    const notes = typeof body.notes === "string" && body.notes.trim() ? body.notes.trim() : null;
+    if (!day) {
+      return err("day es requerido", 400);
+    }
 
-    const saved = await prisma.dailyHealthEntry.upsert({
-      where: { clientUserId_day: { clientUserId: auth.user.sub, day } },
-      create: {
+    // Buscar si ya existe una entrada para este día
+    const existing = await prisma.dailyHealthEntry.findFirst({
+      where: {
         clientUserId: auth.user.sub,
-        day,
-        steps,
-        sleepMinutes,
-        sportType,
-        sportMinutes,
-        notes,
+        day: new Date(day),
       },
-      update: { steps, sleepMinutes, sportType, sportMinutes, notes },
-      select: { id: true, day: true, steps: true, sleepMinutes: true, sportType: true, sportMinutes: true, notes: true },
     });
 
-    return ok(saved, 201);
+    if (existing) {
+      // Actualizar entrada existente
+      const updated = await prisma.dailyHealthEntry.update({
+        where: { id: existing.id },
+        data: {
+          steps: steps !== undefined ? steps : existing.steps,
+          sleepMinutes: sleepMinutes !== undefined ? sleepMinutes : existing.sleepMinutes,
+        },
+      });
+      return ok({ entry: updated, created: false });
+    } else {
+      // Crear nueva entrada
+      const created = await prisma.dailyHealthEntry.create({
+        data: {
+          clientUserId: auth.user.sub,
+          day: new Date(day),
+          steps: steps ?? null,
+          sleepMinutes: sleepMinutes ?? null,
+        },
+      });
+      return ok({ entry: created, created: true });
+    }
   });
 }
-

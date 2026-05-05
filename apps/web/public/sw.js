@@ -1,55 +1,72 @@
-const CACHE = "yourcoachfit-v2";
-const PRECACHE = ["/", "/login", "/icon.svg", "/manifest.webmanifest"];
+/// <reference lib="webworker" />
 
-self.addEventListener("install", (event) => {
+const SW = self as ServiceWorkerGlobalScope;
+
+// Cache name
+const CACHE_NAME = "regen-app-v1";
+
+// Install event
+SW.addEventListener("install", (event) => {
+  console.log("[SW] Installing...");
+  event.waitUntil(SW.skipWaiting());
+});
+
+// Activate event
+SW.addEventListener("activate", (event) => {
+  console.log("[SW] Activating...");
+  event.waitUntil(SW.clients.claim());
+});
+
+// Push notification event
+SW.addEventListener("push", (event) => {
+  console.log("[SW] Push received:", event);
+
+  let data: { notification?: { title?: string; body?: string; icon?: string; badge?: string; tag?: string; data?: { url?: string } } } = {};
+
+  try {
+    data = event.data?.json() || {};
+  } catch (e) {
+    console.error("[SW] Failed to parse push data:", e);
+  }
+
+  const title = data.notification?.title || "Nueva notificación";
+  const options: NotificationOptions = {
+    body: data.notification?.body || "",
+    icon: data.notification?.icon || "/icon-192x192.png",
+    badge: data.notification?.badge || "/icon-192x192.png",
+    tag: data.notification?.tag || "default",
+    requireInteraction: false,
+    data: data.notification?.data || {},
+  };
+
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((c) => Promise.all(PRECACHE.map((u) => c.add(u).catch(() => null))))
-      .then(() => self.skipWaiting()),
+    SW.registration.showNotification(title, options)
   );
 });
 
-self.addEventListener("activate", (event) => {
+// Notification click event
+SW.addEventListener("notificationclick", (event) => {
+  console.log("[SW] Notification clicked:", event);
+
+  event.notification.close();
+
+  const data = event.notification.data as { url?: string };
+  const urlToOpen = data?.url || "/panel";
+
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.map((k) => (k === CACHE ? null : caches.delete(k)))))
-      .then(() => self.clients.claim()),
+    SW.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windowClients) => {
+        // Check if there's already a window open
+        for (const client of windowClients) {
+          if (client.url === urlToOpen && "focus" in client) {
+            return client.focus();
+          }
+        }
+        // Open new window if none exists
+        if (SW.clients.openWindow) {
+          return SW.clients.openWindow(urlToOpen);
+        }
+      })
   );
-});
-
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match(req).then((cached) => cached ?? caches.match("/login"))),
-    );
-    return;
-  }
-
-  if (url.pathname.startsWith("/_next/static/")) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-          return res;
-        });
-      }),
-    );
-    return;
-  }
 });

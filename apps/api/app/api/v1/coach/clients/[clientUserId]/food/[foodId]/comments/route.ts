@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       type: "food_comment",
       title: `${coach?.displayName ?? coach?.email ?? "Tu coach"} comentó una comida`,
       body: text,
-      linkUrl: "/progreso",
+      linkUrl: "/comida",
     });
 
     return ok({ ...created, coach: { id: created.coach.id, name: created.coach.displayName } }, 201);
