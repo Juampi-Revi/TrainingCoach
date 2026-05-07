@@ -95,9 +95,22 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Group sessions by workoutTemplateId to handle multiple instances
+    const sessionsByTemplate = new Map<string, typeof sessions>();
+    for (const session of sessions) {
+      if (session.workoutTemplateId) {
+        const existing = sessionsByTemplate.get(session.workoutTemplateId) ?? [];
+        existing.push(session);
+        sessionsByTemplate.set(session.workoutTemplateId, existing);
+      }
+    }
+
     const workouts = (planWeek?.workouts ?? []).map((pw) => {
       const tpl = pw.workoutTemplate;
-      const session = sessions.find((s) => s.workoutTemplateId === tpl.id) ?? null;
+      // Get sessions for this template and pick the first available one
+      const templateSessions = sessionsByTemplate.get(tpl.id) ?? [];
+      const session = templateSessions.shift() ?? null; // Remove from array so next instance gets the next session
+      
       return {
         workoutTemplateId: tpl.id,
         title: tpl.title,

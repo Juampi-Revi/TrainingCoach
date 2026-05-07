@@ -5,12 +5,22 @@ import { ok, unauthorized, err, notFound, withHandler } from "@/lib/api-response
 
 const MAX_VIDEOS = 1;
 
-// Regex para extraer ID de YouTube de varios formatos de URL
-const YOUTUBE_REGEX = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\s]{11})/;
+// Regex mejorado para soportar más formatos de URL de YouTube
+// Soporta: watch?v=, youtu.be/, /shorts/, /v/, /embed/
+const YOUTUBE_REGEX = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\s]{11})/;
 
 function extractYouTubeId(url: string): string | null {
-  const match = url.match(YOUTUBE_REGEX);
-  return match?.[1] ?? null;
+  // Limpiar la URL primero (quitar espacios)
+  const cleanUrl = url.trim();
+  
+  // Intentar con el regex principal
+  const match = cleanUrl.match(YOUTUBE_REGEX);
+  if (match?.[1]) return match[1];
+  
+  // Fallback: buscar cualquier string de 11 caracteres que parezca un video ID
+  // Esto captura casos edge que el regex no agarra
+  const fallbackMatch = cleanUrl.match(/([a-zA-Z0-9_-]{11})/);
+  return fallbackMatch?.[1] ?? null;
 }
 
 function getYouTubeThumbnail(videoId: string): string {

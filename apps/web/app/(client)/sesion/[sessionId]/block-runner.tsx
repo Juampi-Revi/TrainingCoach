@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui";
 import type { WorkoutBlockSummary, SessionExercise } from "@regen/types";
 import { blockTypeLabel } from "@/lib/constants";
@@ -124,10 +124,19 @@ export function OverlayHeader({
 }
 
 export function DoneScreen({ onClose }: { onClose: () => void }) {
+  const [secondsLeft, setSecondsLeft] = useState(3);
+
   useEffect(() => {
     const t = setTimeout(onClose, 3000);
     return () => clearTimeout(t);
   }, [onClose]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [secondsLeft]);
 
   return (
     <div
@@ -137,7 +146,7 @@ export function DoneScreen({ onClose }: { onClose: () => void }) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 16,
+        gap: 20,
         padding: 24,
       }}
     >
@@ -157,8 +166,33 @@ export function DoneScreen({ onClose }: { onClose: () => void }) {
       </div>
       <div style={{ fontSize: 22, fontWeight: 700 }}>¡Bloque completado!</div>
       <div style={{ color: "var(--text-mute)", fontSize: 13 }}>
-        Cerrando en 3 segundos…
+        Cerrando en {secondsLeft} segundos…
       </div>
+      
+      {/* Botón para cerrar manualmente */}
+      <button
+        onClick={onClose}
+        style={{
+          marginTop: 16,
+          padding: "12px 32px",
+          background: "var(--lime)",
+          border: "none",
+          borderRadius: 12,
+          fontSize: 15,
+          fontWeight: 700,
+          color: "#0B0B0C",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#e0ff3a";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "var(--lime)";
+        }}
+      >
+        Continuar
+      </button>
     </div>
   );
 }

@@ -49,7 +49,7 @@ export function useSetLogger({
     return () => clearTimeout(id);
   }, [session, currentExIdx, prefillExId]);
 
-  // Initialize sheet rows when logger opens
+  // Initialize sheet rows when logger opens - with prefill from lastRef
   useEffect(() => {
     if (!loggerOpen || !session) return;
     const target = session.exercises[currentExIdx];
@@ -60,19 +60,34 @@ export function useSetLogger({
       setSheetRows(Array.from({ length: baseCount }).map((_, idx) => {
         const setNumber = idx + 1;
         const s = existing.find((x) => x.setNumber === setNumber);
-        const effort = effortMode === "RPE" ? s?.rpe : s?.rir;
+        
+        // If already has data in current session, use it
+        if (s?.weight != null || s?.reps != null) {
+          const effort = effortMode === "RPE" ? s?.rpe : s?.rir;
+          return {
+            setNumber,
+            reps: s?.reps != null ? String(s.reps) : "",
+            duration: s?.durationSeconds != null ? String(s.durationSeconds) : "",
+            kg: s?.weight != null ? String(s.weight) : "",
+            effort: effort != null ? String(effort) : "",
+            existingId: s?.id,
+          };
+        }
+        
+        // Otherwise, prefill from lastRef (last workout data)
+        const effort = effortMode === "RPE" ? lastRef?.rpe : lastRef?.rir;
         return {
           setNumber,
-          reps: s?.reps != null ? String(s.reps) : "",
-          duration: s?.durationSeconds != null ? String(s.durationSeconds) : "",
-          kg: s?.weight != null ? String(s.weight) : "",
+          reps: lastRef?.reps != null ? String(lastRef.reps) : (target.target?.reps != null ? String(target.target.reps) : ""),
+          duration: target.target?.durationSeconds != null ? String(target.target.durationSeconds) : "",
+          kg: lastRef?.weight != null ? String(lastRef.weight) : "",
           effort: effort != null ? String(effort) : "",
-          existingId: s?.id,
+          existingId: undefined,
         };
       }));
     }, 0);
     return () => clearTimeout(id);
-  }, [loggerOpen, session, currentExIdx, effortMode]);
+  }, [loggerOpen, session, currentExIdx, effortMode, lastRef]);
 
   // Per-set timer countdown
   useEffect(() => {
@@ -117,30 +132,29 @@ export function useSetLogger({
   const openLogger = useCallback((target: SessionExercise) => {
     const existing = target.sets ?? [];
     const baseCount = Math.max(existing.length, target.target?.sets ?? 0, 1);
-    setSheetRows(Array.from({ length: baseCount }).map((_, idx) => {
-      const setNumber = idx + 1;
-      const s = existing.find((x) => x.setNumber === setNumber);
-      const effort = effortMode === "RPE" ? s?.rpe : s?.rir;
-      return {
-        setNumber,
-        reps: s?.reps != null ? String(s.reps) : "",
-        duration: s?.durationSeconds != null ? String(s.durationSeconds) : "",
-        kg: s?.weight != null ? String(s.weight) : "",
-        effort: effort != null ? String(effort) : "",
-        existingId: s?.id,
-      };
-    }));
+    
+    // Pre-fill equipment type from saved sets, localStorage, or lastRef
     const savedEquip = target.sets.find((s) => s.notes === "barra" || s.notes === "mancuernas" || s.notes === "maquina");
     if (savedEquip) {
       setEquipmentType(savedEquip.notes as "barra" | "mancuernas" | "maquina");
     } else {
-      try {
-        const eq = localStorage.getItem(`regen_equip_${sessionId}_${target.id}`);
-        setEquipmentType(eq === "barra" || eq === "mancuernas" || eq === "maquina" ? eq : null);
-      } catch { setEquipmentType(null); }
+      // Try to get from lastRef first, then from localStorage
+      const lastEquip = lastRef?.notes === "barra" || lastRef?.notes === "mancuernas" || lastRef?.notes === "maquina" 
+        ? lastRef.notes 
+        : null;
+      if (lastEquip) {
+        setEquipmentType(lastEquip as "barra" | "mancuernas" | "maquina");
+      } else {
+        try {
+          const eq = localStorage.getItem(`regen_equip_${sessionId}_${target.id}`);
+          setEquipmentType(eq === "barra" || eq === "mancuernas" || eq === "maquina" ? eq : null);
+        } catch { setEquipmentType(null); }
+      }
     }
+    
+    // Rows will be initialized by the useEffect that depends on lastRef
     setLoggerOpen(true);
-  }, [effortMode, sessionId]);
+  }, [effortMode, sessionId, lastRef]);
 
   const deleteSet = useCallback(async (setNumber: number) => {
     const ex = session?.exercises[currentExIdx];

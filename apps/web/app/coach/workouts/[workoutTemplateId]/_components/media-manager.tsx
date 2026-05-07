@@ -156,16 +156,6 @@ export function MediaManager({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Header */}
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-          Media del ejercicio
-        </div>
-        <div style={{ fontSize: 11, color: "var(--text-mute)" }}>
-          {images.length}/{limits.maxImages} imágenes · {videos.length}/{limits.maxVideos} videos
-        </div>
-      </div>
-
       {/* Images Section */}
       <div style={{ border: "1px dashed var(--line-2)", borderRadius: 8, padding: 12 }}>
         <div
@@ -177,9 +167,13 @@ export function MediaManager({
             fontWeight: 700,
             marginBottom: 10,
             textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          📸 Imágenes {images.length > 0 && `(${images.length})`}
+          <Icon name="image" size={14} color="var(--text-mute)" />
+          Imágenes {images.length > 0 && `(${images.length})`}
         </div>
 
         {images.length > 0 && (
@@ -336,9 +330,13 @@ export function MediaManager({
             fontWeight: 700,
             marginBottom: 10,
             textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          🎥 Videos de YouTube {videos.length > 0 && `(${videos.length})`}
+          <Icon name="video" size={14} color="var(--text-mute)" />
+          Videos de YouTube {videos.length > 0 && `(${videos.length})`}
         </div>
 
         {videos.map((video) => (

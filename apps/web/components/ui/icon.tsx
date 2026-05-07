@@ -7,7 +7,7 @@ export type IconName =
   | "alert" | "edit" | "trash" | "filter" | "more" | "x" | "logo"
   | "send" | "home" | "history" | "settings" | "star" | "book"
   | "eye" | "eyeOff" | "lock" | "sun" | "moon"
-  | "image" | "repeat" | "footprint" | "target" | "refresh"
+   | "image" | "video" | "repeat" | "footprint" | "target" | "refresh"
   | "scale" | "ruler" | "chest" | "hips" | "arm" | "leg"
   | "heart" | "watch" | "activity" | "info";
 
@@ -59,6 +59,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   sun:      <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
   moon:     <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
   image:    <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>,
+  video:    <><path d="m22 8-6 4 6 4V8Z" /><rect x="2" y="6" width="14" height="12" rx="2" /></>,
   repeat:   <><path d="M17 2l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></>,
   footprint: <><path d="M12 2c2 0 3 2 3 4s-1 4-3 4-3-2-3-4 1-4 3-4z" /><path d="M7 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" /><path d="M17 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" /><path d="M9 18c1 0 2 1 2 2.5s-1 2.5-2 2.5-2-1-2-2.5 1-2.5 2-2.5z" /><path d="M15 18c1 0 2 1 2 2.5s-1 2.5-2 2.5-2-1-2-2.5 1-2.5 2-2.5z" /></>,
   target:   <><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>,
