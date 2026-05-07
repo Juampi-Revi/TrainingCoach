@@ -251,21 +251,39 @@ export default function MedicionesPage() {
 
   if (loading) {
     return (
-      <div className="mediciones-page">
-        <div className="mediciones-header">
-          <button onClick={() => router.back()} className="back-button">
+      <div style={{ minHeight: "100dvh", background: "var(--bg)", padding: "20px 16px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <button 
+            onClick={() => router.back()} 
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 4, 
+              fontSize: 13, 
+              color: "var(--text-mute)", 
+              background: "transparent", 
+              border: "none", 
+              cursor: "pointer",
+              marginBottom: 16 
+            }}
+          >
             <Icon name="chevL" size={16} color="var(--text-mute)" />
             Volver
           </button>
-          <div className="mediciones-title">Mediciones</div>
-          <div className="mediciones-subtitle">Registra tu progreso físico</div>
+          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Mediciones</div>
+          <div style={{ fontSize: 14, color: "var(--text-mute)" }}>Registra tu progreso físico</div>
         </div>
-        <div className="mediciones-content">
-          <div className="loading-state">
-            <Icon name="refresh" size={32} color="var(--text-mute)" />
-            <div className="loading-text">Cargando mediciones...</div>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ height: 200, background: "var(--bg-1)", borderRadius: 14, animation: "pulse 1.5s ease-in-out infinite" }} />
+          <div style={{ height: 80, background: "var(--bg-1)", borderRadius: 14, animation: "pulse 1.5s ease-in-out infinite", animationDelay: "0.1s" }} />
+          <div style={{ height: 80, background: "var(--bg-1)", borderRadius: 14, animation: "pulse 1.5s ease-in-out infinite", animationDelay: "0.2s" }} />
         </div>
+        <style jsx>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
       </div>
     );
   }

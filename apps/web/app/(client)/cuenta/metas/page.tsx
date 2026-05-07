@@ -181,21 +181,22 @@ export default function MetasPage() {
 
   if (loading) {
     return (
-      <div className="metas-page">
-        <div className="metas-header">
-          <button onClick={() => router.back()} className="back-button">
-            <Icon name="chevL" size={16} color="var(--text-mute)" />
-            Volver
-          </button>
-          <div className="metas-title">Metas de salud</div>
-          <div className="metas-subtitle">Define tus objetivos de pasos, sueño y entrenamientos</div>
+      <div style={{ minHeight: "100dvh", background: "var(--bg)", padding: "20px 16px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Metas de salud</div>
+          <div style={{ fontSize: 14, color: "var(--text-mute)" }}>Configurá tus objetivos personales</div>
         </div>
-        <div className="metas-content">
-          <div className="loading-state">
-            <Icon name="refresh" size={32} color="var(--text-mute)" />
-            <div className="loading-text">Cargando metas...</div>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ height: 120, background: "var(--bg-1)", borderRadius: 14, animation: "pulse 1.5s ease-in-out infinite" }} />
+          ))}
         </div>
+        <style jsx>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
       </div>
     );
   }
