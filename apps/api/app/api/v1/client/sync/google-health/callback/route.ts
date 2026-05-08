@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     // Check if this Google account is already connected to another user
     const existingConnection = await prisma.healthProviderConnection.findFirst({
-      where: { provider: "google_health", providerUserId: profileId, userId: { not: pendingConnection.userId } },
+      where: { provider: "google_health", providerUserId: profileId, userId: { not: pendingConnection.userId }, isActive: true },
     });
     if (existingConnection) {
       return NextResponse.redirect(`${WEB_BASE}/cuenta/wearable?error=account_in_use`);

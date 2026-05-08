@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
         // Check if this Garmin account is already connected to another user
         const existingConnection = await prisma.healthProviderConnection.findFirst({
-          where: { provider, providerUserId: email, userId: { not: auth.user.sub } },
+          where: { provider, providerUserId: email, userId: { not: auth.user.sub }, isActive: true },
         });
         if (existingConnection) {
           return err("Esta cuenta de Garmin ya está conectada a otro usuario", 409);

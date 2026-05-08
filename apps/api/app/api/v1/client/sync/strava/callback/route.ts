@@ -41,6 +41,14 @@ export async function GET(req: NextRequest) {
       // Profile endpoint may not be available, use default ID
     }
 
+    // Check if this Strava account is already connected to another user
+    const existingConnection = await prisma.healthProviderConnection.findFirst({
+      where: { provider: "strava", providerUserId: profileId, userId: { not: pendingConnection.userId }, isActive: true },
+    });
+    if (existingConnection) {
+      return NextResponse.redirect(`${WEB_BASE}/cuenta/wearable?error=account_in_use`);
+    }
+
     await prisma.healthProviderConnection.update({
       where: {
         userId_provider: { userId: pendingConnection.userId, provider: "strava" },
