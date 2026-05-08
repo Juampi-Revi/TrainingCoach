@@ -122,16 +122,15 @@ export class GarminProvider implements HealthProvider {
       try {
         const hr = await client.getHeartRate(date);
         if (hr) {
-          if (hr.value) {
-            if (typeof hr.value.restingHeartRate === "number") {
-              metrics.restingHeartRate = hr.value.restingHeartRate;
-            }
-            if (typeof hr.value.averageHeartRate === "number") {
-              metrics.avgHeartRate = hr.value.averageHeartRate;
-            }
-            if (typeof hr.value.maxHeartRate === "number") {
-              metrics.maxHeartRate = hr.value.maxHeartRate;
-            }
+          if (typeof hr.restingHeartRate === "number") {
+            metrics.restingHeartRate = hr.restingHeartRate;
+          }
+          // No average in Garmin daily data, use min as proxy for resting
+          if (typeof hr.minHeartRate === "number") {
+            metrics.avgHeartRate = hr.minHeartRate;
+          }
+          if (typeof hr.maxHeartRate === "number") {
+            metrics.maxHeartRate = hr.maxHeartRate;
           }
         }
       } catch {}
@@ -139,18 +138,19 @@ export class GarminProvider implements HealthProvider {
       // Sleep
       try {
         const sleep = await client.getSleepData(dateStr);
-        if (sleep) {
-          if (typeof sleep.totalSleepSeconds === "number") {
-            metrics.sleepMinutes = Math.round(sleep.totalSleepSeconds / 60);
+        if (sleep && sleep.dailySleepDTO) {
+          const dto = sleep.dailySleepDTO;
+          if (typeof dto.sleepTimeSeconds === "number") {
+            metrics.sleepMinutes = Math.round(dto.sleepTimeSeconds / 60);
           }
-          if (typeof sleep.deepSleepSeconds === "number") {
-            metrics.deepSleepMinutes = Math.round(sleep.deepSleepSeconds / 60);
+          if (typeof dto.deepSleepSeconds === "number") {
+            metrics.deepSleepMinutes = Math.round(dto.deepSleepSeconds / 60);
           }
-          if (typeof sleep.lightSleepSeconds === "number") {
-            metrics.lightSleepMinutes = Math.round(sleep.lightSleepSeconds / 60);
+          if (typeof dto.lightSleepSeconds === "number") {
+            metrics.lightSleepMinutes = Math.round(dto.lightSleepSeconds / 60);
           }
-          if (typeof sleep.remSleepSeconds === "number") {
-            metrics.remSleepMinutes = Math.round(sleep.remSleepSeconds / 60);
+          if (typeof dto.remSleepSeconds === "number") {
+            metrics.remSleepMinutes = Math.round(dto.remSleepSeconds / 60);
           }
         }
       } catch {}
@@ -158,8 +158,8 @@ export class GarminProvider implements HealthProvider {
       // Weight
       try {
         const weight = await client.getDailyWeightData(date);
-        if (typeof weight === "number" && weight > 0) {
-          metrics.calories = weight;
+        if (weight && weight.dateWeightList && weight.dateWeightList.length > 0) {
+          metrics.calories = weight.dateWeightList[0].weight;
         }
       } catch {}
 
