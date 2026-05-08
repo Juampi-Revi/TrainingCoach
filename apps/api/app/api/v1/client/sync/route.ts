@@ -66,6 +66,14 @@ export async function POST(req: NextRequest) {
       const credentials = Buffer.from(JSON.stringify({ email, password })).toString("base64");
       try {
         const tokens = await providerInstance.exchangeCode(credentials, "");
+
+        // Check if this Garmin account is already connected to another user
+        const existingConnection = await prisma.healthProviderConnection.findFirst({
+          where: { provider, providerUserId: email, userId: { not: auth.user.sub } },
+        });
+        if (existingConnection) {
+          return err("Esta cuenta de Garmin ya está conectada a otro usuario", 409);
+        }
         
         await prisma.healthProviderConnection.upsert({
           where: { userId_provider: { userId: auth.user.sub, provider } },

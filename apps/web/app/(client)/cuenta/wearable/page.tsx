@@ -89,6 +89,7 @@ export default function WearableSettingsPage() {
         garmin_failed: "Error al conectar con Garmin",
         google_failed: "Error al conectar con Google Health",
         strava_failed: "Error al conectar con Strava",
+        account_in_use: "Esta cuenta ya está conectada a otro usuario",
       };
       setError(errorMessages[err] || "Error desconocido");
     }

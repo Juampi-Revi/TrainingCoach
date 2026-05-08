@@ -599,6 +599,7 @@ model HealthProviderConnection {
   syncedActivities HealthSyncedActivity[]
 
   @@unique([userId, provider])
+  @@unique([providerUserId, provider], name: "HealthProviderConnection_providerUnique")
   @@index([userId, isActive])
 }
 
