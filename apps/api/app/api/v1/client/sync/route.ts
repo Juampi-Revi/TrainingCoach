@@ -83,7 +83,6 @@ export async function POST(req: NextRequest) {
             accessToken: tokens.accessToken,
             tokenExpiresAt: tokens.expiresAt,
             providerUserId: email,
-            scope: [],
           },
         });
 
@@ -114,7 +113,6 @@ export async function POST(req: NextRequest) {
         userId: auth.user.sub,
         provider,
         isActive: false,
-        scope: [],
       },
     });
 
