@@ -93,6 +93,7 @@ Importar de ahí, nunca duplicar.
 - `$executeRaw` / `$queryRaw` salvo caso extremo sin alternativa
 - Tipos definidos en archivos locales cuando ya existen en `packages/types`
 - Archivos .env en commits
+- **NUNCA hacer `git add`, `git commit` o `git push` sin autorización explícita del usuario**
 
 ---
 
