@@ -451,3 +451,63 @@ export interface CoachGoalsResponse {
   goals: HealthGoalItem[];
   shared: boolean;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Health Providers & Sync
+// ─────────────────────────────────────────────────────────────
+export type HealthProviderId = "garmin" | "google_health" | "strava";
+
+export interface HealthProviderConfig {
+  id: HealthProviderId;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  scopes: string[];
+  dataTypes: string[];
+}
+
+export interface NormalizedDailyMetrics {
+  date: string; // ISO date
+  steps?: number;
+  distanceMeters?: number;
+  calories?: number;
+  activeMinutes?: number;
+  sleepMinutes?: number;
+  deepSleepMinutes?: number;
+  lightSleepMinutes?: number;
+  remSleepMinutes?: number;
+  restingHeartRate?: number;
+  avgHeartRate?: number;
+  maxHeartRate?: number;
+  stress?: number;
+  bodyBattery?: number;
+  spo2?: number;
+  activities?: Array<{
+    type: string;
+    minutes: number;
+    calories?: number;
+    distanceMeters?: number;
+  }>;
+}
+
+export interface ProviderConnectionStatus {
+  provider: HealthProviderId;
+  isConnected: boolean;
+  lastSyncAt: string | null;
+  lastSyncStatus: string | null;
+  lastError: string | null;
+  providerUserId: string | null;
+  scope: string[];
+}
+
+export interface HealthDashboardData {
+  date: string;
+  steps: number | null;
+  sleepMinutes: number | null;
+  activeMinutes: number | null;
+  calories: number | null;
+  restingHeartRate: number | null;
+  stress: number | null;
+  source: string | null;
+}

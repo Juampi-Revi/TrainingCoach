@@ -1,101 +1,157 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
-import { ok, unauthorized, withHandler } from "@/lib/api-response";
+import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
+import { getProviderIds, getProvider } from "@/lib/health/registry";
+import { syncUserProvider } from "@/lib/health/sync-engine";
+import { randomBytes } from "crypto";
 
-// GET - Obtener estado de sincronización
+const WEB_BASE = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001";
+
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "client");
     if (!auth.ok) return unauthorized(auth.message);
 
-    const syncs = await prisma.healthDataSync.findMany({
+    const connections = await prisma.healthProviderConnection.findMany({
       where: { userId: auth.user.sub },
       select: {
         provider: true,
         isActive: true,
         lastSyncAt: true,
+        lastSyncStatus: true,
+        lastError: true,
+        providerUserId: true,
+        scope: true,
         createdAt: true,
       },
     });
 
-    return ok({ syncs });
+    const providerConfigs = [
+      { id: "garmin", name: "Garmin Connect", description: "Sincroniza pasos, sueño, HR, stress y más", color: "#007CC3", icon: "watch", dataTypes: ["steps", "sleep", "heart_rate", "stress", "body_battery", "spo2"] },
+      { id: "google_health", name: "Google Health", description: "Fitbit y Pixel Watch", color: "#4285F4", icon: "activity", dataTypes: ["steps", "sleep", "heart_rate", "calories", "distance"] },
+      { id: "strava", name: "Strava", description: "Actividades: running, cycling, swimming", color: "#FC4C02", icon: "run", dataTypes: ["activities", "calories", "distance"] },
+    ];
+
+    const statusMap = new Map(connections.map((c) => [c.provider, c]));
+
+    return ok({
+      providers: providerConfigs.map((p) => ({
+        ...p,
+        connection: statusMap.get(p.id) || null,
+      })),
+    });
   });
 }
 
-// POST - Conectar nuevo proveedor (placeholder para OAuth)
 export async function POST(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "client");
     if (!auth.ok) return unauthorized(auth.message);
 
     const body = await req.json();
-    const { provider, authCode } = body;
+    const { provider, email, password } = body as { provider: string; email?: string; password?: string };
 
-    if (!provider || !authCode) {
-      return ok({ 
-        success: false, 
-        message: "OAuth flow not fully implemented yet. This is a placeholder endpoint." 
-      });
+    if (!getProviderIds().includes(provider)) {
+      return err("Proveedor no soportado", 400);
     }
 
-    // Placeholder: In a real implementation, you would:
-    // 1. Exchange authCode for access_token with the provider
-    // 2. Store tokens securely
-    // 3. Start data sync process
+    // Garmin uses email/password instead of OAuth
+    if (provider === "garmin" && email && password) {
+      const providerInstance = getProvider(provider);
+      if (!providerInstance) {
+        return err("Proveedor no disponible", 400);
+      }
 
-    // For now, create a placeholder sync record
-    await prisma.healthDataSync.upsert({
-      where: {
-        userId_provider: {
-          userId: auth.user.sub,
-          provider,
-        },
-      },
-      update: {
-        isActive: true,
-        lastSyncAt: new Date(),
-      },
+      const credentials = Buffer.from(JSON.stringify({ email, password })).toString("base64");
+      try {
+        const tokens = await providerInstance.exchangeCode(credentials, "");
+        
+        await prisma.healthProviderConnection.upsert({
+          where: { userId_provider: { userId: auth.user.sub, provider } },
+          update: {
+            isActive: true,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            tokenExpiresAt: tokens.expiresAt,
+            providerUserId: email,
+          },
+          create: {
+            userId: auth.user.sub,
+            provider,
+            isActive: true,
+            accessToken: tokens.accessToken,
+            tokenExpiresAt: tokens.expiresAt,
+            providerUserId: email,
+            scope: [],
+          },
+        });
+
+        // Trigger initial sync
+        await syncUserProvider(auth.user.sub, "garmin");
+
+        return ok({ success: true, message: "Garmin conectado exitosamente" });
+      } catch (connectError) {
+        const message = connectError instanceof Error ? connectError.message : "Error al conectar con Garmin";
+        return err(message, 400);
+      }
+    }
+
+    // OAuth flow for other providers
+    const providerInstance = getProvider(provider);
+    if (!providerInstance) {
+      return err("Proveedor no disponible", 400);
+    }
+
+    const state = randomBytes(16).toString("hex");
+    const providerPath = provider === "google_health" ? "google-health" : provider;
+    const redirectUri = `${process.env.API_BASE_URL || "http://localhost:3003"}/api/v1/client/sync/${providerPath}/callback`;
+
+    await prisma.healthProviderConnection.upsert({
+      where: { userId_provider: { userId: auth.user.sub, provider } },
+      update: {},
       create: {
         userId: auth.user.sub,
         provider,
-        isActive: true,
-        lastSyncAt: new Date(),
+        isActive: false,
+        scope: [],
       },
     });
 
-    return ok({ 
-      success: true, 
-      message: `${provider} connected successfully (demo mode)` 
+    const authUrl = providerInstance.getAuthUrl(state, redirectUri);
+
+    return ok({
+      authUrl,
+      state,
+      provider,
     });
   });
 }
 
-// DELETE - Desconectar proveedor
 export async function DELETE(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "client");
     if (!auth.ok) return unauthorized(auth.message);
 
     const body = await req.json();
-    const { provider } = body;
+    const { provider } = body as { provider: string };
 
     if (!provider) {
-      return ok({ success: false, message: "Provider required" });
+      return err("Provider required", 400);
     }
 
-    await prisma.healthDataSync.updateMany({
-      where: {
-        userId: auth.user.sub,
-        provider,
-      },
+    await prisma.healthProviderConnection.updateMany({
+      where: { userId: auth.user.sub, provider },
       data: {
         isActive: false,
         accessToken: null,
         refreshToken: null,
+        tokenExpiresAt: null,
+        lastSyncStatus: null,
+        lastError: null,
       },
     });
 
-    return ok({ success: true, message: `${provider} disconnected` });
+    return ok({ success: true, message: `${provider} desconectado` });
   });
 }

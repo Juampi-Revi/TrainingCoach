@@ -47,6 +47,7 @@ model User {
   pushSubscriptions     PushSubscription[]
   badges                UserBadge[]
   healthDataSyncs       HealthDataSync[]
+  healthProviderConnections HealthProviderConnection[]
 }
 
 model CoachClient {
@@ -416,6 +417,7 @@ model DailyHealthEntry {
   sportType    String?
   sportMinutes Int?
   notes        String?
+  source       String   @default("manual")  // 'manual' | 'garmin' | 'google_health' | 'strava'
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -570,10 +572,77 @@ model HealthDataSync {
   lastSyncAt      DateTime?
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
   @@index([userId])
+}
+
+model HealthProviderConnection {
+  id              String   @id @default(uuid())
+  userId          String
+  provider        String   // 'garmin' | 'google_health' | 'strava'
+  providerUserId  String?
+  accessToken     String?  @db.Text
+  refreshToken    String?  @db.Text
+  tokenExpiresAt  DateTime?
+  scope           String[] @default([])
+  lastSyncAt      DateTime?
+  lastSyncStatus  String?  // 'success' | 'partial' | 'failed'
+  lastError       String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncedActivities HealthSyncedActivity[]
+
+  @@unique([userId, provider])
+  @@index([userId, isActive])
+}
+
+model HealthSyncedActivity {
+  id               String   @id @default(uuid())
+  userId           String
+  connectionId     String
+  provider         String   // 'garmin' | 'google_health' | 'strava'
+  providerRef      String   // ID externo para deduplicar
+
+  // Datos normalizados
+  date             DateTime @db.Date
+  steps            Int?
+  distanceMeters   Int?
+  calories         Float?
+  activeMinutes    Int?
+
+  // Sleep
+  sleepMinutes     Int?
+  deepSleepMinutes Int?
+  lightSleepMinutes Int?
+  remSleepMinutes  Int?
+
+  // Heart
+  restingHeartRate Int?
+  avgHeartRate     Int?
+  maxHeartRate     Int?
+
+  // Garmin-specific (opcional)
+  stress           Int?
+  bodyBattery      Int?
+  spo2             Float?
+
+  // Activity summary
+  activityType     String?  // 'run' | 'walk' | 'cycle' | 'swim' | 'workout'
+  activityMinutes  Int?
+
+  // Metadata
+  rawData          Json?    // para debug o features futuras
+  syncedAt         DateTime @default(now())
+
+  connection       HealthProviderConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, providerRef])
+  @@index([userId, date(sort: Desc)])
+  @@index([connectionId])
 }

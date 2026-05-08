@@ -52,6 +52,10 @@ export default function CuentaPage() {
             <div className="menu-item-icon"><Icon name="edit" size={22} color="var(--lime)" /></div>
             <div><div className="menu-item-label">Metas de salud</div><div className="menu-item-desc">Pasos, sueño y entrenamientos</div></div>
           </button>
+          <button onClick={() => router.push("/cuenta/wearable")} className="menu-item">
+            <div className="menu-item-icon"><Icon name="watch" size={22} color="var(--lime)" /></div>
+            <div><div className="menu-item-label">Dispositivos</div><div className="menu-item-desc">Garmin, Google Health, Strava</div></div>
+          </button>
           <button onClick={() => router.push("/cuenta/mediciones")} className="menu-item">
             <div className="menu-item-icon"><Icon name="chart" size={22} color="var(--lime)" /></div>
             <div><div className="menu-item-label">Mediciones</div><div className="menu-item-desc">Peso y medidas corporales</div></div>

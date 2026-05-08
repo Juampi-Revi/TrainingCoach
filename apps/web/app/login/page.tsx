@@ -137,10 +137,7 @@ export default function LoginPage() {
         </form>
 
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--text-mute)" }}>
-          ¿No tenés cuenta?{" "}
-          <Link href="/registro" style={{ color: "var(--accent-text)", fontWeight: 600, textDecoration: "none" }}>
-            Registrate
-          </Link>
+          ¿Problemas para ingresar? Contactá a tu coach
         </div>
       </div>
     </div>
