@@ -153,7 +153,6 @@ export async function DELETE(req: NextRequest) {
         accessToken: null,
         refreshToken: null,
         tokenExpiresAt: null,
-        providerUserId: null,
         lastSyncStatus: null,
         lastError: null,
       },
