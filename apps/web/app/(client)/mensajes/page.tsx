@@ -2,50 +2,35 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { Avatar, Button, Icon, StateBlock } from "@/components/ui";
-
-type RefPayload = {
-  kind: "session" | "workoutTemplate";
-  id: string;
-  label?: string;
-};
-
-interface ChatMessageItem {
-  id: string;
-  text: string;
-  createdAt: string;
-  author: { id: string; name: string | null; role: string };
-  reference?: RefPayload | null;
-}
-
-const READ_KEY = "regen_chat_read_general";
+import { StateBlock } from "@/components/ui";
+import { ChatMessage, ChatEmptyState } from "./_components/chat-message";
+import { ChatInput } from "./_components/chat-input";
+import { RefPicker, RefDetail } from "./_components/reference-picker";
+import { useChat, useRecentSessions } from "./_hooks/use-chat";
+import { RefPayload } from "./_types";
+import "./_styles.css";
 
 export default function MensajesAlumnoPage() {
   const { api, user } = useAuth();
-  const [coachName, setCoachName] = useState<string>("Coach");
-  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isDesktop, setIsDesktop] = useState(false);
   const [newMsg, setNewMsg] = useState("");
-  const [sending, setSending] = useState(false);
   const [ref, setRef] = useState<RefPayload | null>(null);
   const [refPickerOpen, setRefPickerOpen] = useState(false);
   const [refDetail, setRefDetail] = useState<RefPayload | null>(null);
-  const [refDetailData, setRefDetailData] = useState<any | null | undefined>(null);
+  const [refDetailData, setRefDetailData] = useState<unknown>(undefined);
   const stickToBottomRef = useRef(true);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const [recentSessions, setRecentSessions] = useState<Array<{ id: string; performedAt: string; workoutTemplate: { id: string; title: string } | null }>>([]);
+
+  const { coachName, messages, loading, sending, load, send } = useChat(api);
+  const recentSessions = useRecentSessions(api);
 
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 900px)");
     const apply = () => setIsDesktop(mql.matches);
     const t = window.setTimeout(apply, 0);
     mql.addEventListener("change", apply);
-    return () => {
-      window.clearTimeout(t);
-      mql.removeEventListener("change", apply);
-    };
+    return () => { window.clearTimeout(t); mql.removeEventListener("change", apply); };
   }, []);
 
   const isNearBottom = useCallback(() => {
@@ -54,376 +39,82 @@ export default function MensajesAlumnoPage() {
     return el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
   }, []);
 
-  const load = useCallback(async () => {
-    const res = await api.get<{
-      coach: { id: string; name: string };
-      messages: ChatMessageItem[];
-    }>("/client/chat?take=160");
-    setCoachName(res.coach.name ?? "Coach");
-    setMessages(res.messages);
-  }, [api]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const runLoad = () => {
-      load()
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    };
-
-    const t = window.setTimeout(runLoad, 0);
-
-    const onVis = () => {
-      if (document.visibilityState === "visible") runLoad();
-    };
-    document.addEventListener("visibilitychange", onVis);
-
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") runLoad();
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-      document.removeEventListener("visibilitychange", onVis);
-      window.clearInterval(interval);
-    };
-  }, [load]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(READ_KEY, new Date().toISOString());
-    } catch {}
-  }, [messages.length]);
+  const handleSend = useCallback(async () => {
+    if (!newMsg.trim()) return;
+    stickToBottomRef.current = true;
+    await send(newMsg, ref ? { kind: ref.kind, id: ref.id, label: ref.label } : undefined);
+    setNewMsg("");
+    setRef(null);
+    await load();
+  }, [newMsg, ref, send, load]);
 
   useEffect(() => {
     if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
   useEffect(() => {
-    api
-      .get<{ items: Array<{ id: string; performedAt: string; workoutTemplate: { id: string; title: string } | null }> }>("/client/sessions?limit=10")
-      .then((r) => setRecentSessions(r.items))
-      .catch(() => {});
-  }, [api]);
-
-  async function send() {
-    if (!newMsg.trim()) return;
-    setSending(true);
-    stickToBottomRef.current = true;
-    try {
-      await api.post("/client/chat", {
-        text: newMsg.trim(),
-        reference: ref ? { kind: ref.kind, id: ref.id, label: ref.label } : undefined,
-      });
-      setNewMsg("");
-      setRef(null);
-      await load();
-    } catch {
-    } finally {
-      setSending(false);
-    }
-  }
-
-  function openRefDetail(next: RefPayload) {
-    setRefDetailData(undefined);
-    setRefDetail(next);
-  }
-
-  useEffect(() => {
     if (!refDetail) return;
-
     const run = async () => {
-      if (refDetail.kind === "session") {
-        const s = await api.get(`/client/sessions/${refDetail.id}`);
-        setRefDetailData(s);
-      } else {
-        const t = await api.get(`/client/workouts/${refDetail.id}`);
-        setRefDetailData(t);
-      }
+      setRefDetailData(undefined);
+      const data = refDetail.kind === "session"
+        ? await api.get(`/client/sessions/${refDetail.id}`)
+        : await api.get(`/client/workouts/${refDetail.id}`);
+      setRefDetailData(data);
     };
-
-    run()
-      .catch(() => {})
-      .finally(() => {});
+    run().catch(() => setRefDetailData(null));
   }, [api, refDetail]);
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column", paddingBottom: 100 }}>
-      <div style={{ padding: "48px 20px 10px", borderBottom: "1px solid var(--line)" }}>
-        <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>Mensajes</div>
-        <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-          Chat con {coachName}
-        </div>
+    <div className="chat-page">
+      <div className="chat-header">
+        <div className="chat-title">Mensajes</div>
+        <div className="chat-subtitle">Chat con {coachName}</div>
       </div>
 
       {loading ? (
-        <div style={{ padding: 20 }}>
-          <StateBlock kind="loading" title="Cargando chat…" />
-        </div>
+        <div style={{ padding: 20 }}><StateBlock kind="loading" title="Cargando chat…" /></div>
       ) : (
         <>
           <div
             ref={listRef}
-            onScroll={() => {
-              stickToBottomRef.current = isNearBottom();
-            }}
-            style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 14 }}
+            onScroll={() => { stickToBottomRef.current = isNearBottom(); }}
+            className="chat-content"
           >
-            {messages.length === 0 && (
-              <div style={{ textAlign: "center", fontSize: 13, color: "var(--text-mute)", marginTop: 16 }}>
-                Aún no hay mensajes. Escribile a tu coach.
-              </div>
-            )}
-
-            {messages.map((m) => {
-              const isMe = m.author.id === user?.id;
-              const authorName = isMe ? "Vos" : (m.author.name ?? m.author.role);
-              return (
-                <div
-                  key={m.id}
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "flex-end",
-                    flexDirection: isMe ? "row-reverse" : "row",
-                  }}
-                >
-                  <Avatar name={authorName} size={28} tone={isMe ? "var(--lime)" : "#7AB8FF"} />
-                  <div style={{ maxWidth: 300 }}>
-                    <div style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 3, display: "flex", gap: 6, justifyContent: isMe ? "flex-end" : "flex-start" }}>
-                      <span style={{ fontWeight: 600 }}>{authorName}</span>
-                      <span>·</span>
-                      <span className="ta-mono">
-                        {new Date(m.createdAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-                    {m.reference && (
-                      <button
-                        onClick={() => openRefDetail(m.reference as RefPayload)}
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "8px 10px",
-                          background: "var(--bg-2)",
-                          border: "1px solid var(--line)",
-                          borderRadius: 12,
-                          marginBottom: 6,
-                          cursor: "pointer",
-                          color: "var(--text)",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <Icon name="book" size={14} color="var(--text-mute)" />
-                          <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>
-                            {m.reference.kind === "session" ? "Sesión" : "Entrenamiento"}{m.reference.label ? ` · ${m.reference.label}` : ""}
-                          </div>
-                        </div>
-                      </button>
-                    )}
-                    <div
-                      style={{
-                        padding: "10px 12px",
-                        background: isMe ? "var(--lime)" : "var(--bg-1)",
-                        color: isMe ? "#0B0B0C" : "var(--text)",
-                        border: isMe ? "none" : "1px solid var(--line)",
-                        borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                        fontSize: 14,
-                        lineHeight: 1.45,
-                        fontWeight: 500,
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {m.text}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {messages.length === 0 ? <ChatEmptyState /> : messages.map(m => (
+              <ChatMessage key={m.id} message={m} currentUserId={user?.id} onRefClick={setRefDetail} />
+            ))}
             <div ref={bottomRef} />
           </div>
 
-          <div style={{ flexShrink: 0, padding: "12px 14px 32px", background: "var(--bg)", borderTop: "1px solid var(--line)" }}>
-            {ref && (
-              <div style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--bg-1)" }}>
-                  <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>
-                    {ref.kind === "session" ? "Sesión" : "Entrenamiento"}{ref.label ? ` · ${ref.label}` : ""}
-                  </div>
-                </div>
-                <Button variant="secondary" onClick={() => setRef(null)} style={{ height: 36 }}>Quitar</Button>
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-              <Button variant="secondary" onClick={() => setRefPickerOpen(true)} style={{ height: 44, padding: "0 12px" }}>
-                <Icon name="book" size={16} />
-              </Button>
-              <textarea
-                value={newMsg}
-                onChange={(e) => setNewMsg(e.target.value)}
-                placeholder="Escribí un mensaje…"
-                rows={1}
-                style={{
-                  flex: 1,
-                  resize: "none",
-                  background: "var(--bg-1)",
-                  border: "1px solid var(--line)",
-                  borderRadius: 14,
-                  padding: "12px 12px",
-                  color: "var(--text)",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 14,
-                  lineHeight: 1.35,
-                  outline: "none",
-                  minHeight: 44,
-                  maxHeight: 120,
-                }}
-              />
-              <Button onClick={send} disabled={!newMsg.trim() || sending} style={{ height: 44, padding: "0 16px", fontWeight: 700 }}>
-                Enviar
-              </Button>
-            </div>
-          </div>
+          <ChatInput
+            value={newMsg}
+            onChange={setNewMsg}
+            onSend={handleSend}
+            sending={sending}
+            ref={ref}
+            onRef={ref}
+            onClearRef={() => setRef(null)}
+            onOpenRefPicker={() => setRefPickerOpen(true)}
+          />
         </>
       )}
 
       {refPickerOpen && (
-        <div
-          onClick={() => setRefPickerOpen(false)}
-          style={{
-            position: "fixed", inset: 0,
-            background: "rgba(0,0,0,.65)",
-            display: "flex", alignItems: "flex-end", justifyContent: "center",
-            zIndex: 2000, padding: "0 14px 14px",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "100%",
-              maxWidth: 520,
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              borderRadius: 16,
-              padding: 14,
-              maxHeight: "70vh",
-              overflowY: "auto",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Referenciar</div>
-              <button onClick={() => setRefPickerOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-mute)" }}>
-                <Icon name="x" size={18} />
-              </button>
-            </div>
-
-            {recentSessions.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--text-mute)" }}>No hay sesiones recientes para referenciar.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {recentSessions.map((s) => {
-                  const title = s.workoutTemplate?.title ?? "Sesión libre";
-                  const date = new Date(s.performedAt).toLocaleDateString("es", { day: "2-digit", month: "short" });
-                  return (
-                    <div key={s.id} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 10, background: "var(--bg)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-                        <div className="ta-ellipsis" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{title}</div>
-                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", flexShrink: 0 }}>{date}</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                        <Button
-                          variant="secondary"
-                          onClick={() => { setRef({ kind: "session", id: s.id, label: `${title} · ${date}` }); setRefPickerOpen(false); }}
-                          style={{ height: 34 }}
-                        >
-                          Sesión
-                        </Button>
-                        {s.workoutTemplate?.id && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => { setRef({ kind: "workoutTemplate", id: s.workoutTemplate!.id, label: title }); setRefPickerOpen(false); }}
-                            style={{ height: 34 }}
-                          >
-                            Entrenamiento
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        <RefPicker
+          sessions={recentSessions}
+          onClose={() => setRefPickerOpen(false)}
+          onSelect={r => { setRef(r); setRefPickerOpen(false); }}
+        />
       )}
 
       {refDetail && (
-        <div
-          onClick={() => setRefDetail(null)}
-          style={{
-            position: "fixed", inset: 0,
-            background: "rgba(0,0,0,.65)",
-            display: "flex",
-            alignItems: isDesktop ? "stretch" : "flex-end",
-            justifyContent: isDesktop ? "flex-end" : "center",
-            zIndex: 2000,
-            padding: isDesktop ? 0 : "0 14px 14px",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: isDesktop ? 440 : "100%",
-              maxWidth: isDesktop ? 440 : 520,
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              borderRadius: isDesktop ? "16px 0 0 16px" : 16,
-              padding: 14,
-              maxHeight: isDesktop ? "100vh" : "70vh",
-              overflowY: "auto",
-              marginTop: isDesktop ? 0 : undefined,
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>
-                {refDetail.kind === "session" ? "Sesión" : "Entrenamiento"}
-              </div>
-              <button onClick={() => setRefDetail(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-mute)" }}>
-                <Icon name="x" size={18} />
-              </button>
-            </div>
-
-            {refDetailData === undefined ? (
-              <StateBlock kind="loading" title="Cargando…" />
-            ) : refDetailData ? (
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.01em", color: "var(--text)" }}>
-                  {refDetailData.title ?? refDetailData.workoutTemplate?.title ?? refDetail.label ?? "Detalle"}
-                </div>
-                {refDetail.kind === "session" && refDetailData.performedAt && (
-                  <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4 }}>
-                    {new Date(refDetailData.performedAt).toLocaleString("es", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </div>
-                )}
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {(refDetailData.exercises ?? []).slice(0, 12).map((ex: any) => (
-                    <div key={ex.id} style={{ padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 12 }}>
-                      <div className="ta-ellipsis" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
-                        {ex.exercise?.name ?? ex.performedExercise?.name ?? "Ejercicio"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ fontSize: 13, color: "var(--text-mute)" }}>No se pudo cargar el detalle.</div>
-            )}
-          </div>
-        </div>
+        <RefDetail
+          ref={refDetail}
+          data={refDetailData}
+          loading={refDetailData === undefined}
+          isDesktop={isDesktop}
+          onClose={() => setRefDetail(null)}
+        />
       )}
     </div>
   );

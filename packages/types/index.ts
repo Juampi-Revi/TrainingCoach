@@ -3,6 +3,19 @@
 // ─────────────────────────────────────────────────────────────
 export type UserRole = "coach" | "client";
 export type BillingStatus = "good" | "due";
+
+/**
+ * Tipos de usuario para futuro multi-tenant.
+ * Hoy: athlete (cliente sin plan), gym_member (futuro), coach, gym_admin (futuro).
+ */
+export type UserType = "athlete" | "gym_member" | "coach" | "gym_admin";
+
+/**
+ * Tipos de negocio para futuro multi-tenant.
+ * hoy: solo coach individual.
+ * futuro: gym (gimnasio con admin), online_platform (plataforma tipo ClassPass).
+ */
+export type BusinessType = "solo_coach" | "gym" | "online_platform";
 export type SessionStatus = "in_progress" | "completed" | "discarded";
 export type PlanStatus = "draft" | "published" | "archived";
 export type AssignmentStatus = "active" | "paused" | "finished";
