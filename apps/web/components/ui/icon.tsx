@@ -5,11 +5,12 @@ export type IconName =
   | "play" | "pause" | "timer" | "reset" | "flame" | "dumbbell"
   | "user" | "users" | "calendar" | "chart" | "msg" | "bell" | "bellOff"
   | "alert" | "edit" | "trash" | "filter" | "more" | "x" | "logo"
-  | "send" | "home" | "history" | "settings" | "star" | "book"
+  | "send" | "home" | "history" | "settings" | "star" | "book" | "plate" | "beef"
   | "eye" | "eyeOff" | "lock" | "sun" | "moon"
-   | "image" | "video" | "repeat" | "footprint" | "target" | "refresh"
+  | "image" | "video" | "repeat" | "footprint" | "footprints" | "walk" | "target" | "refresh"
   | "scale" | "ruler" | "chest" | "hips" | "arm" | "leg"
-  | "heart" | "watch" | "activity" | "info";
+  | "heart" | "watch" | "activity" | "info"
+  | "trophy" | "bolt" | "fire" | "trendingUp" | "trendingDown" | "minus";
 
 interface IconProps {
   name: IconName;
@@ -53,6 +54,8 @@ const PATHS: Record<IconName, React.ReactNode> = {
   settings: <><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.5-2.3.9a7 7 0 0 0-2.2-1.3L14 3h-4l-.4 2.3a7 7 0 0 0-2.2 1.3l-2.3-.9-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .5 0 .9.1 1.3l-2 1.5 2 3.5 2.3-.9a7 7 0 0 0 2.2 1.3L10 21h4l.4-2.3a7 7 0 0 0 2.2-1.3l2.3.9 2-3.5-2-1.5c.1-.4.1-.8.1-1.3z" /></>,
   star:     <path d="M12 3l3 6 6 .9-4.3 4.3 1 6.3L12 17.8 6.3 20.5l1-6.3L3 9.9 9 9l3-6z" />,
   book:     <><path d="M4 4v16a2 2 0 0 0 2 2h14V4H6a2 2 0 0 0-2 2z" /><path d="M4 20h14" /></>,
+  plate:    <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2.2" /><path d="M6 3v6M8 3v6" /><path d="M6 6h2" /><path d="M18 3v9" /><path d="M20 3v9" /></>,
+  beef:     <><path d="M16.4 13.7A6.5 6.5 0 1 0 6.28 6.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3" /><path d="m18.5 6 2.19 4.5a6.48 6.48 0 0 1-2.29 7.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5" /><circle cx="12.5" cy="8.5" r="2.5" /></>,
   eye:      <><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></>,
   eyeOff:   <><path d="M17.9 17.9A10.9 10.9 0 0 1 12 19C5 19 1 12 1 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A11 11 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2" /><path d="M1 1l22 22" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
   lock:     <><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
@@ -62,6 +65,8 @@ const PATHS: Record<IconName, React.ReactNode> = {
   video:    <><path d="m22 8-6 4 6 4V8Z" /><rect x="2" y="6" width="14" height="12" rx="2" /></>,
   repeat:   <><path d="M17 2l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></>,
   footprint: <><path d="M12 2c2 0 3 2 3 4s-1 4-3 4-3-2-3-4 1-4 3-4z" /><path d="M7 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" /><path d="M17 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" /><path d="M9 18c1 0 2 1 2 2.5s-1 2.5-2 2.5-2-1-2-2.5 1-2.5 2-2.5z" /><path d="M15 18c1 0 2 1 2 2.5s-1 2.5-2 2.5-2-1-2-2.5 1-2.5 2-2.5z" /></>,
+  footprints: <><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" /><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" /><path d="M16 17h4" /><path d="M4 13h4" /></>,
+  walk:     <><circle cx="10" cy="6" r="2" /><path d="M10 8l-1 4 3 2" /><path d="M9 12l-3 3" /><path d="M12 14l2 4" /><path d="M12 9l4 1" /></>,
   target:   <><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>,
   refresh:  <><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3" /><path d="M21 6v3h-3" /><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3" /><path d="M3 18v-3h3" /></>,
   scale:    <><rect x="4" y="6" width="16" height="12" rx="2" /><path d="M4 10h16" /><circle cx="12" cy="13" r="2" /></>,
@@ -74,6 +79,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
   watch:    <><rect x="6" y="4" width="12" height="16" rx="4" /><path d="M12 8v8M9 12h6" /></>,
   activity: <><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></>,
   info:     <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></>,
+  trophy:   <><path d="M6 9H4a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h2M18 9h2a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-2" /><path d="M6 3h12v6a6 6 0 0 1-12 0V3z" /><path d="M12 15v4M8 19h8" /></>,
+  bolt:     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" stroke="none" />,
+  fire:     <><path d="M12 22c-4 0-7-3-7-7 0-4 2.5-6 4-8 0 3 2 4 2 6 0-2 1-4 3-6 0 3 1.5 5 1.5 8 0 4-1.5 7-3.5 7z" /><path d="M12 22v-4" /></>,
+  trendingUp: <><path d="M23 6l-9.5 9.5-5-5L1 18" /><path d="M17 6h6v6" /></>,
+  trendingDown: <><path d="M23 18l-9.5-9.5-5 5L1 6" /><path d="M17 18h6v-6" /></>,
+  minus:    <path d="M5 12h14" />,
 };
 
 export function Icon({ name, size = 18, color = "currentColor", style, className }: IconProps) {

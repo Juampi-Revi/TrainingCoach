@@ -25,7 +25,7 @@ export function RightSidebar({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {tab === "Salud" && (
+      {tab === "Actividad" && (
         <Card pad={16}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Nota del coach</div>
           <div style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "center" }}>

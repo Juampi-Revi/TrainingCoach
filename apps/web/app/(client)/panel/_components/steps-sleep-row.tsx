@@ -33,21 +33,21 @@ export function StepsSleepRow({
       <MetricCard
         label="PASOS · 7D"
         value={stepsK !== null ? stepsK.toFixed(1).replace(".", ",") + "k" : "—"}
-        sub={stepsK !== null ? "prom diario · meta 8k" : "no registrado"}
+        sub={stepsK !== null ? "prom diario · meta 6k" : "no registrado"}
         trend={trend}
         accent="var(--lime)"
       >
-        <MiniBars data={dailyStepsK} target={8} color="var(--lime)" unit="k" />
+        <MiniBars data={dailyStepsK} target={6} color="var(--lime)" unit="k" />
       </MetricCard>
 
       <MetricCard
         label="SUEÑO"
         value={sleepHours !== null ? formatSleepH(sleepHours) : "—"}
-        sub={sleepHours !== null ? "prom · meta 8h" : "no registrado"}
-        accent="#A78BFA"
+        sub={sleepHours !== null ? "prom · meta 7h" : "no registrado"}
+        accent="var(--sleep)"
       >
         {sleepHours !== null && (
-          <SleepRing hours={sleepHours} targetHours={8} size={38} />
+          <SleepRing hours={sleepHours} targetHours={7} size={38} />
         )}
       </MetricCard>
     </div>

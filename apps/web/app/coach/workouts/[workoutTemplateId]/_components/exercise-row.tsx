@@ -5,11 +5,20 @@ import Image from "next/image";
 import { Icon, ConfirmModal } from "@/components/ui";
 import { MUSCLE_LABEL, GROUP_COLORS } from "@/lib/constants";
 import type { WE } from "./_types";
-import type { BlockType } from "@regen/types";
+import type { BlockType, IntervalType } from "@regen/types";
 
-export function ExerciseRow({ we, blockType, selected, onSelect, onMoveUp, onMoveDown, onDelete }: {
+function fmtIntervalTarget(we: WE): string {
+  if (we.durationSeconds) return `${we.durationSeconds}s`;
+  if (we.targetReps) return `${we.targetReps} reps`;
+  if (we.targetSets && we.targetReps) return `${we.targetSets} × ${we.targetReps}`;
+  if (we.targetSets) return `${we.targetSets} ×`;
+  return "—";
+}
+
+export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, onMoveUp, onMoveDown, onDelete }: {
   we: WE;
   blockType?: BlockType;
+  intervalType?: IntervalType | null;
   selected: boolean;
   onSelect: () => void;
   onMoveUp: (() => void) | null;
@@ -21,7 +30,6 @@ export function ExerciseRow({ we, blockType, selected, onSelect, onMoveUp, onMov
   const muscleLabel = we.exercise.primaryMuscle ? (MUSCLE_LABEL[we.exercise.primaryMuscle] ?? we.exercise.primaryMuscle) : null;
   
   // Check if exercise has media indicators
-  const hasMedia = we.exercise.thumbnailUrl || we.exercise.youtubeUrl;
   const hasVideo = we.exercise.youtubeUrl;
 
   return (
@@ -41,11 +49,11 @@ export function ExerciseRow({ we, blockType, selected, onSelect, onMoveUp, onMov
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }} onClick={(e) => e.stopPropagation()}>
-          <button onClick={onMoveUp ?? undefined} disabled={!onMoveUp}
+          <button onClick={onMoveUp ?? undefined} disabled={!onMoveUp} title="Mover ejercicio arriba" aria-label="Mover ejercicio arriba"
             style={{ background: "none", border: "none", cursor: onMoveUp ? "pointer" : "default", padding: "2px 3px", opacity: onMoveUp ? 0.7 : 0.15, lineHeight: 1 }}>
             <Icon name="chevUp" size={10} color="var(--text-mute)" />
           </button>
-          <button onClick={onMoveDown ?? undefined} disabled={!onMoveDown}
+          <button onClick={onMoveDown ?? undefined} disabled={!onMoveDown} title="Mover ejercicio abajo" aria-label="Mover ejercicio abajo"
             style={{ background: "none", border: "none", cursor: onMoveDown ? "pointer" : "default", padding: "2px 3px", opacity: onMoveDown ? 0.7 : 0.15, lineHeight: 1 }}>
             <Icon name="chevD" size={10} color="var(--text-mute)" />
           </button>
@@ -108,7 +116,7 @@ export function ExerciseRow({ we, blockType, selected, onSelect, onMoveUp, onMov
           ) : blockType === "warmup" || blockType === "cooldown" || blockType === "cardio" ? (
             we.durationSeconds ? `${Math.round(we.durationSeconds / 60)}min` : "—"
           ) : blockType === "intervals" ? (
-            <span style={{ color: "var(--lime)" }}>○</span>
+            fmtIntervalTarget(we)
           ) : (
             we.targetSets && we.targetReps ? `${we.targetSets} × ${we.targetReps}` : "—"
           )}
@@ -116,7 +124,9 @@ export function ExerciseRow({ we, blockType, selected, onSelect, onMoveUp, onMov
 
         <div className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--accent-text)", whiteSpace: "nowrap" }}>
           {blockType === "intervals" ? (
-            <span style={{ color: "var(--text-mute)" }}>por ronda</span>
+            <span style={{ color: "var(--text-mute)" }}>
+              {intervalType === "emom" ? "por min" : "por ronda"}
+            </span>
           ) : (
             we.intensityTarget ? `${we.intensityType?.toUpperCase() ?? ""} ${we.intensityTarget}`.trim() : "—"
           )}
@@ -124,7 +134,7 @@ export function ExerciseRow({ we, blockType, selected, onSelect, onMoveUp, onMov
 
         <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", whiteSpace: "nowrap" }}>
           {blockType === "intervals" ? (
-            <span style={{ color: "var(--lime)" }}>↻</span>
+            we.restSeconds ? `${we.restSeconds}s` : "auto"
           ) : (
             we.restSeconds ? `${we.restSeconds}s` : "—"
           )}

@@ -23,7 +23,7 @@ const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string; mobil
 function useActiveNav(): NavId {
   const p = usePathname() ?? "";
   if (p.startsWith("/panel")) return "panel";
-  if (p.startsWith("/comida")) return "panel"; // Food page is accessed from panel
+  if (p.startsWith("/comida")) return "panel";
   if (p.startsWith("/historial")) return "history";
   if (p.startsWith("/mensajes") || p.startsWith("/comentarios")) return "messages";
   if (p.startsWith("/notificaciones")) return "notifications";

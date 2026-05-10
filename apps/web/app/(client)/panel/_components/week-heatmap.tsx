@@ -24,8 +24,8 @@ export function WeekHeatmap({
   goals,
   onDayClick,
 }: WeekHeatmapProps) {
-  const stepsGoal = goals?.steps ?? 8000;
-  const sleepGoal = goals?.sleepMinutes ?? 480; // 8 hours
+  const stepsGoal = goals?.steps ?? 6000;
+  const sleepGoal = goals?.sleepMinutes ?? 420;
 
   function getStepsColor(value: number | null): string {
     if (value === null) return "var(--bg-3)";
@@ -69,7 +69,7 @@ export function WeekHeatmap({
         {/* Steps row */}
         <div className="heatmap-row">
           <div className="heatmap-label-cell">
-            <Icon name="footprint" size={16} color="var(--text-mute)" />
+            <Icon name="footprints" size={16} color="var(--text-mute)" />
             <span className="heatmap-label-text">Pasos</span>
           </div>
           {dailySteps.map((value, i) => (

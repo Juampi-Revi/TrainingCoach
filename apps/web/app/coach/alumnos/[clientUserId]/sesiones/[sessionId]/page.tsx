@@ -7,6 +7,13 @@ import { useAuth } from "@/lib/auth";
 import { Avatar, Badge, Button, Icon, StateBlock, Tabs } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { SessionDetail, Comment } from "@regen/types";
+import { fmtSessionDuration } from "../../_components/_utils";
+
+type CoachSessionDetail = SessionDetail & {
+  client?: { id: string; name: string; email: string };
+  totalVolumeKg?: number;
+  previousTotalVolumeKg?: number | null;
+};
 
 export default function CoachSessionDetailPage() {
   const { api, user } = useAuth();
@@ -15,18 +22,19 @@ export default function CoachSessionDetailPage() {
     clientUserId: string;
     sessionId: string;
   }>();
-  const [session, setSession] = useState<SessionDetail | null>(null);
+  const [session, setSession] = useState<CoachSessionDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentTab, setCommentTab] = useState("Sesión");
   const [newMsg, setNewMsg] = useState("");
   const [sending, setSending] = useState(false);
+  const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
 
   const load = useCallback(() => {
     Promise.all([
-      api.get<SessionDetail>(`/coach/clients/${clientUserId}/sessions/${sessionId}`),
+      api.get<CoachSessionDetail>(`/coach/clients/${clientUserId}/sessions/${sessionId}`),
       api.get<Comment[]>(`/sessions/${sessionId}/comments`),
     ])
       .then(([s, c]) => {
@@ -111,16 +119,12 @@ export default function CoachSessionDetailPage() {
     day: "numeric",
     month: "short",
   });
-
-  const totalVol = session.exercises.reduce(
-    (acc, e) =>
-      acc +
-      e.sets.reduce(
-        (a, s) => a + (Number(s.reps ?? 0) * Number(s.weight ?? 0)),
-        0
-      ),
-    0
-  );
+  const duration = fmtSessionDuration(session.performedAt, session.completedAt);
+  const improved =
+    typeof session.totalVolumeKg === "number" &&
+    typeof session.previousTotalVolumeKg === "number" &&
+    session.totalVolumeKg > session.previousTotalVolumeKg;
+  const clientName = session.client?.name ?? "Alumno";
 
   return (
     <DesktopShell
@@ -132,7 +136,7 @@ export default function CoachSessionDetailPage() {
             onClick={() => router.push(`/coach/alumnos/${clientUserId}`)}
             style={{ cursor: "pointer" }}
           >
-            Alumno
+            {clientName}
           </span>
           <span style={{ margin: "0 8px" }}>/</span>
           <span style={{ color: "var(--text)", fontWeight: 700 }}>
@@ -140,7 +144,7 @@ export default function CoachSessionDetailPage() {
           </span>
         </span>
       }
-      subtitle={`${session.status === "completed" ? "Completada" : "En curso"} · Volumen ${Math.round(totalVol).toLocaleString("es")} kg`}
+      subtitle={`${session.status === "completed" ? "Completada" : "En curso"}${duration ? ` · ${duration}` : ""}`}
       coachName={user?.name ?? "Coach"}
       actions={
         <Button
@@ -172,6 +176,9 @@ export default function CoachSessionDetailPage() {
             {session.status === "completed" && (
               <Badge tone="success" icon="check">Completa</Badge>
             )}
+          {improved && (
+            <Badge tone="limeSoft" icon="trendingUp">Más carga que anterior</Badge>
+          )}
             {(() => {
               if (!session.energyRating) return null;
               const normalized =
@@ -240,15 +247,39 @@ export default function CoachSessionDetailPage() {
                 >
                   {String(ei + 1).padStart(2, "0")}
                 </div>
-                {ex.exercise.thumbnailUrl && (
+                {ex.exercise.thumbnailUrl && !failedThumbs[ex.id] ? (
                   <Image
                     unoptimized
                     src={ex.exercise.thumbnailUrl}
                     alt={ex.exercise.name}
                     width={40}
                     height={40}
-                    style={{ borderRadius: 8, objectFit: "cover", flexShrink: 0, background: "var(--bg-3)" }}
+                    onError={() => setFailedThumbs((prev) => ({ ...prev, [ex.id]: true }))}
+                    style={{
+                      borderRadius: 8,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                      background: "var(--bg-3)",
+                      border: "1px solid var(--line)",
+                    }}
                   />
+                ) : (
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 8,
+                      flexShrink: 0,
+                      background: "var(--bg-3)",
+                      border: "1px solid var(--line)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-mute)",
+                    }}
+                  >
+                    <Icon name="dumbbell" size={18} />
+                  </div>
                 )}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{ex.exercise.name}</div>

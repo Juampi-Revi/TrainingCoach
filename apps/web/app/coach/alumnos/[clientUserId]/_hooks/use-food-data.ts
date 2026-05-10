@@ -27,7 +27,7 @@ export function useFoodData(clientUserId: string): UseFoodDataResult {
       const r = await api.get<{ items: FoodItem[] }>(`/coach/clients/${clientUserId}/food?take=30`);
       setFood(r.items ?? []);
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Error cargando comidas");
     } finally {
       setFoodLoading(false);
     }

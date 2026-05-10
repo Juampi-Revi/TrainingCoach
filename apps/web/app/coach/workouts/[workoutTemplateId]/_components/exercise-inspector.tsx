@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { Icon } from "@/components/ui";
-import { MUSCLE_LABEL, GROUP_COLORS, GROUP_LETTERS, groupLabel, blockTypeLabel, blockSummary } from "@/lib/constants";
+import { MUSCLE_LABEL, GROUP_COLORS, GROUP_LETTERS } from "@/lib/constants";
 import type { WorkoutTemplateDetail } from "@regen/types";
 import type { WE } from "./_types";
-import { AlternativesPanel } from "./alternatives-panel";
-import { MediaManager } from "./media-manager";
+import { ExerciseInspectorMeta } from "./exercise-inspector-meta";
+import { ExerciseInspectorObjective } from "./exercise-inspector-objective";
+import { ExerciseInspectorDetails } from "./exercise-inspector-details";
 
 export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSizes, nextGroup, onUpdate, onSetGroup, onClose }: {
   we: WE;
@@ -21,6 +23,7 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
   onClose: () => void;
 }) {
   const { api } = useAuth();
+  const toast = useToast();
   const [localSets, setLocalSets] = useState(String(we.targetSets ?? ""));
   const [localReps, setLocalReps] = useState(we.targetReps ?? "");
   const [localDuration, setLocalDuration] = useState(String(we.durationSeconds ?? ""));
@@ -47,33 +50,8 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
     videoId?: string;
     embedUrl?: string;
   }>>([]);
-  const [mediaLoading, setMediaLoading] = useState(false);
 
-  const prevId = useRef(we.id);
-  useEffect(() => {
-    if (prevId.current === we.id) return;
-    prevId.current = we.id;
-    setLocalSets(String(we.targetSets ?? ""));
-    setLocalReps(we.targetReps ?? "");
-    setLocalDuration(String(we.durationSeconds ?? ""));
-    setLocalBlockId(we.workoutBlockId ?? "");
-    setLocalIntType((we.intensityType?.toLowerCase() as "rpe" | "rir") ?? "");
-    setLocalIntVal(we.intensityTarget ?? "");
-    setLocalRest(String(we.restSeconds ?? ""));
-    setLocalNotes(we.notes ?? "");
-    setLocalGroupNote(we.groupNote ?? "");
-    setLocalYoutubeUrl(we.exercise.youtubeUrl ?? "");
-    // Load media when exercise changes
-    loadMedia();
-  }, [we]);
-  
-  // Load media on mount
-  useEffect(() => {
-    loadMedia();
-  }, []);
-  
-  async function loadMedia() {
-    setMediaLoading(true);
+  const loadMedia = useCallback(async () => {
     try {
       const res = await api.get<{
         images: Array<{
@@ -96,25 +74,41 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
           thumbnailUrl?: string;
         }>;
       }>(`/coach/exercises/${we.exercise.id}/media`);
-      
+
       const allMedia = [
-        ...res.images.map(img => ({ ...img, mediaType: "image" as const })),
-        ...res.videos.map(vid => ({ ...vid, mediaType: "video" as const })),
+        ...res.images.map((img) => ({ ...img, mediaType: "image" as const })),
+        ...res.videos.map((vid) => ({ ...vid, mediaType: "video" as const })),
       ];
       setExerciseMedia(allMedia);
-    } catch (e) {
-      console.error("Error loading media:", e);
-    } finally {
-      setMediaLoading(false);
+    } catch {
+      toast.error("No se pudo cargar la media del ejercicio");
     }
-  }
+  }, [api, toast, we.exercise.id]);
+
+  const prevId = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevId.current === we.id) return;
+    prevId.current = we.id;
+    setLocalSets(String(we.targetSets ?? ""));
+    setLocalReps(we.targetReps ?? "");
+    setLocalDuration(String(we.durationSeconds ?? ""));
+    setLocalBlockId(we.workoutBlockId ?? "");
+    setLocalIntType((we.intensityType?.toLowerCase() as "rpe" | "rir") ?? "");
+    setLocalIntVal(we.intensityTarget ?? "");
+    setLocalRest(String(we.restSeconds ?? ""));
+    setLocalNotes(we.notes ?? "");
+    setLocalGroupNote(we.groupNote ?? "");
+    setLocalYoutubeUrl(we.exercise.youtubeUrl ?? "");
+    // Load media when exercise changes
+    loadMedia();
+  }, [we, loadMedia]);
 
   async function save(patch: Record<string, unknown>) {
     onUpdate(patch as Partial<WE>);
     try {
       await api.patch(`/coach/workouts/${templateId}/exercises/${we.id}`, patch);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      toast.error("No se pudo guardar el ejercicio");
     }
   }
 
@@ -157,14 +151,18 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
     try {
       await api.patch(`/coach/exercises/${we.exercise.id}`, { youtubeUrl: localYoutubeUrl.trim() || null });
       onUpdate({ exercise: { ...we.exercise, youtubeUrl: localYoutubeUrl.trim() || null } });
-    } catch (e) { console.error(e); }
+    } catch {
+      toast.error("No se pudo guardar la URL");
+    }
   }
 
   const gc = we.supersetGroup ? (GROUP_COLORS[we.supersetGroup] ?? null) : null;
-  const groupmates = we.supersetGroup
-    ? `Grupo ${we.supersetGroup} · ${groupLabel(groupSizes[we.supersetGroup] ?? 1)}`
-    : null;
-  const allGroupOptions: (string | null)[] = [null, ...GROUP_LETTERS.slice(0, Math.max(usedGroups.length + 1, 1))];
+  const nextGroupIdx = GROUP_LETTERS.indexOf(nextGroup);
+  const maxGroupCount = Math.max(usedGroups.length + 1, nextGroupIdx >= 0 ? nextGroupIdx + 1 : 1, 1);
+  const allGroupOptions: (string | null)[] = [null, ...GROUP_LETTERS.slice(0, maxGroupCount)];
+  const currentBlock = blocks.find((b) => b.id === localBlockId) ?? null;
+  const isIntervalBlock = currentBlock?.type === "intervals";
+  const isEmomBlock = isIntervalBlock && currentBlock?.intervalType === "emom";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -188,241 +186,71 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 18 }}>
 
-        {blocks.length > 0 && (
-          <div>
-            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 8 }}>BLOQUE</div>
-            <select
-              value={localBlockId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setLocalBlockId(v);
-                save({ workoutBlockId: v });
-              }}
-              style={{
-                width: "100%", height: 36, borderRadius: 8,
-                background: "var(--bg-2)",
-                border: "1px solid var(--line-2)",
-                color: "var(--text)",
-                fontSize: 13, padding: "0 10px", outline: "none",
-              }}
-            >
-              {blocks.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {blockTypeLabel(b.type, b.intervalType)}{b.label ? ` · ${b.label}` : ""} · {blockSummary(b)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <ExerciseInspectorMeta
+          blocks={blocks}
+          localBlockId={localBlockId}
+          onChangeBlockId={(blockId) => {
+            setLocalBlockId(blockId);
+            save({ workoutBlockId: blockId });
+          }}
+          allGroupOptions={allGroupOptions}
+          selectedGroup={we.supersetGroup}
+          groupSizes={groupSizes}
+          onSetGroup={onSetGroup}
+        />
 
-        <div>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 8 }}>SUPERSET / GRUPO</div>
-          <div style={{ display: "flex", gap: 4 }}>
-            {allGroupOptions.map((g) => {
-              const gColor = g ? (GROUP_COLORS[g] ?? "var(--text-mute)") : null;
-              const sel = we.supersetGroup === g;
-              return (
-                <button
-                  key={g ?? "none"}
-                  onClick={() => onSetGroup(g)}
-                  style={{
-                    flex: 1, height: 36, borderRadius: 8,
-                    background: sel ? (gColor ?? "var(--bg-3)") : "var(--bg-2)",
-                    border: `1px solid ${sel ? (gColor ?? "var(--line)") : "var(--line-2)"}`,
-                    color: sel ? (g ? "#0B0B0C" : "var(--text)") : (g ? (gColor ?? "var(--text-mute)") : "var(--text-mute)"),
-                    fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  }}
-                >
-                  {g ?? "—"}
-                </button>
-              );
-            })}
-          </div>
-          {groupmates && (
-            <div style={{ fontSize: 11, color: gc ?? "var(--text-mute)", marginTop: 6 }}>{groupmates}</div>
-          )}
-        </div>
+        <ExerciseInspectorObjective
+          isIntervalBlock={!!isIntervalBlock}
+          isEmomBlock={!!isEmomBlock}
+          localSets={localSets}
+          setLocalSets={setLocalSets}
+          commitSets={commitSets}
+          localReps={localReps}
+          setLocalReps={setLocalReps}
+          commitReps={commitReps}
+          localDuration={localDuration}
+          setLocalDuration={setLocalDuration}
+          commitDuration={commitDuration}
+          onToggleDuration={() => {
+            if (localDuration) {
+              setLocalDuration("");
+              save({ durationSeconds: null });
+              return;
+            }
+            setLocalReps("");
+            setLocalDuration("30");
+            save({ targetReps: null, durationSeconds: 30 });
+          }}
+          localIntType={localIntType}
+          setLocalIntType={setLocalIntType}
+          localIntVal={localIntVal}
+          setLocalIntVal={setLocalIntVal}
+          commitInt={commitInt}
+          localRest={localRest}
+          setLocalRest={setLocalRest}
+          commitRest={commitRest}
+          onQuickSetIntensityType={(next) => {
+            if (next === localIntType) return;
+            save({ intensityType: next || null, intensityTarget: localIntVal || null });
+          }}
+        />
 
-        <div>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 8 }}>OBJETIVO</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".04em" }}>Series</span>
-              <input
-                type="number" value={localSets}
-                onChange={(e) => setLocalSets(e.target.value)}
-                onBlur={commitSets}
-                placeholder="3"
-                style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", outline: "none", textAlign: "center", width: "100%" }}
-              />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".04em" }}>
-                {localDuration ? "Duración (seg)" : "Reps"}
-              </span>
-              {localDuration ? (
-                <input
-                  type="number" value={localDuration}
-                  onChange={(e) => setLocalDuration(e.target.value)}
-                  onBlur={commitDuration}
-                  placeholder="30"
-                  style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--lime)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--lime)", outline: "none", textAlign: "center", width: "100%" }}
-                />
-              ) : (
-                <input
-                  value={localReps}
-                  onChange={(e) => setLocalReps(e.target.value)}
-                  onBlur={commitReps}
-                  placeholder="8-12"
-                  style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", outline: "none", textAlign: "center", width: "100%" }}
-                />
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              if (localDuration) { setLocalDuration(""); save({ durationSeconds: null }); }
-              else { setLocalReps(""); save({ targetReps: null, durationSeconds: null }); setLocalDuration("30"); }
-            }}
-            style={{
-              marginTop: 4, padding: "5px 10px", borderRadius: 7,
-              border: `1px solid ${localDuration ? "var(--lime)" : "var(--line-2)"}`,
-              background: "transparent",
-              color: localDuration ? "var(--lime)" : "var(--text-mute)",
-              fontSize: 11, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start",
-            }}
-          >
-            {localDuration ? "⏱ Por tiempo · cambiar a reps" : "⏱ Cambiar a por tiempo"}
-          </button>
-
-          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 8, marginTop: 8, alignItems: "end" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".04em" }}>Tipo</span>
-              <div style={{ display: "flex", padding: 3, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8 }}>
-                {(["rpe", "rir", ""] as const).map((t) => (
-                  <button
-                    key={t || "none"}
-                    onClick={() => { setLocalIntType(t); if (t !== localIntType) save({ intensityType: t || null, intensityTarget: localIntVal || null }); }}
-                    style={{
-                      padding: "5px 8px", borderRadius: 6,
-                      background: localIntType === t ? "var(--bg-3)" : "transparent",
-                      border: "none", color: localIntType === t ? "var(--text)" : "var(--text-mute)",
-                      fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    }}
-                  >
-                    {t ? t.toUpperCase() : "—"}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".04em" }}>Valor</span>
-              <input
-                type="number" value={localIntVal}
-                onChange={(e) => setLocalIntVal(e.target.value)}
-                onBlur={commitInt}
-                placeholder="8"
-                style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", outline: "none", textAlign: "center", width: "100%" }}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginTop: 8 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 500, textTransform: "uppercase", letterSpacing: ".04em" }}>Descanso (segundos)</span>
-              <input
-                type="number" value={localRest}
-                onChange={(e) => setLocalRest(e.target.value)}
-                onBlur={commitRest}
-                placeholder="90"
-                style={{ height: 36, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 8, padding: "0 10px", fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", outline: "none", textAlign: "center", width: "100%" }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 3 }}>EJERCICIO ALTERNATIVO</div>
-          <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 8 }}>Si el equipo no está disponible el cliente puede cambiar al alternativo.</div>
-          <AlternativesPanel weId={we.id} templateId={templateId} />
-        </div>
-
-        <div>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 6 }}>NOTA TÉCNICA</div>
-          <textarea
-            value={localNotes}
-            onChange={(e) => setLocalNotes(e.target.value)}
-            onBlur={commitNotes}
-            placeholder="Ej: Bajar controlado 3 seg, mantener tensión…"
-            rows={3}
-            style={{
-              width: "100%", background: "var(--bg-2)", border: "1px solid var(--line-2)",
-              borderRadius: 8, padding: "8px 10px", fontFamily: "var(--font-sans)",
-              fontSize: 13, color: "var(--text)", lineHeight: 1.45,
-              resize: "none", outline: "none", boxSizing: "border-box",
-            }}
-          />
-        </div>
-
-        {we.supersetGroup && (
-          <div>
-            <div className="ta-mono" style={{ fontSize: 9, color: gc ?? "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 6 }}>
-              NOTA DEL BLOQUE {we.supersetGroup}
-            </div>
-            <textarea
-              value={localGroupNote}
-              onChange={(e) => setLocalGroupNote(e.target.value.slice(0, 100))}
-              onBlur={commitGroupNote}
-              placeholder="Nota visible al lado del título del bloque…"
-              rows={2}
-              maxLength={100}
-              style={{
-                width: "100%", background: "var(--bg-2)", border: `1px solid ${gc ?? "var(--line-2)"}`,
-                borderRadius: 8, padding: "8px 10px", fontFamily: "var(--font-sans)",
-                fontSize: 13, color: "var(--text)", lineHeight: 1.45,
-                resize: "none", outline: "none", boxSizing: "border-box",
-              }}
-            />
-            <div style={{ fontSize: 10, color: "var(--text-dim)", textAlign: "right", marginTop: 2 }}>{localGroupNote.length}/100</div>
-          </div>
-        )}
-
-        <div>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 6 }}>YOUTUBE URL</div>
-          <input
-            type="url"
-            value={localYoutubeUrl}
-            onChange={(e) => setLocalYoutubeUrl(e.target.value)}
-            onBlur={commitYoutubeUrl}
-            placeholder="https://youtube.com/watch?v=…"
-            disabled={we.exercise.isSystem}
-            title={we.exercise.isSystem ? "Los ejercicios del sistema no se pueden modificar" : undefined}
-            style={{
-              height: 36, width: "100%", background: "var(--bg-2)", border: "1px solid var(--line-2)",
-              borderRadius: 8, padding: "0 10px", fontSize: 12, color: "var(--text)",
-              outline: "none", boxSizing: "border-box", opacity: we.exercise.isSystem ? 0.5 : 1,
-            }}
-          />
-          {we.exercise.isSystem && (
-            <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 3 }}>Solo lectura — ejercicio del sistema</div>
-          )}
-        </div>
-
-        {/* Media Manager Section */}
-        <div style={{ borderTop: "2px solid var(--lime)", paddingTop: 16, marginTop: 8 }}>
-          <div className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", letterSpacing: ".12em", fontWeight: 700, marginBottom: 12, textTransform: "uppercase" }}>
-            📸 Media del Ejercicio
-          </div>
-          <MediaManager
-            exerciseId={we.exercise.id}
-            exerciseName={we.exercise.name}
-            media={exerciseMedia}
-            onMediaChange={loadMedia}
-            limits={{ maxImages: 3, maxVideos: 1 }}
-          />
-        </div>
+        <ExerciseInspectorDetails
+          templateId={templateId}
+          we={we}
+          gc={gc}
+          localNotes={localNotes}
+          setLocalNotes={setLocalNotes}
+          commitNotes={commitNotes}
+          localGroupNote={localGroupNote}
+          setLocalGroupNote={setLocalGroupNote}
+          commitGroupNote={commitGroupNote}
+          localYoutubeUrl={localYoutubeUrl}
+          setLocalYoutubeUrl={setLocalYoutubeUrl}
+          commitYoutubeUrl={commitYoutubeUrl}
+          exerciseMedia={exerciseMedia}
+          onReloadMedia={loadMedia}
+        />
       </div>
     </div>
   );

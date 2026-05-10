@@ -47,7 +47,7 @@ export function MonthSummary({
       <div className="month-stats">
         <div className="month-stat">
           <div className="month-stat-icon">
-            <Icon name="footprint" size={18} color="var(--lime)" />
+            <Icon name="footprints" size={18} color="var(--lime)" />
           </div>
           <div className="month-stat-content">
             <div className="month-stat-value">{stepsAvg.toLocaleString()}</div>
@@ -57,7 +57,7 @@ export function MonthSummary({
 
         <div className="month-stat">
           <div className="month-stat-icon">
-            <Icon name="moon" size={18} color="#A78BFA" />
+            <Icon name="moon" size={18} color="var(--sleep)" />
           </div>
           <div className="month-stat-content">
             <div className="month-stat-value">{sleepHours}h {sleepMins > 0 ? `${sleepMins}m` : ""}</div>
@@ -67,7 +67,7 @@ export function MonthSummary({
 
         <div className="month-stat">
           <div className="month-stat-icon">
-            <Icon name="dumbbell" size={18} color="#7AB8FF" />
+            <Icon name="dumbbell" size={18} color="var(--info)" />
           </div>
           <div className="month-stat-content">
             <div className="month-stat-value">{workoutsTotal}</div>

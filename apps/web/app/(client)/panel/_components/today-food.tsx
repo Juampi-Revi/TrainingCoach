@@ -68,7 +68,7 @@ export function TodayFood({ food, onAddFood }: TodayFoodProps) {
     <div className="today-food-container">
       <div className="today-food-header">
         <div className="today-food-title">
-          <Icon name="book" size={16} color="var(--text-mute)" />
+          <Icon name="beef" size={16} color="var(--text-mute)" />
           Comidas de hoy
         </div>
         <button
@@ -82,7 +82,7 @@ export function TodayFood({ food, onAddFood }: TodayFoodProps) {
 
       {!hasFood ? (
         <div className="today-food-empty">
-          <Icon name="book" size={32} color="var(--text-mute)" />
+          <Icon name="beef" size={32} color="var(--text-mute)" />
           <p>No registraste comidas hoy</p>
           <button
             onClick={onAddFood || (() => router.push("/comida"))}

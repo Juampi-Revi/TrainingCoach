@@ -3,28 +3,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import { Button, ConfirmModal, Icon, Input } from "@/components/ui";
-import { blockTypeLabel } from "@/lib/constants";
 import type { BlockType, IntervalType } from "@regen/types";
 import type { WB } from "./_types";
-
-const BLOCK_TYPES: BlockType[] = ["warmup", "strength", "intervals", "cardio", "cooldown"];
-const INTERVAL_TYPES: IntervalType[] = ["tabata", "hiit", "emom", "amrap"];
-
-const INTERVAL_PRESETS: Array<{
-  id: string;
-  label: string;
-  intervalType: IntervalType;
-  work: string;
-  rest: string;
-  rounds: string;
-  total: string;
-}> = [
-  { id: "tabata", label: "Tabata", intervalType: "tabata", work: "20", rest: "10", rounds: "8", total: "" },
-  { id: "hiit3030", label: "HIIT 30:30", intervalType: "hiit", work: "30", rest: "30", rounds: "10", total: "" },
-  { id: "emom", label: "EMOM 20min", intervalType: "emom", work: "", rest: "", rounds: "20", total: "1200" },
-  { id: "amrap", label: "AMRAP 10min", intervalType: "amrap", work: "", rest: "", rounds: "", total: "600" },
-];
+import { BlockModalView } from "./block-modal-view";
 
 export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   templateId: string;
@@ -115,6 +96,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
             totalDurationSeconds: emomRounds ? emomRounds * 60 : null,
             workSeconds: null,
             restSeconds: null,
+            restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
           };
         } else if (intervalType === "amrap") {
           payload = {
@@ -125,6 +107,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
             workSeconds: null,
             restSeconds: null,
             rounds: null,
+            restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
           };
         } else {
           // Tabata / HIIT
@@ -136,6 +119,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
             restSeconds: !isNaN(r) && r > 0 ? r : null,
             rounds: !isNaN(ro) && ro > 0 ? ro : null,
             totalDurationSeconds: null,
+            restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
           };
         }
       } else if (blockType === "cardio") {
@@ -162,7 +146,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       } else {
         const created = await api.post<WB>(`/coach/workouts/${templateId}/blocks`, payload);
         onSaved(created);
-        toast.success("Bloque creado");
+        toast.success("Bloque creado. Agregá ejercicios al bloque.");
       }
       onClose();
     } catch (e) {
@@ -189,234 +173,40 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
     }
   }
 
-  // Determine which fields to show based on block type
-  const isInterval = blockType === "intervals";
-  const isCardio = blockType === "cardio";
-  const isWarmup = blockType === "warmup";
-  const isCooldown = blockType === "cooldown";
-  const isStrength = blockType === "strength";
-  const isEmom = intervalType === "emom";
-  const isAmrap = intervalType === "amrap";
-  const showIntervalFields = isInterval && intervalType;
-  const showWorkRest = showIntervalFields && !isEmom && !isAmrap; // Only Tabata/HIIT
-  const showRounds = showIntervalFields && !isAmrap; // Tabata, HIIT, EMOM have rounds
-  const showTotal = showIntervalFields && (isAmrap || isEmom);
-  // Universal config for warmup/strength/cooldown
-  const showUniversalConfig = isWarmup || isStrength || isCooldown;
-
-  // Auto-calculate total duration for EMOM
-  const emomRounds = parseInt(rounds);
-  const calculatedEmomTotal = !isNaN(emomRounds) && emomRounds > 0 ? emomRounds * 60 : "";
-
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200, padding: "0 16px" }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 520, maxHeight: "80vh", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 16, display: "flex", flexDirection: "column", overflow: "hidden" }}
-      >
-        <div style={{ padding: "18px 18px 12px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div>
-            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700 }}>
-              {block ? "EDITAR BLOQUE" : "NUEVO BLOQUE"}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, marginTop: 2 }}>
-              {blockTypeLabel(blockType, intervalType)} {label ? `· ${label}` : ""}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            style={{ width: 32, height: 32, borderRadius: 10, background: "transparent", border: "1px solid var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-mute)" }}
-          >
-            <Icon name="x" size={14} />
-          </button>
-        </div>
-
-        <div style={{ padding: 18, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
-          
-          {/* Block Type Selector */}
-          <div>
-            <div style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Tipo de bloque</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {BLOCK_TYPES.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => {
-                    setBlockType(t);
-                    if (t === "intervals" && !intervalType) setIntervalType("tabata");
-                    if (t !== "intervals") setIntervalType(null);
-                  }}
-                  style={{
-                    padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
-                    border: `1px solid ${blockType === t ? "var(--lime)" : "var(--line-2)"}`,
-                    background: blockType === t ? "rgba(215,255,58,.12)" : "transparent",
-                    color: blockType === t ? "var(--lime)" : "var(--text-mute)",
-                  }}
-                >
-                  {blockTypeLabel(t)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Interval Type Selector (only for intervals) */}
-          {isInterval && (
-            <div>
-              <div style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Tipo de intervalo</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {INTERVAL_PRESETS.map((p) => {
-                  const isSel = intervalType === p.intervalType;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        setIntervalType(p.intervalType);
-                        setWork(p.work);
-                        setRest(p.rest);
-                        setRounds(p.rounds);
-                        setTotal(p.total);
-                      }}
-                      style={{
-                        padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
-                        border: `1px solid ${isSel ? "#FF8E72" : "var(--line-2)"}`,
-                        background: isSel ? "rgba(255,142,114,.12)" : "transparent",
-                        color: isSel ? "#FF8E72" : "var(--text-mute)",
-                      }}
-                    >
-                      {p.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Label */}
-          <Input
-            label="Nombre del bloque"
-            placeholder="Ej: Tabata · 4 ejercicios"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-
-          {/* Description */}
-          <Input
-            label="Descripción (opcional)"
-            placeholder="Notas sobre este bloque..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-
-          {/* Interval-specific fields */}
-          {showIntervalFields && (
-            <>
-              {showWorkRest && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <Input label="Trabajo (seg)" placeholder="20" value={work} onChange={(e) => setWork(e.target.value)} />
-                  <Input label="Descanso (seg)" placeholder="10" value={rest} onChange={(e) => setRest(e.target.value)} />
-                </div>
-              )}
-              {showRounds && (
-                <>
-                  <Input
-                    label={isEmom ? "Minutos (rondas)" : "Rondas"}
-                    placeholder={isEmom ? "10" : "8"}
-                    value={rounds}
-                    onChange={(e) => {
-                      setRounds(e.target.value);
-                      // Auto-calculate total for EMOM
-                      if (isEmom) {
-                        const r = parseInt(e.target.value);
-                        if (!isNaN(r) && r > 0) {
-                          setTotal(String(r * 60));
-                        }
-                      }
-                    }}
-                  />
-                  {isEmom && (
-                    <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: -10 }}>
-                      Cada minuto empieza una nueva serie. El alumno completa el ejercicio y descansa el tiempo restante.
-                    </div>
-                  )}
-                </>
-              )}
-              {showTotal && (
-                <div style={{ display: "grid", gridTemplateColumns: isEmom ? "1fr 1fr" : "1fr", gap: 10 }}>
-                  <Input
-                    label={isEmom ? "Duración total (auto)" : "Duración total (seg)"}
-                    placeholder={isEmom ? "600" : "600"}
-                    value={isEmom ? (calculatedEmomTotal || total) : total}
-                    onChange={(e) => !isEmom && setTotal(e.target.value)}
-                    disabled={isEmom}
-                  />
-                  {isEmom && (
-                    <Input
-                      label="En minutos"
-                      value={calculatedEmomTotal ? String(Math.round(Number(calculatedEmomTotal) / 60)) : ""}
-                      disabled
-                    />
-                  )}
-                </div>
-              )}
-              {isAmrap && (
-                <div style={{ fontSize: 11, color: "var(--text-mute)" }}>
-                  AMRAP = "As Many Rounds As Possible". El alumno hace tantas rondas como pueda en el tiempo total.
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Cardio-specific fields */}
-          {isCardio && (
-            <>
-              <Input label="Minutos objetivo" placeholder="20" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
-              <Input label="Zona objetivo (opcional)" placeholder="Ej: Zona 2, 70-80% FCm" value={targetZone} onChange={(e) => setTargetZone(e.target.value)} />
-            </>
-          )}
-
-          {/* Universal config for warmup/strength/cooldown */}
-          {showUniversalConfig && (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <Input label="Tiempo objetivo (min)" placeholder="Ej: 10" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
-                <Input label="Descanso entre ejercicios (seg)" placeholder="Ej: 60" value={restBetweenExercises} onChange={(e) => setRestBetweenExercises(e.target.value)} />
-              </div>
-            </>
-          )}
-
-          {/* Rest after block */}
-          <Input
-            label="Descanso después del bloque (seg, opcional)"
-            placeholder="Ej: 120"
-            value={restAfterSeconds}
-            onChange={(e) => setRestAfterSeconds(e.target.value)}
-          />
-        </div>
-
-        <div style={{ padding: "12px 18px 18px", borderTop: "1px solid var(--line)", display: "flex", gap: 8 }}>
-          {block && (
-            <Button variant="secondary" onClick={() => setConfirmDelete(true)} disabled={saving}>
-              Eliminar
-            </Button>
-          )}
-          <div style={{ flex: 1 }} />
-          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancelar</Button>
-          <Button onClick={save} disabled={saving}>
-            {block ? "Guardar" : "Crear"}
-          </Button>
-        </div>
-      </div>
-
-      {confirmDelete && (
-        <ConfirmModal
-          message="¿Eliminar este bloque? Los ejercicios dentro del bloque también se eliminarán."
-          confirmLabel="Eliminar"
-          onConfirm={del}
-          onCancel={() => setConfirmDelete(false)}
-        />
-      )}
-    </div>
+    <BlockModalView
+      block={block}
+      saving={saving}
+      confirmDelete={confirmDelete}
+      blockType={blockType}
+      intervalType={intervalType}
+      label={label}
+      description={description}
+      restAfterSeconds={restAfterSeconds}
+      work={work}
+      rest={rest}
+      rounds={rounds}
+      total={total}
+      targetMinutes={targetMinutes}
+      restBetweenExercises={restBetweenExercises}
+      targetZone={targetZone}
+      setBlockType={setBlockType}
+      setIntervalType={setIntervalType}
+      setLabel={setLabel}
+      setDescription={setDescription}
+      setRestAfterSeconds={setRestAfterSeconds}
+      setWork={setWork}
+      setRest={setRest}
+      setRounds={setRounds}
+      setTotal={setTotal}
+      setTargetMinutes={setTargetMinutes}
+      setRestBetweenExercises={setRestBetweenExercises}
+      setTargetZone={setTargetZone}
+      onClose={onClose}
+      onSave={save}
+      onRequestDelete={() => setConfirmDelete(true)}
+      onCancelDelete={() => setConfirmDelete(false)}
+      onConfirmDelete={del}
+    />
   );
 }

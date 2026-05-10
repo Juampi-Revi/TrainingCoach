@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "@/components/ui";
+import { Button, Icon } from "@/components/ui";
 
 interface QuickHealthModalProps {
   type: "steps" | "sleep";
@@ -21,9 +21,9 @@ export function QuickHealthModal({ type, isOpen, onClose, onSave, currentValue }
 
   const isSteps = type === "steps";
   const title = isSteps ? "Registrar pasos" : "Registrar sueño";
-  const icon = isSteps ? "footprint" : "moon";
+  const icon = isSteps ? "footprints" : "moon";
   const unit = isSteps ? "pasos" : "horas";
-  const placeholder = isSteps ? "8000" : "7.5";
+  const placeholder = isSteps ? "6000" : "7";
   const step = isSteps ? "1" : "0.5";
 
   async function handleSubmit(e: React.FormEvent) {
@@ -96,12 +96,12 @@ export function QuickHealthModal({ type, isOpen, onClose, onSave, currentValue }
           </div>
 
           <div className="modal-actions">
-            <button type="button" onClick={onClose} className="modal-btn cancel">
+            <Button variant="secondary" size="md" type="button" onClick={onClose} disabled={saving} style={{ flex: 1 }}>
               Cancelar
-            </button>
-            <button type="submit" disabled={saving || !value} className="modal-btn save">
+            </Button>
+            <Button size="md" type="submit" disabled={saving || !value} style={{ flex: 1 }}>
               {saving ? "Guardando..." : "Guardar"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -245,40 +245,6 @@ export function QuickHealthModal({ type, isOpen, onClose, onSave, currentValue }
           margin-top: 4px;
         }
 
-        .modal-btn {
-          flex: 1;
-          padding: 12px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: none;
-        }
-
-        .modal-btn.cancel {
-          background: var(--bg-2);
-          color: var(--text);
-        }
-
-        .modal-btn.cancel:hover {
-          background: var(--line);
-        }
-
-        .modal-btn.save {
-          background: var(--lime);
-          color: var(--bg);
-        }
-
-        .modal-btn.save:hover:not(:disabled) {
-          opacity: 0.9;
-        }
-
-        .modal-btn.save:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
         @media (min-width: 768px) {
           .modal-content {
             max-width: 400px;
@@ -303,11 +269,6 @@ export function QuickHealthModal({ type, isOpen, onClose, onSave, currentValue }
           .modal-input {
             padding: 14px 16px;
             font-size: 17px;
-          }
-
-          .modal-btn {
-            padding: 14px;
-            font-size: 15px;
           }
         }
       `}</style>

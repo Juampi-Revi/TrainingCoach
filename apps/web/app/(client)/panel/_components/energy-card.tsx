@@ -15,7 +15,7 @@ export function EnergyCard({ energyAvg, dailyEnergy }: EnergyCardProps) {
   const sub = energyAvg !== null ? "/ 5 · prom 7 días" : "sin datos";
 
   return (
-    <MetricCard label="ENERGÍA · DIARIA" value={value} sub={sub} accent="#7AB8FF">
+    <MetricCard label="ENERGÍA · DIARIA" value={value} sub={sub} accent="var(--info)">
       <EnergyBars data={dailyEnergy} />
     </MetricCard>
   );

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Avatar, Button, Icon } from "@/components/ui";
+import { PerfilHeader } from "./_components/perfil-header";
+import { perfilStyles } from "./perfil-styles";
 
 export default function PerfilPage() {
-  const { user, logout, refreshUser, api } = useAuth();
+  const { user, refreshUser, api } = useAuth();
   const toast = useToast();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,13 +58,7 @@ export default function PerfilPage() {
       try {
         const formData = new FormData();
         formData.append("file", file);
-
-        const uploadRes = await api.post<{ url: string; publicId: string }>(
-          "/auth/avatar",
-          formData
-        );
-
-        // Save the avatar URL to user profile
+        const uploadRes = await api.post<{ url: string; publicId: string }>("/auth/avatar", formData);
         await api.patch("/auth/me", { avatarUrl: uploadRes.url });
         await refreshUser();
         toast.success("Foto de perfil actualizada");
@@ -72,23 +68,21 @@ export default function PerfilPage() {
         setUploadingAvatar(false);
       }
     },
-    [api, toast, refreshUser]
-  );
-
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        void handleAvatarUpload(file);
-      }
-      e.target.value = "";
-    },
-    [handleAvatarUpload]
+    [api, toast, refreshUser],
   );
 
   const triggerFileSelect = useCallback(() => {
     fileRef.current?.click();
   }, []);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) void handleAvatarUpload(file);
+      e.target.value = "";
+    },
+    [handleAvatarUpload],
+  );
 
   async function changePassword() {
     if (changingPassword) return;
@@ -121,470 +115,135 @@ export default function PerfilPage() {
     }
   }
 
-  function handleLogout() {
-    logout();
-    router.replace("/login");
-  }
-
   return (
-    <div
-      style={{
-        minHeight: "100dvh",
-        background: "var(--bg)",
-        paddingBottom: 100,
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          padding: "24px 20px",
-          maxWidth: 600,
-          margin: "0 auto",
-        }}
-      >
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--text-mute)",
-            fontSize: 14,
-            padding: 0,
-            marginBottom: 16,
-          }}
-        >
-          <Icon name="chevL" size={16} color="var(--text-mute)" />
-          Volver
-        </button>
+    <div className="perfil-page">
+      <PerfilHeader onBack={() => router.push("/cuenta")} />
 
-        <div
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Mi perfil
+      <div className="perfil-section">
+        <div className="profile-banner" onClick={triggerFileSelect} role="button" tabIndex={0}>
+          <Avatar name={name} src={user?.avatarUrl} size={64} tone="var(--lime)" textColor="#0B0B0C" />
+          <div className="profile-info">
+            <div className="profile-name">{name}</div>
+            <div className="profile-email">{user?.email}</div>
+          </div>
+          <Icon name="image" size={18} color="var(--text-dim)" />
         </div>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+          disabled={uploadingAvatar}
+        />
       </div>
 
-      <div
-        style={{
-          padding: "0 20px",
-          maxWidth: 600,
-          margin: "0 auto",
-        }}
-      >
-        {/* Avatar Section */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: "32px 24px",
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 16,
-            marginBottom: 24,
-          }}
-        >
-          <button
-            onClick={triggerFileSelect}
-            disabled={uploadingAvatar}
-            style={{
-              position: "relative",
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: uploadingAvatar ? "not-allowed" : "pointer",
-              opacity: uploadingAvatar ? 0.7 : 1,
-              marginBottom: 16,
-            }}
-          >
-            <Avatar
-              name={name}
-              src={user?.avatarUrl}
-              size={100}
-              tone="var(--lime)"
-              textColor="#0B0B0C"
-            />
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: "50%",
-                background: "rgba(0,0,0,0.5)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: 0,
-                transition: "opacity 0.2s",
-              }}
-              className="avatar-overlay"
-            >
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-            </div>
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            style={{ display: "none" }}
-          />
+      <div className="perfil-section">
+        <div className="section-label">Cuenta</div>
 
+        <div className="card-cuenta">
           <div
-            style={{
-              fontSize: 13,
-              color: "var(--text-mute)",
-              textAlign: "center",
+            className="card-cuenta-row"
+            onClick={() => {
+              setNameInput(user?.name ?? "");
+              setEditingName((v) => !v);
             }}
           >
-            Tocá la foto para cambiarla
-          </div>
-        </div>
-
-        {/* Name Section */}
-        <div
-          style={{
-            padding: 20,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 16,
-            marginBottom: 16,
-          }}
-        >
-          {!editingName ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--text-mute)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    fontWeight: 600,
-                    marginBottom: 4,
-                  }}
-                >
-                  Nombre
-                </div>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 600,
-                  }}
-                >
-                  {name}
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setNameInput(user?.name ?? "");
-                  setEditingName(true);
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 8,
-                  color: "var(--text-mute)",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <Icon name="edit" size={18} color="var(--text-mute)" />
-              </button>
+            <div className="card-cuenta-left">
+              <Icon name="user" size={20} color="var(--lime)" />
+              <span>Nombre</span>
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-mute)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  fontWeight: 600,
-                }}
-              >
-                Nombre
+            <div className="card-cuenta-right">
+              <div className="card-cuenta-value">{name}</div>
+              <Icon name="chevR" size={18} color="var(--text-dim)" />
+            </div>
+          </div>
+
+          {editingName && (
+            <div className="card-editor">
+              <div>
+                <label className="form-label">Nombre</label>
+                <input
+                  autoFocus
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void saveName();
+                    if (e.key === "Escape") setEditingName(false);
+                  }}
+                  placeholder="Tu nombre"
+                  className="form-input"
+                />
               </div>
-              <input
-                autoFocus
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void saveName();
-                  if (e.key === "Escape") setEditingName(false);
-                }}
-                placeholder="Tu nombre"
-                style={{
-                  width: "100%",
-                  height: 48,
-                  padding: "0 16px",
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--lime)",
-                  borderRadius: 10,
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 16,
-                  color: "var(--text)",
-                  fontWeight: 600,
-                  outline: "none",
-                }}
-              />
-              <div style={{ display: "flex", gap: 8 }}>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setEditingName(false)}
-                  disabled={savingName}
-                  style={{ flex: 1 }}
-                >
+              <div className="btn-row">
+                <Button variant="secondary" size="md" onClick={() => setEditingName(false)} disabled={savingName} style={{ flex: 1 }}>
                   Cancelar
                 </Button>
-                <Button
-                  size="md"
-                  onClick={() => void saveName()}
-                  disabled={savingName}
-                  style={{ flex: 1 }}
-                >
+                <Button size="md" onClick={() => void saveName()} disabled={savingName} style={{ flex: 1 }}>
                   {savingName ? "Guardando…" : "Guardar"}
                 </Button>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Email Section */}
-        <div
-          style={{
-            padding: 20,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 16,
-            marginBottom: 16,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              color: "var(--text-mute)",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              fontWeight: 600,
-              marginBottom: 4,
-            }}
-          >
-            Email
-          </div>
-          <div
-            style={{
-              fontSize: 16,
-              color: "var(--text-dim)",
-            }}
-          >
-            {user?.email}
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              color: "var(--text-mute)",
-              marginTop: 4,
-            }}
-          >
-            El email no se puede cambiar
-          </div>
-        </div>
-
-        {/* Password Section */}
-        <div
-          style={{
-            padding: 20,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 16,
-            marginBottom: 16,
-          }}
-        >
-          {!showPasswordForm ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--text-mute)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    fontWeight: 600,
-                    marginBottom: 4,
-                  }}
-                >
-                  Contraseña
-                </div>
-                <div
-                  style={{
-                    fontSize: 16,
-                    color: "var(--text-dim)",
-                  }}
-                >
-                  ••••••••
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPasswordForm(true)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 8,
-                  color: "var(--text-mute)",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <Icon name="edit" size={18} color="var(--text-mute)" />
-              </button>
+          <div className="card-cuenta-row is-disabled">
+            <div className="card-cuenta-left">
+              <Icon name="send" size={20} color="var(--lime)" />
+              <span>Email</span>
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-mute)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  fontWeight: 600,
-                }}
-              >
-                Cambiar contraseña
-              </div>
+            <div className="card-cuenta-right">
+              <div className="card-cuenta-value">{user?.email}</div>
+            </div>
+          </div>
 
+          <div className="card-cuenta-row" onClick={() => setShowPasswordForm((v) => !v)}>
+            <div className="card-cuenta-left">
+              <Icon name="lock" size={20} color="var(--lime)" />
+              <span>Contraseña</span>
+            </div>
+            <div className="card-cuenta-right">
+              <div className="card-cuenta-value">••••••••</div>
+              <Icon name="chevR" size={18} color="var(--text-dim)" />
+            </div>
+          </div>
+
+          {showPasswordForm && (
+            <div className="card-editor" style={{ borderBottom: "none" }}>
               <div>
-                <label
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-mute)",
-                    fontWeight: 500,
-                    marginBottom: 6,
-                    display: "block",
-                  }}
-                >
-                  Contraseña actual
-                </label>
+                <label className="form-label">Contraseña actual</label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="••••••••"
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    padding: "0 14px",
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 10,
-                    fontFamily: "var(--font-sans)",
-                    fontSize: 15,
-                    color: "var(--text)",
-                    outline: "none",
-                  }}
+                  className="form-input"
                 />
               </div>
 
               <div>
-                <label
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-mute)",
-                    fontWeight: 500,
-                    marginBottom: 6,
-                    display: "block",
-                  }}
-                >
-                  Nueva contraseña
-                </label>
+                <label className="form-label">Nueva contraseña</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    padding: "0 14px",
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 10,
-                    fontFamily: "var(--font-sans)",
-                    fontSize: 15,
-                    color: "var(--text)",
-                    outline: "none",
-                  }}
+                  className="form-input"
                 />
               </div>
 
               <div>
-                <label
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-mute)",
-                    fontWeight: 500,
-                    marginBottom: 6,
-                    display: "block",
-                  }}
-                >
-                  Confirmar nueva contraseña
-                </label>
+                <label className="form-label">Confirmar nueva contraseña</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repetir contraseña"
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    padding: "0 14px",
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 10,
-                    fontFamily: "var(--font-sans)",
-                    fontSize: 15,
-                    color: "var(--text)",
-                    outline: "none",
-                  }}
+                  className="form-input"
                 />
               </div>
 
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <div className="btn-row" style={{ marginTop: 4 }}>
                 <Button
                   variant="secondary"
                   size="md"
@@ -597,12 +256,7 @@ export default function PerfilPage() {
                 <Button
                   size="md"
                   onClick={() => void changePassword()}
-                  disabled={
-                    changingPassword ||
-                    !currentPassword ||
-                    !newPassword ||
-                    !confirmPassword
-                  }
+                  disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
                   style={{ flex: 1 }}
                 >
                   {changingPassword ? "Cambiando…" : "Cambiar"}
@@ -611,34 +265,9 @@ export default function PerfilPage() {
             </div>
           )}
         </div>
-
-        {/* Logout Button */}
-        <Button
-          variant="danger"
-          size="lg"
-          block
-          onClick={handleLogout}
-          style={{ marginTop: 8 }}
-        >
-          Cerrar sesión
-        </Button>
       </div>
 
-      <style jsx>{`
-        .avatar-overlay:hover {
-          opacity: 1 !important;
-        }
-
-        button:hover .avatar-overlay {
-          opacity: 1;
-        }
-
-        @media (min-width: 640px) {
-          button .avatar-overlay {
-            opacity: 0;
-          }
-        }
-      `}</style>
+      <style jsx>{perfilStyles}</style>
     </div>
   );
 }

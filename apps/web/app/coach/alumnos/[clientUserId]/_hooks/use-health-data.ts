@@ -34,7 +34,12 @@ export function useHealthData(clientUserId: string): UseHealthDataResult {
     if (!force && (healthLoading || health)) return;
     setHealthLoading(true);
     try {
-      const r = await api.get<{ entries: Record<string, unknown>[]; metrics: Record<string, unknown>[]; coachNotes: Record<string, unknown>[] }>(
+      const r = await api.get<{
+        entries: Record<string, unknown>[];
+        metrics: Record<string, unknown>[];
+        metricsShared: boolean;
+        coachNotes: Record<string, unknown>[];
+      }>(
         `/coach/clients/${clientUserId}/health?take=30`,
       );
       setHealth({
@@ -58,6 +63,7 @@ export function useHealthData(clientUserId: string): UseHealthDataResult {
           thighCm: m.thighCm != null ? String(m.thighCm) : null,
           notes: m.notes != null ? String(m.notes) : null,
         })),
+        metricsShared: Boolean(r.metricsShared),
         coachNotes: (r.coachNotes ?? []).map((n) => ({
           id: String(n.id),
           day: String(n.day).slice(0, 10),
@@ -67,7 +73,7 @@ export function useHealthData(clientUserId: string): UseHealthDataResult {
         })),
       });
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Error cargando salud");
     } finally {
       setHealthLoading(false);
     }

@@ -257,6 +257,48 @@ export interface ExerciseProgression {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Progress Analytics
+// ─────────────────────────────────────────────────────────────
+
+export interface PersonalRecord {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  weight: number;
+  reps: number;
+  estimated1rm: number;
+  achievedAt: string;
+  sessionId: string;
+}
+
+export interface MuscleVolumeStats {
+  muscle: string;
+  sets: number;
+  exercises: number;
+  trend: "up" | "down" | "stable";
+}
+
+export interface WeeklyProgressSummary {
+  weekNumber: number;
+  totalWorkouts: number;
+  totalSets: number;
+  totalVolume: number;
+  prsCount: number;
+  topMuscles: MuscleVolumeStats[];
+}
+
+export interface ProgressDashboard {
+  recentPRs: PersonalRecord[];
+  muscleVolume: MuscleVolumeStats[];
+  weeklyProgress: WeeklyProgressSummary[];
+  comparisonVsLastWeek: {
+    workoutsDelta: number;
+    volumeDelta: number;
+    prsDelta: number;
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // Comments
 // ─────────────────────────────────────────────────────────────
 export interface Comment {
@@ -523,4 +565,20 @@ export interface HealthDashboardData {
   restingHeartRate: number | null;
   stress: number | null;
   source: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Notification Settings
+// ─────────────────────────────────────────────────────────────
+export interface NotificationSettings {
+  id: string;
+  workoutReminder: boolean;
+  reminderTime: string;
+  reminderDays: string[];
+  inactivityAlert: boolean;
+  inactivityDays: number;
+  weeklySummary: boolean;
+  weeklySummaryDay: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
 }

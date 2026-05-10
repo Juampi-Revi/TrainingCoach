@@ -5,6 +5,7 @@ import type { GoalItem } from "../_components/_types";
 
 interface UseGoalsDataResult {
   goals: GoalItem[] | null;
+  goalsShared: boolean | null;
   goalsLoading: boolean;
   goalKind: string;
   setGoalKind: React.Dispatch<React.SetStateAction<string>>;
@@ -27,6 +28,7 @@ export function useGoalsData(clientUserId: string): UseGoalsDataResult {
   const toast = useToast();
 
   const [goals, setGoals] = useState<GoalItem[] | null>(null);
+  const [goalsShared, setGoalsShared] = useState<boolean | null>(null);
   const [goalsLoading, setGoalsLoading] = useState(false);
   const [goalKind, setGoalKind] = useState("steps_daily");
   const [goalTarget, setGoalTarget] = useState("");
@@ -35,10 +37,11 @@ export function useGoalsData(clientUserId: string): UseGoalsDataResult {
     if (!force && (goalsLoading || goals)) return;
     setGoalsLoading(true);
     try {
-      const r = await api.get<{ goals: GoalItem[] }>(`/coach/clients/${clientUserId}/goals`);
+      const r = await api.get<{ goals: GoalItem[]; shared: boolean }>(`/coach/clients/${clientUserId}/goals`);
       setGoals(r.goals ?? []);
+      setGoalsShared(Boolean(r.shared));
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Error cargando metas");
     } finally {
       setGoalsLoading(false);
     }
@@ -81,5 +84,5 @@ export function useGoalsData(clientUserId: string): UseGoalsDataResult {
     }
   }
 
-  return { goals, goalsLoading, goalKind, setGoalKind, goalTarget, setGoalTarget, loadGoalsData, addGoal, deleteGoal };
+  return { goals, goalsShared, goalsLoading, goalKind, setGoalKind, goalTarget, setGoalTarget, loadGoalsData, addGoal, deleteGoal };
 }

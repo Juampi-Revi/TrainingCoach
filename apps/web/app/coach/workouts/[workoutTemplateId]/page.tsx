@@ -8,12 +8,11 @@ import { Button, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { WorkoutTemplateDetail } from "@regen/types";
 import { GROUP_COLORS, GROUP_LETTERS, groupLabel, blockTypeLabel, blockSummary } from "@/lib/constants";
-import type { WE, WB } from "./_components/_types";
+import type { WE } from "./_components/_types";
 import { ExercisePicker } from "./_components/exercise-picker";
 import { ExerciseRow } from "./_components/exercise-row";
 import { ExerciseInspector } from "./_components/exercise-inspector";
 import { WorkoutProperties } from "./_components/workout-properties";
-import { SectionLabel } from "./_components/section-label";
 import { BlockModal } from "./_components/block-modal";
 import { Icon } from "@/components/ui";
 
@@ -105,9 +104,14 @@ export default function TemplateEditorPage() {
     } catch (e) { console.error(e); }
   }
 
-  // Create block lookup map
-  const blockMap = new Map(blocks.map((b) => [b.id, b]));
-  
+  async function reorderBlocks(nextSorted: WorkoutTemplateDetail["blocks"]) {
+    const prev = blocks;
+    const nextWithOrder = nextSorted.map((b, index) => ({ ...b, sortOrder: index }));
+    setBlocks(nextWithOrder);
+    try { await api.put(`/coach/workouts/${workoutTemplateId}/blocks`, { blockIds: nextWithOrder.map((b) => b.id) }); }
+    catch (e) { console.error(e); setBlocks(prev); toast.error("No se pudo reordenar el bloque"); }
+  }
+
   const usedGroups = [...new Set(exercises
     .map((e) => e.supersetGroup)
     .filter(Boolean) as string[]
@@ -184,6 +188,8 @@ export default function TemplateEditorPage() {
                   .filter((e) => e.workoutBlockId === b.id)
                   .sort((a, c) => a.sortOrder - c.sortOrder);
                 const isLast = bIdx === blocksSorted.length - 1;
+                const canMoveUp = bIdx > 0;
+                const canMoveDown = bIdx < blocksSorted.length - 1;
                 return (
                   <div key={b.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--line)" }}>
                     {/* Block Header */}
@@ -206,7 +212,7 @@ export default function TemplateEditorPage() {
                           color: b.type === "warmup" ? "#FF8E72" : b.type === "cooldown" ? "#A78BFA" : b.type === "cardio" ? "#7AB8FF" : "var(--lime)",
                           letterSpacing: ".08em"
                         }}>
-                          {blockTypeLabel(b.type).toUpperCase()} {b.label ? `· ${b.label}` : ""} · {blockSummary(b)}
+                          {blockTypeLabel(b.type, b.intervalType).toUpperCase()} {b.label ? `· ${b.label}` : ""} · {blockSummary(b)}
                         </div>
                         <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
                           {blockExercises.length} ejercicio{blockExercises.length === 1 ? "" : "s"}
@@ -221,6 +227,8 @@ export default function TemplateEditorPage() {
                         )}
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
+                        <Button variant="ghost" size="sm" icon="chevUp" title="Mover bloque arriba" ariaLabel="Mover bloque arriba" disabled={!canMoveUp} onClick={() => { if (!canMoveUp) return; const next = [...blocksSorted]; const swapIdx = bIdx - 1; [next[bIdx], next[swapIdx]] = [next[swapIdx]!, next[bIdx]!]; void reorderBlocks(next); }} />
+                        <Button variant="ghost" size="sm" icon="chevD" title="Mover bloque abajo" ariaLabel="Mover bloque abajo" disabled={!canMoveDown} onClick={() => { if (!canMoveDown) return; const next = [...blocksSorted]; const swapIdx = bIdx + 1; [next[bIdx], next[swapIdx]] = [next[swapIdx]!, next[bIdx]!]; void reorderBlocks(next); }} />
                         <Button variant="outline" size="sm" onClick={() => { setEditingBlockId(b.id); setBlockModalOpen(true); }}>
                           Configurar
                         </Button>
@@ -231,6 +239,27 @@ export default function TemplateEditorPage() {
                     </div>
 
                     {/* Exercises in block */}
+                    {blockExercises.length === 0 && (
+                      <div style={{ padding: "14px 14px", borderBottom: "1px solid var(--line)", background: "var(--bg-1)" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                          <div style={{
+                            width: 28, height: 28, borderRadius: 8,
+                            background: "var(--bg-2)", border: "1px solid var(--line-2)",
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                          }}>
+                            <Icon name="plus" size={14} color="var(--text-mute)" />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>
+                              Este bloque todavía no tiene ejercicios
+                            </div>
+                            <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2, lineHeight: 1.35 }}>
+                              Agregá ejercicios para que el bloque tenga contenido. Si es EMOM, los ejercicios se alternan por minuto.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {blockExercises.map((we) => {
                       const secIdx = blockExercises.findIndex((e) => e.id === we.id);
                       const gc = we.supersetGroup ? (GROUP_COLORS[we.supersetGroup] ?? null) : null;
@@ -256,6 +285,7 @@ export default function TemplateEditorPage() {
                           <ExerciseRow
                             we={we}
                             blockType={b.type}
+                            intervalType={b.intervalType}
                             selected={selectedWeId === we.id}
                             onSelect={() => setSelectedWeId((id) => id === we.id ? null : we.id)}
                             onMoveUp={secIdx > 0 ? () => moveExerciseInSection(we.id, "up", b.id) : null}

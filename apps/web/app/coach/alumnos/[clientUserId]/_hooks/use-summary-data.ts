@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import type { WeeklySummary } from "../_components/_types";
 
 interface UseSummaryDataResult {
@@ -10,6 +11,7 @@ interface UseSummaryDataResult {
 
 export function useSummaryData(clientUserId: string): UseSummaryDataResult {
   const { api } = useAuth();
+  const toast = useToast();
   const [summary, setSummary] = useState<WeeklySummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
@@ -20,7 +22,7 @@ export function useSummaryData(clientUserId: string): UseSummaryDataResult {
       const r = await api.get<WeeklySummary>(`/coach/clients/${clientUserId}/summary/week?days=7`);
       setSummary(r);
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Error cargando el resumen");
     } finally {
       setSummaryLoading(false);
     }

@@ -36,9 +36,9 @@ export function FuerzaAerobicoRow({
         label="AERÓBICO"
         value={String(cardioCompleted)}
         sub={`de ${cardioTargetCount} esta sem`}
-        accent="#7AB8FF"
+        accent="var(--info)"
       >
-        <DotProgress count={cardioTargetCount} done={cardioCompleted} color="#7AB8FF" />
+        <DotProgress count={cardioTargetCount} done={cardioCompleted} color="var(--info)" />
       </MetricCard>
     </div>
   );

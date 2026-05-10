@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import type { ClientDetail, ApiClientResponse } from "../_components/_types";
 
 interface UseClientDetailResult {
@@ -10,6 +11,7 @@ interface UseClientDetailResult {
 
 export function useClientDetail(clientUserId: string): UseClientDetailResult {
   const { api } = useAuth();
+  const toast = useToast();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,15 +22,17 @@ export function useClientDetail(clientUserId: string): UseClientDetailResult {
         setClient({
           ...data.client,
           recentSessions: data.recentSessions,
-          weightHistory: data.weightHistory.map((w) => ({
-            recordedAt: w.measuredAt,
-            weight: w.weightKg ? parseFloat(w.weightKg) : 0,
-          })),
+          weightHistory: (data.weightHistory ?? [])
+            .filter((w) => w.weightKg != null)
+            .map((w) => ({
+              recordedAt: w.measuredAt,
+              weight: parseFloat(w.weightKg!),
+            })),
         });
       })
-      .catch(console.error)
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Error cargando alumno"))
       .finally(() => setLoading(false));
-  }, [api, clientUserId]);
+  }, [api, clientUserId, toast]);
 
   return { client, loading, setClient };
 }

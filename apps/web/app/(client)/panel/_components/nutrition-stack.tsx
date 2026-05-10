@@ -26,7 +26,7 @@ export function NutritionStack({ good, regular, poor }: NutritionStackProps) {
         <div
           className="nutrition-score"
           style={{
-            color: score >= 7 ? "var(--lime)" : score >= 4 ? "#FF8E72" : "var(--danger)",
+            color: score >= 7 ? "var(--lime)" : score >= 4 ? "var(--warn)" : "var(--danger)",
           }}
         >
           {score}
@@ -45,7 +45,7 @@ export function NutritionStack({ good, regular, poor }: NutritionStackProps) {
       {/* Legend */}
       <div className="nutrition-legend">
         <LegendItem color="var(--success)" count={good} label="buenas" />
-        <LegendItem color="#FF8E72" count={regular} label="ok" />
+        <LegendItem color="var(--warn)" count={regular} label="ok" />
         <LegendItem color="var(--danger)" count={poor} label="pobres" />
       </div>
 
@@ -108,7 +108,7 @@ export function NutritionStack({ good, regular, poor }: NutritionStackProps) {
         }
 
         .nutrition-segment.regular {
-          background: #FF8E72;
+          background: var(--warn);
         }
 
         .nutrition-segment.poor {

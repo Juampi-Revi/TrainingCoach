@@ -2,7 +2,7 @@
 
 // components/quick-log-strip.tsx — Strip de botones para log rápido
 
-import { useState } from "react";
+import { Icon } from "@/components/ui";
 
 interface QuickLogStripProps {
   workoutsCompleted: number;
@@ -10,53 +10,10 @@ interface QuickLogStripProps {
   foodCount: number;
   stepsCount: number | null;
   sleepMinutes: number | null;
+  onLogWorkout: () => void;
   onLogFood: () => void;
   onLogSteps: () => void;
   onLogSleep: () => void;
-}
-
-// Simple SVG icons
-function DumbbellIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 5v14M18 5v14M6 9h12M6 15h12M3 5h3M3 19h3M18 5h3M18 19h3" />
-    </svg>
-  );
-}
-
-function BookIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    </svg>
-  );
-}
-
-function FootprintIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 2c2 0 3 2 3 4s-1 4-3 4-3-2-3-4 1-4 3-4z" />
-      <path d="M7 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" />
-      <path d="M17 10c1.5 0 2.5 1.5 2.5 3s-1 3-2.5 3-2.5-1.5-2.5-3 1-3 2.5-3z" />
-    </svg>
-  );
-}
-
-function MoonIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-    </svg>
-  );
-}
-
-function CheckIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
 }
 
 export function QuickLogStrip({
@@ -65,6 +22,7 @@ export function QuickLogStrip({
   foodCount,
   stepsCount,
   sleepMinutes,
+  onLogWorkout,
   onLogFood,
   onLogSteps,
   onLogSleep,
@@ -80,15 +38,15 @@ export function QuickLogStrip({
       <div className="quick-log-grid">
         {/* Workout */}
         <QuickLogButton
-          icon={<DumbbellIcon />}
-          label="Workout"
+          icon={<Icon name="dumbbell" size={22} />}
+          label="Entreno"
           done={workoutsDone}
-          onClick={() => {}}
+          onClick={onLogWorkout}
         />
 
         {/* Comida */}
         <QuickLogButton
-          icon={<BookIcon />}
+          icon={<Icon name="beef" size={22} />}
           label="Comida"
           badge={foodCount > 0 ? String(foodCount) : undefined}
           onClick={onLogFood}
@@ -96,7 +54,7 @@ export function QuickLogStrip({
 
         {/* Pasos */}
         <QuickLogButton
-          icon={<FootprintIcon />}
+          icon={<Icon name="footprints" size={22} />}
           label="Pasos"
           done={hasSteps}
           badge={hasSteps ? (stepsCount! > 999 ? `${(stepsCount! / 1000).toFixed(1)}k` : String(stepsCount)) : undefined}
@@ -105,7 +63,7 @@ export function QuickLogStrip({
 
         {/* Sueño */}
         <QuickLogButton
-          icon={<MoonIcon />}
+          icon={<Icon name="moon" size={22} />}
           label="Sueño"
           done={hasSleep}
           badge={hasSleep ? `${Math.floor(sleepMinutes! / 60)}h` : undefined}
@@ -163,14 +121,9 @@ interface QuickLogButtonProps {
 }
 
 function QuickLogButton({ icon, label, done, badge, disabled, onClick }: QuickLogButtonProps) {
-  const [hovered, setHovered] = useState(false);
-  const isActive = done || (!disabled && hovered);
-
   return (
     <button
       onClick={disabled ? undefined : onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       className={`quick-log-btn ${done ? "done" : ""} ${disabled ? "disabled" : ""}`}
     >
       <div className="quick-log-icon-wrapper">
@@ -179,12 +132,12 @@ function QuickLogButton({ icon, label, done, badge, disabled, onClick }: QuickLo
         </div>
 
         {/* Badge */}
-        {badge && !done && <div className="quick-log-badge">{badge}</div>}
+        {badge && <div className="quick-log-badge">{badge}</div>}
 
         {/* Done checkmark */}
-        {done && (
+        {done && !badge && (
           <div className="quick-log-check">
-            <CheckIcon size={10} />
+            <Icon name="check" size={12} />
           </div>
         )}
       </div>

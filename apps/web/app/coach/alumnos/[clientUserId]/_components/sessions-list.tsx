@@ -5,8 +5,10 @@ import { Icon, StateBlock } from "@/components/ui";
 import type { SessionSummary } from "@regen/types";
 import { daysSince, normalizeEnergyRating, fmtSessionDuration } from "./_utils";
 
+type SessionSummaryWithVolume = SessionSummary & { totalVolumeKg?: number | null };
+
 interface SessionsListProps {
-  sessions: SessionSummary[];
+  sessions: SessionSummaryWithVolume[];
   clientUserId: string;
   limit?: number;
   showStatus?: boolean;
@@ -28,9 +30,13 @@ export function SessionsList({ sessions, clientUserId, limit, showStatus = false
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {items.map((s) => {
+      {items.map((s, idx) => {
         const d = fmtSessionDuration(s.performedAt, s.completedAt);
         const e = normalizeEnergyRating(s.energyRating);
+        const prev = items[idx + 1];
+        const currentVol = typeof s.totalVolumeKg === "number" ? s.totalVolumeKg : null;
+        const prevVol = prev && typeof prev.totalVolumeKg === "number" ? prev.totalVolumeKg : null;
+        const improved = currentVol != null && prevVol != null && currentVol > prevVol;
         return (
           <div
             key={s.id}
@@ -88,6 +94,12 @@ export function SessionsList({ sessions, clientUserId, limit, showStatus = false
                 </>
               )}
             </div>
+            {improved && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <Icon name="trendingUp" size={16} color="var(--success)" />
+                <Icon name="star" size={14} color="var(--success)" />
+              </div>
+            )}
             <Icon name="chevR" size={14} color="var(--text-mute)" />
           </div>
         );

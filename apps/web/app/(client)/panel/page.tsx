@@ -94,12 +94,16 @@ export default function PanelPage() {
   }, [api]);
 
   const loadAll = useCallback(async () => {
-    setLoading(true);
     await Promise.all([loadDashboard(), loadToday(), loadGoals()]);
     setLoading(false);
   }, [loadDashboard, loadToday, loadGoals]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void loadAll();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [loadAll]);
 
   const handleSaveSteps = async (data: { date: string; value: number }) => {
     try {
@@ -139,15 +143,14 @@ export default function PanelPage() {
   const totalTarget = d?.workoutsTarget ?? 4;
   const strengthTarget = d?.strengthTarget ?? Math.ceil(totalTarget / 2);
   const cardioTarget = d?.cardioTarget ?? Math.floor(totalTarget / 2);
-  const workoutFraction = totalTarget > 0 ? (d?.workoutsCompleted ?? 0) / totalTarget : 0;
-  const stepsFraction = d?.stepsAvg ? Math.min(1, d.stepsAvg / 10000) : 0;
-  const sleepFraction = d?.sleepMinutesAvg ? Math.min(1, d.sleepMinutesAvg / (8 * 60)) : 0;
   const stepsK = d?.stepsAvg ? Math.round(d.stepsAvg / 100) / 10 : null;
   const dailyStepsK = d?.dailySteps.map(s => s !== null ? Math.round(s / 100) / 10 : null) ?? [];
   const trend = calculateTrend(d?.dailySteps ?? []);
   const sleepHours = d?.sleepMinutesAvg ? d.sleepMinutesAvg / 60 : null;
-  const stepsGoal = goals.find(g => g.kind === "steps")?.targetInt ?? 8000;
-  const sleepGoalMinutes = goals.find(g => g.kind === "sleep")?.targetInt ?? 480;
+  const stepsGoal = goals.find(g => g.kind === "steps")?.targetInt ?? 6000;
+  const sleepGoalMinutes = goals.find(g => g.kind === "sleep")?.targetInt ?? 420;
+  const stepsGoalK = Math.round((stepsGoal / 1000) * 10) / 10;
+  const sleepGoalHours = sleepGoalMinutes / 60;
 
   return (
     <div className="panel-page">
@@ -159,15 +162,15 @@ export default function PanelPage() {
       </div>
 
       <div className="panel-section panel-section-score">
-        {d && (
+        {d && todayData && (
           <ScoreHeader
             weekNumber={d.weekNumber}
             totalWeeks={d.totalWeeks}
             weekScore={d.weekScore}
             previousWeekScore={d.previousWeekScore}
-            workoutFraction={workoutFraction}
-            stepsFraction={stepsFraction}
-            sleepFraction={sleepFraction}
+            workoutsWeeklyTarget={d.workoutsTarget}
+            today={todayData}
+            goals={goals}
           />
         )}
       </div>
@@ -180,6 +183,7 @@ export default function PanelPage() {
             foodCount={todayData.food.length}
             stepsCount={todayData.steps}
             sleepMinutes={todayData.sleepMinutes}
+            onLogWorkout={() => router.push("/semana")}
             onLogFood={() => router.push("/comida")}
             onLogSteps={() => setModalOpen("steps")}
             onLogSleep={() => setModalOpen("sleep")}
@@ -188,20 +192,31 @@ export default function PanelPage() {
       </div>
 
       <div className="panel-section">
+        <div className="panel-section-title">RESUMEN DE LA SEMANA</div>
         <div className="stats-grid-main">
           {d && (
             <>
-              <MetricCard label="FUERZA" value={String(d.strengthCompleted)} sub={`de ${strengthTarget} esta sem`} accent="var(--lime)">
-                <DotProgress count={strengthTarget} done={d.strengthCompleted} color="var(--lime)" />
+              <MetricCard
+                label="FUERZA"
+                value={strengthTarget > 0 ? String(d.strengthCompleted) : "—"}
+                sub={strengthTarget > 0 ? `de ${strengthTarget} esta sem` : "no planificado esta sem"}
+                accent="var(--lime)"
+              >
+                {strengthTarget > 0 ? <DotProgress count={strengthTarget} done={d.strengthCompleted} color="var(--lime)" /> : null}
               </MetricCard>
-              <MetricCard label="AERÓBICO" value={String(d.cardioCompleted)} sub={`de ${cardioTarget} esta sem`} accent="#7AB8FF">
-                <DotProgress count={cardioTarget} done={d.cardioCompleted} color="#7AB8FF" />
+              <MetricCard
+                label="AERÓBICO"
+                value={cardioTarget > 0 ? String(d.cardioCompleted) : "—"}
+                sub={cardioTarget > 0 ? `de ${cardioTarget} esta sem` : "no planificado esta sem"}
+                accent="var(--info)"
+              >
+                {cardioTarget > 0 ? <DotProgress count={cardioTarget} done={d.cardioCompleted} color="var(--info)" /> : null}
               </MetricCard>
-              <MetricCard label="PASOS · 7D" value={stepsK !== null ? stepsK.toFixed(1).replace(".", ",") + "k" : "—"} sub={stepsK !== null ? "prom diario · meta 8k" : "no registrado"} trend={trend} accent="var(--lime)">
-                <MiniBars data={dailyStepsK} target={8} color="var(--lime)" unit="k" />
+              <MetricCard label="PASOS · 7D" value={stepsK !== null ? stepsK.toFixed(1).replace(".", ",") + "k" : "—"} sub={stepsK !== null ? `prom diario · meta ${String(stepsGoalK).replace(".", ",")}k` : "no registrado"} trend={trend} accent="var(--lime)">
+                <MiniBars data={dailyStepsK} target={stepsGoalK} color="var(--lime)" unit="k" />
               </MetricCard>
-              <MetricCard label="SUEÑO" value={sleepHours !== null ? fmtSleepH(sleepHours) : "—"} sub={sleepHours !== null ? "prom · meta 8h" : "no registrado"} accent="#A78BFA">
-                {sleepHours !== null && <div style={{ display: "flex", justifyContent: "flex-end" }}><SleepRing hours={sleepHours} targetHours={8} size={40} /></div>}
+              <MetricCard label="SUEÑO" value={sleepHours !== null ? fmtSleepH(sleepHours) : "—"} sub={sleepHours !== null ? `prom · meta ${fmtSleepH(sleepGoalHours)}` : "no registrado"} accent="var(--sleep)">
+                {sleepHours !== null && <div style={{ display: "flex", justifyContent: "flex-end" }}><SleepRing hours={sleepHours} targetHours={sleepGoalHours} size={40} /></div>}
               </MetricCard>
             </>
           )}
@@ -209,6 +224,7 @@ export default function PanelPage() {
       </div>
 
       <div className="panel-section">
+        <div className="panel-section-title">DETALLE DE LA SEMANA</div>
         <div className="stats-grid-secondary">
           {d && (
             <>
@@ -216,7 +232,7 @@ export default function PanelPage() {
                 <div className="secondary-label">ENERGÍA · DIARIA</div>
                 <div className="secondary-content">
                   <div className="secondary-value-row">
-                    <span className="secondary-value" style={{ color: "#7AB8FF" }}>{d.energyAvg !== null ? d.energyAvg.toFixed(1).replace(".", ",") : "—"}</span>
+                    <span className="secondary-value" style={{ color: "var(--info)" }}>{d.energyAvg !== null ? d.energyAvg.toFixed(1).replace(".", ",") : "—"}</span>
                     <span className="secondary-unit">/ 5</span>
                   </div>
                   <div className="secondary-sub">{d.energyAvg !== null ? "promedio 7 días" : "sin datos"}</div>

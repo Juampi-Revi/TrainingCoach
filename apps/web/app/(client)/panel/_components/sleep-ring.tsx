@@ -32,7 +32,7 @@ export function SleepRing({ hours, targetHours = 8, size = 38 }: SleepRingProps)
           cy={center}
           r={r}
           fill="none"
-          stroke="#A78BFA"
+          stroke="var(--sleep)"
           strokeWidth="3"
           strokeLinecap="round"
           strokeDasharray={circumference}

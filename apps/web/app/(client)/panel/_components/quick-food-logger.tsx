@@ -16,7 +16,7 @@ const MEAL_OPTIONS: Array<{ id: MealType; label: string }> = [
 
 const QUALITY_OPTIONS: Array<{ id: FoodQuality; label: string; color: string; bg: string; desc: string }> = [
   { id: "good", label: "Buena", color: "var(--success)", bg: "rgba(110,231,168,.12)", desc: "Saludable, balanceada" },
-  { id: "regular", label: "Regular", color: "#FF8E72", bg: "rgba(255,142,114,.12)", desc: "Aceptable, mejorable" },
+  { id: "regular", label: "Regular", color: "var(--warn)", bg: "rgba(255,181,71,.12)", desc: "Aceptable, mejorable" },
   { id: "poor", label: "Pobre", color: "var(--danger)", bg: "rgba(255,91,91,.12)", desc: "Procesados, pesado" },
 ];
 

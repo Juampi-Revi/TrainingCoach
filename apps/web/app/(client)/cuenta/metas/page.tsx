@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
 import { createClient } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
+import "./_styles.css";
 
 interface Goal {
   id: string;
@@ -27,11 +28,11 @@ interface GoalsData {
 
 const GOAL_CONFIGS = {
   steps: {
-    icon: "footprint" as const,
+    icon: "footprints" as const,
     label: "Pasos diarios",
     description: "Meta de pasos por día",
     unit: "pasos",
-    defaultValue: 10000,
+    defaultValue: 6000,
     min: 1000,
     max: 50000,
     step: 500,
@@ -41,7 +42,7 @@ const GOAL_CONFIGS = {
     label: "Horas de sueño",
     description: "Meta de descanso diario",
     unit: "horas",
-    defaultValue: 8,
+    defaultValue: 7,
     min: 4,
     max: 12,
     step: 0.5,
@@ -65,13 +66,9 @@ export default function MetasPage() {
   const api = createClient(token);
   const [data, setData] = useState<GoalsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editingGoal, setEditingGoal] = useState<string | null>(null);
+  const [expandedKind, setExpandedKind] = useState<keyof typeof GOAL_CONFIGS | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [updatingShare, setUpdatingShare] = useState(false);
-
-  useEffect(() => {
-    loadGoals();
-  }, []);
 
   async function loadGoals() {
     try {
@@ -85,17 +82,24 @@ export default function MetasPage() {
     }
   }
 
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      loadGoals();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
+
   function getGoalByKind(kind: keyof typeof GOAL_CONFIGS): Goal | undefined {
     return data?.goals.find((g) => g.kind === kind);
   }
 
-  async function handleCreateGoal(kind: keyof typeof GOAL_CONFIGS) {
+  async function handleCreateGoal(kind: keyof typeof GOAL_CONFIGS, value: number) {
     const config = GOAL_CONFIGS[kind];
     try {
       const payload = {
         kind,
-        targetInt: kind === "sleep" ? null : config.defaultValue,
-        targetNumber: kind === "sleep" ? String(config.defaultValue) : null,
+        targetInt: kind === "sleep" ? null : Math.trunc(value),
+        targetNumber: kind === "sleep" ? String(value) : null,
         unit: kind === "steps" ? "steps" : kind === "sleep" ? "hours" : "sessions",
         period: kind === "workouts" ? "weekly" : "daily",
         startDate: new Date().toISOString().split("T")[0],
@@ -104,6 +108,7 @@ export default function MetasPage() {
 
       await api.post<Goal>("/client/goals", payload);
       toast.success(`${config.label} configurada`);
+      setExpandedKind(null);
       loadGoals();
     } catch (error) {
       toast.error("Error al crear meta");
@@ -124,11 +129,10 @@ export default function MetasPage() {
 
       await api.patch<Goal>(`/client/goals/${goalId}`, payload);
       toast.success("Meta actualizada");
+      setExpandedKind(null);
       loadGoals();
     } catch (error) {
       toast.error("Error al actualizar meta");
-    } finally {
-      setEditingGoal(null);
     }
   }
 
@@ -136,6 +140,7 @@ export default function MetasPage() {
     try {
       await api.del(`/client/goals/${goalId}`);
       toast.success("Meta eliminada");
+      setExpandedKind(null);
       loadGoals();
     } catch (error) {
       toast.error("Error al eliminar meta");
@@ -159,21 +164,42 @@ export default function MetasPage() {
     }
   }
 
-  function startEditing(goal: Goal) {
-    setEditingGoal(goal.id);
-    const value = goal.kind === "sleep" && goal.targetNumber
-      ? goal.targetNumber
-      : goal.targetInt?.toString() || "";
+  function openEditor(kind: keyof typeof GOAL_CONFIGS) {
+    setExpandedKind((prev) => (prev === kind ? null : kind));
+    const goal = getGoalByKind(kind);
+    const config = GOAL_CONFIGS[kind];
+    const value = goal
+      ? goal.kind === "sleep"
+        ? goal.targetNumber ?? String(config.defaultValue)
+        : goal.targetInt?.toString() ?? String(config.defaultValue)
+      : String(config.defaultValue);
     setEditValue(value);
   }
 
-  function saveEdit(goal: Goal) {
+  function closeEditor() {
+    setExpandedKind(null);
+    setEditValue("");
+  }
+
+  async function saveKind(kind: keyof typeof GOAL_CONFIGS) {
+    const config = GOAL_CONFIGS[kind];
     const numValue = parseFloat(editValue);
-    if (isNaN(numValue)) {
+    if (Number.isNaN(numValue)) {
       toast.error("Valor inválido");
       return;
     }
-    handleUpdateGoal(goal.id, numValue);
+
+    if (numValue < config.min || numValue > config.max) {
+      toast.error(`El valor debe estar entre ${config.min} y ${config.max}`);
+      return;
+    }
+
+    const goal = getGoalByKind(kind);
+    if (goal) {
+      await handleUpdateGoal(goal.id, numValue);
+      return;
+    }
+    await handleCreateGoal(kind, numValue);
   }
 
   const hasGoals = data && data.goals.length > 0;
@@ -181,22 +207,24 @@ export default function MetasPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100dvh", background: "var(--bg)", padding: "20px 16px" }}>
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Metas de salud</div>
-          <div style={{ fontSize: 14, color: "var(--text-mute)" }}>Configurá tus objetivos personales</div>
+      <div className="metas-page">
+        <div className="metas-header">
+          <button onClick={() => router.back()} className="back-button">
+            <Icon name="chevL" size={16} color="var(--text-mute)" />
+            Volver
+          </button>
+          <div className="metas-title">Metas de salud</div>
+          <div className="metas-subtitle">Define tus objetivos de pasos, sueño y entrenamientos</div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {[1, 2, 3].map((i) => (
-            <div key={i} style={{ height: 120, background: "var(--bg-1)", borderRadius: 14, animation: "pulse 1.5s ease-in-out infinite" }} />
-          ))}
+
+        <div className="metas-content">
+          <div className="metas-skeleton">
+            <div className="skeleton-block skeleton-sm" />
+            <div className="skeleton-block skeleton-sm skeleton-delay-1" />
+            <div className="skeleton-block skeleton-sm skeleton-delay-2" />
+            <div className="skeleton-block skeleton-sm skeleton-delay-3" />
+          </div>
         </div>
-        <style jsx>{`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-          }
-        `}</style>
       </div>
     );
   }
@@ -213,620 +241,98 @@ export default function MetasPage() {
       </div>
 
       <div className="metas-content">
-        {data?.hasCoach && (
-          <div className="share-section">
-            <div className="share-card">
-              <div className="share-info">
-                <div className="share-icon">
-                  <Icon name={anyShared ? "eye" : "eyeOff"} size={20} color="var(--lime)" />
-                </div>
-                <div className="share-text">
-                  <div className="share-title">Compartir con entrenador</div>
-                  <div className="share-desc">
-                    {anyShared
-                      ? "Tu entrenador puede ver tu progreso"
-                      : "Las metas son privadas"}
-                  </div>
-                </div>
+        <div className="card-cuenta">
+          {data?.hasCoach && (
+            <div className="card-cuenta-row is-disabled">
+              <div className="card-cuenta-left">
+                <Icon name={anyShared ? "eye" : "eyeOff"} size={20} color="var(--lime)" />
+                <span>Compartir con entrenador</span>
               </div>
-              <button
-                onClick={toggleShareWithCoach}
-                disabled={updatingShare}
-                className={`share-toggle ${anyShared ? "active" : ""}`}
-              >
-                <div className="share-toggle-knob" />
-              </button>
+              <div className="card-cuenta-right">
+                <button
+                  onClick={toggleShareWithCoach}
+                  disabled={!hasGoals || updatingShare}
+                  className={`share-toggle ${anyShared ? "active" : ""}`}
+                  aria-label="Compartir con entrenador"
+                >
+                  <div className="share-toggle-knob" />
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="goals-grid">
           {(Object.keys(GOAL_CONFIGS) as Array<keyof typeof GOAL_CONFIGS>).map((kind) => {
             const config = GOAL_CONFIGS[kind];
             const goal = getGoalByKind(kind);
-            const isEditing = editingGoal === goal?.id;
+            const expanded = expandedKind === kind;
+            const displayValue = goal
+              ? goal.kind === "sleep"
+                ? goal.targetNumber ?? ""
+                : goal.targetInt?.toString() ?? ""
+              : "Sin configurar";
 
             return (
-              <div key={kind} className={`goal-card ${goal ? "active" : "empty"}`}>
-                <div className="goal-header">
-                  <div className="goal-icon">
-                    <Icon name={config.icon} size={24} color={goal ? "var(--lime)" : "var(--text-mute)"} />
+              <Fragment key={kind}>
+                <div className="card-cuenta-row" onClick={() => openEditor(kind)}>
+                  <div className="card-cuenta-left">
+                    <Icon name={config.icon} size={20} color="var(--lime)" />
+                    <span>{config.label}</span>
                   </div>
-                  {goal && (
-                    <button
-                      onClick={() => handleDeleteGoal(goal.id)}
-                      className="goal-delete"
-                      title="Eliminar meta"
-                    >
-                      <Icon name="x" size={16} color="var(--text-mute)" />
-                    </button>
-                  )}
+                  <div className="card-cuenta-right">
+                    <div className="card-cuenta-value">
+                      {goal ? `${displayValue} ${config.unit}` : displayValue}
+                    </div>
+                    <Icon name={expanded ? "chevUp" : "chevD"} size={18} color="var(--text-dim)" />
+                  </div>
                 </div>
 
-                <div className="goal-label">{config.label}</div>
+                {expanded && (
+                  <div className="card-editor">
+                    <div className="editor-row">
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveKind(kind);
+                          if (e.key === "Escape") closeEditor();
+                        }}
+                        min={config.min}
+                        max={config.max}
+                        step={config.step}
+                        autoFocus
+                        className="goal-input"
+                      />
+                      <div className="goal-unit">{config.unit}</div>
+                    </div>
 
-                {goal ? (
-                  <>
-                    {isEditing ? (
-                      <div className="goal-edit">
-                        <input
-                          type="number"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveEdit(goal);
-                            if (e.key === "Escape") setEditingGoal(null);
-                          }}
-                          min={config.min}
-                          max={config.max}
-                          step={config.step}
-                          autoFocus
-                          className="goal-input"
-                        />
-                        <div className="goal-unit">{config.unit}</div>
-                        <div className="goal-edit-actions">
-                          <button onClick={() => setEditingGoal(null)} className="goal-btn cancel">
-                            <Icon name="x" size={14} color="var(--text-mute)" />
-                          </button>
-                          <button onClick={() => saveEdit(goal)} className="goal-btn save">
-                            <Icon name="check" size={14} color="var(--bg)" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="goal-value-section" onClick={() => startEditing(goal)}>
-                        <div className="goal-value">
-                          {goal.kind === "sleep" && goal.targetNumber
-                            ? goal.targetNumber
-                            : goal.targetInt}
-                        </div>
-                        <div className="goal-unit">{config.unit}</div>
-                        <div className="goal-edit-hint">
-                          <Icon name="edit" size={12} color="var(--text-mute)" />
-                        </div>
-                      </div>
-                    )}
-                    <div className="goal-desc">{config.description}</div>
-                  </>
-                ) : (
-                  <>
-                    <div className="goal-empty-text">Sin configurar</div>
-                    <button
-                      onClick={() => handleCreateGoal(kind)}
-                      className="goal-setup-btn"
-                    >
-                      <Icon name="plus" size={16} color="var(--bg)" />
-                      Configurar
-                    </button>
-                  </>
+                    <div className="editor-actions">
+                      {goal && (
+                        <button
+                          className="danger-btn"
+                          onClick={() => handleDeleteGoal(goal.id)}
+                          type="button"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                      <div className="spacer" />
+                      <button className="ghost-btn" onClick={closeEditor} type="button">
+                        Cancelar
+                      </button>
+                      <button className="primary-btn" onClick={() => saveKind(kind)} type="button">
+                        Guardar
+                      </button>
+                    </div>
+
+                    <div className="editor-help">{config.description}</div>
+                  </div>
                 )}
-              </div>
+              </Fragment>
             );
           })}
         </div>
-
-        {!hasGoals && (
-          <div className="empty-state">
-            <div className="empty-icon">
-              <Icon name="target" size={48} color="var(--text-mute)" />
-            </div>
-            <div className="empty-title">Configura tus metas</div>
-            <div className="empty-desc">
-              Define objetivos de pasos, sueño y entrenos para hacer un seguimiento de tu progreso.
-              Puedes editar los valores en cualquier momento.
-            </div>
-          </div>
-        )}
       </div>
-
-      <style jsx>{`
-        .metas-page {
-          min-height: 100dvh;
-          background: var(--bg);
-          padding-bottom: calc(100px + env(safe-area-inset-bottom));
-        }
-
-        .metas-header {
-          padding: 20px 16px 16px;
-        }
-
-        .back-button {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: var(--text-mute);
-          font-size: 14px;
-          padding: 0;
-          margin-bottom: 16px;
-          transition: color 0.2s ease;
-        }
-
-        .back-button:hover {
-          color: var(--text);
-        }
-
-        .metas-title {
-          font-size: 24px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-          margin-bottom: 6px;
-        }
-
-        .metas-subtitle {
-          font-size: 13px;
-          color: var(--text-mute);
-        }
-
-        .metas-content {
-          padding: 0 16px;
-        }
-
-        .loading-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 60px 24px;
-          gap: 16px;
-        }
-
-        .loading-text {
-          font-size: 14px;
-          color: var(--text-mute);
-        }
-
-        .share-section {
-          margin-bottom: 16px;
-        }
-
-        .share-card {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 16px;
-          background: var(--bg-1);
-          border: 1px solid var(--line);
-          border-radius: 14px;
-        }
-
-        .share-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .share-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          background: rgba(215, 255, 58, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .share-title {
-          font-size: 15px;
-          font-weight: 600;
-          letter-spacing: -0.01em;
-        }
-
-        .share-desc {
-          font-size: 12px;
-          color: var(--text-mute);
-          margin-top: 2px;
-        }
-
-        .share-toggle {
-          width: 52px;
-          height: 28px;
-          border-radius: 14px;
-          background: var(--bg-2);
-          border: 2px solid var(--line);
-          cursor: pointer;
-          position: relative;
-          transition: all 0.2s ease;
-          padding: 0;
-        }
-
-        .share-toggle.active {
-          background: var(--lime);
-          border-color: var(--lime);
-        }
-
-        .share-toggle:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .share-toggle-knob {
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          background: var(--text);
-          position: absolute;
-          top: 2px;
-          left: 2px;
-          transition: transform 0.2s ease;
-        }
-
-        .share-toggle.active .share-toggle-knob {
-          transform: translateX(24px);
-          background: var(--bg);
-        }
-
-        .goals-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-        }
-
-        .goal-card {
-          background: var(--bg-1);
-          border: 1px solid var(--line);
-          border-radius: 14px;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .goal-card.empty {
-          background: transparent;
-          border-style: dashed;
-        }
-
-        .goal-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .goal-icon {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
-          background: rgba(215, 255, 58, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .goal-card.empty .goal-icon {
-          background: var(--bg-1);
-        }
-
-        .goal-delete {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          border: none;
-          background: transparent;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-        }
-
-        .goal-delete:hover {
-          background: rgba(255, 91, 91, 0.1);
-        }
-
-        .goal-label {
-          font-family: var(--font-mono);
-          font-size: 9px;
-          color: var(--text-mute);
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-        }
-
-        .goal-value-section {
-          display: flex;
-          align-items: baseline;
-          gap: 8px;
-          cursor: pointer;
-          padding: 8px 0;
-          border-radius: 8px;
-          transition: all 0.2s ease;
-        }
-
-        .goal-value-section:hover {
-          background: var(--bg-2);
-          padding: 8px 12px;
-          margin: 0 -12px;
-        }
-
-        .goal-value {
-          font-size: 32px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-          color: var(--lime);
-          line-height: 1;
-        }
-
-        .goal-unit {
-          font-size: 13px;
-          color: var(--text-mute);
-          font-weight: 500;
-        }
-
-        .goal-edit-hint {
-          margin-left: auto;
-          opacity: 0;
-          transition: opacity 0.2s ease;
-        }
-
-        .goal-value-section:hover .goal-edit-hint {
-          opacity: 1;
-        }
-
-        .goal-edit {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .goal-input {
-          width: 100px;
-          padding: 10px 14px;
-          font-size: 24px;
-          font-weight: 700;
-          background: var(--bg);
-          border: 2px solid var(--lime);
-          border-radius: 10px;
-          color: var(--text);
-          outline: none;
-          text-align: center;
-        }
-
-        .goal-input::-webkit-outer-spin-button,
-        .goal-input::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-
-        .goal-edit-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .goal-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-        }
-
-        .goal-btn.cancel {
-          background: var(--bg-2);
-        }
-
-        .goal-btn.cancel:hover {
-          background: var(--line);
-        }
-
-        .goal-btn.save {
-          background: var(--lime);
-        }
-
-        .goal-btn.save:hover {
-          opacity: 0.9;
-        }
-
-        .goal-desc {
-          font-size: 13px;
-          color: var(--text-mute);
-        }
-
-        .goal-empty-text {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--text-mute);
-        }
-
-        .goal-setup-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 12px 20px;
-          background: var(--lime);
-          border: none;
-          border-radius: 10px;
-          color: var(--bg);
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          width: fit-content;
-        }
-
-        .goal-setup-btn:hover {
-          opacity: 0.9;
-          transform: translateY(-1px);
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 40px 24px;
-          margin-top: 24px;
-        }
-
-        .empty-icon {
-          margin-bottom: 16px;
-          opacity: 0.5;
-        }
-
-        .empty-title {
-          font-size: 18px;
-          font-weight: 700;
-          margin-bottom: 8px;
-        }
-
-        .empty-desc {
-          font-size: 14px;
-          color: var(--text-mute);
-          max-width: 320px;
-          margin: 0 auto;
-          line-height: 1.5;
-        }
-
-        @media (min-width: 768px) {
-          .metas-page {
-            padding-bottom: 32px;
-          }
-
-          .metas-header {
-            padding: 48px 28px 24px;
-            border-bottom: 1px solid var(--line);
-          }
-
-          .metas-title {
-            font-size: 32px;
-          }
-
-          .metas-subtitle {
-            font-size: 15px;
-          }
-
-          .metas-content {
-            padding: 0 28px;
-            max-width: 900px;
-            margin: 0 auto;
-          }
-
-          .share-section {
-            margin-top: 24px;
-            margin-bottom: 24px;
-          }
-
-          .share-card {
-            padding: 20px 24px;
-            border-radius: 16px;
-          }
-
-          .share-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-          }
-
-          .share-title {
-            font-size: 16px;
-          }
-
-          .share-desc {
-            font-size: 14px;
-          }
-
-          .goals-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-          }
-
-          .goal-card {
-            padding: 24px;
-            border-radius: 16px;
-            min-height: 220px;
-          }
-
-          .goal-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-          }
-
-          .goal-label {
-            font-size: 10px;
-          }
-
-          .goal-value {
-            font-size: 40px;
-          }
-
-          .goal-unit {
-            font-size: 15px;
-          }
-
-          .goal-input {
-            width: 120px;
-            font-size: 28px;
-          }
-
-          .empty-state {
-            padding: 60px 24px;
-          }
-
-          .empty-icon {
-            transform: scale(1.2);
-          }
-
-          .empty-title {
-            font-size: 20px;
-          }
-
-          .empty-desc {
-            font-size: 15px;
-            max-width: 400px;
-          }
-        }
-
-        @media (min-width: 1200px) {
-          .metas-header {
-            padding: 48px 48px 24px;
-          }
-
-          .metas-content {
-            padding: 0 48px;
-            max-width: 1100px;
-          }
-
-          .goals-grid {
-            gap: 20px;
-          }
-
-          .goal-card {
-            padding: 28px;
-            min-height: 240px;
-          }
-
-          .goal-value {
-            font-size: 48px;
-          }
-        }
-      `}</style>
     </div>
   );
 }

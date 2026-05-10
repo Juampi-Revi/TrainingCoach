@@ -70,11 +70,14 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         where: { clientUserId },
         orderBy: { measuredAt: "desc" },
         take: 30,
-        select: { measuredAt: true, weightKg: true },
+        select: { measuredAt: true, weightKg: true, shareWithCoach: true },
       }),
     ]);
 
     if (!client) return notFound("Client not found");
+
+    const metricsShared =
+      metrics.length === 0 || metrics.some((m) => m.shareWithCoach);
 
     const sessionsWithStats = sessions.map((s) => {
       const allSets = s.exercises.flatMap((e) => e.sets);
@@ -108,10 +111,12 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         assignment: client.planAssignments[0] ?? null,
       },
       recentSessions: sessionsWithStats,
-      weightHistory: metrics.map((m) => ({
-        measuredAt: m.measuredAt,
-        weightKg: m.weightKg ? String(m.weightKg) : null,
-      })),
+      weightHistory: metricsShared
+        ? metrics.map((m) => ({
+            measuredAt: m.measuredAt,
+            weightKg: m.weightKg ? String(m.weightKg) : null,
+          }))
+        : [],
     });
   });
 }

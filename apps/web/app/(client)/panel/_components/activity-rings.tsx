@@ -19,8 +19,8 @@ export function ActivityRings({
   const scale = size / 76;
   const rings = [
     { r: 28 * scale, val: workoutFraction, color: "var(--lime)", stroke: 5 * scale },     // workouts
-    { r: 22 * scale, val: stepsFraction, color: "#7AB8FF", stroke: 5 * scale },          // steps
-    { r: 16 * scale, val: sleepFraction, color: "#A78BFA", stroke: 5 * scale },          // sleep
+    { r: 22 * scale, val: stepsFraction, color: "var(--info)", stroke: 5 * scale },          // steps
+    { r: 16 * scale, val: sleepFraction, color: "var(--sleep)", stroke: 5 * scale },          // sleep
   ];
 
   const center = size / 2;

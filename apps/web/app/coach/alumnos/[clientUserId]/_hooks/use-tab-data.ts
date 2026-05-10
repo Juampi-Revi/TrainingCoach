@@ -25,6 +25,7 @@ export interface TabData {
   postFoodComment: (foodId: string) => Promise<void>;
   // Goals
   goals: GoalItem[] | null;
+  goalsShared: boolean | null;
   goalsLoading: boolean;
   goalKind: string;
   setGoalKind: React.Dispatch<React.SetStateAction<string>>;

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Avatar, Icon } from "@/components/ui";
-import { PushNotificationSettings } from "./_components/push-notification-settings";
 
 export default function CuentaPage() {
   const { user, logout } = useAuth();
@@ -28,46 +27,70 @@ export default function CuentaPage() {
 
       {/* Profile Section */}
       <div className="cuenta-section">
-        <div className="profile-banner" onClick={() => router.push("/cuenta/perfil")}>
+        <div className="profile-banner">
           <Avatar name={name} src={user?.avatarUrl} size={64} tone="var(--lime)" textColor="#0B0B0C" />
           <div className="profile-info">
             <div className="profile-name">{name}</div>
             <div className="profile-email">{user?.email}</div>
           </div>
-          <Icon name="chevR" size={20} color="var(--text-dim)" />
         </div>
       </div>
 
-      {/* Push Notifications */}
+      {/* Configuración de cuenta */}
       <div className="cuenta-section">
-        <div className="section-label">Notificaciones</div>
-        <PushNotificationSettings />
+        <div className="section-label">Cuenta</div>
+        <div className="card-cuenta">
+          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/perfil")}>
+            <div className="card-cuenta-left">
+              <Icon name="user" size={20} color="var(--lime)" />
+              <span>Editar perfil</span>
+            </div>
+            <Icon name="chevR" size={18} color="var(--text-dim)" />
+          </div>
+          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/configuracion/notificaciones")}>
+            <div className="card-cuenta-left">
+              <Icon name="bell" size={20} color="var(--lime)" />
+              <span>Notificaciones</span>
+            </div>
+            <Icon name="chevR" size={18} color="var(--text-dim)" />
+          </div>
+          <div className="card-cuenta-row">
+            <div className="card-cuenta-left">
+              <Icon name={theme === "dark" ? "sun" : "moon"} size={20} color="var(--lime)" />
+              <span>Modo {theme === "dark" ? "oscuro" : "claro"}</span>
+            </div>
+            <button className={`toggle-tema ${theme}`} onClick={toggle} type="button">
+              <span className="toggle-tema-knob" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Menu Grid */}
+      {/* Configuración de salud */}
       <div className="cuenta-section">
-        <div className="section-label">Configuración</div>
-        <div className="menu-grid">
-          <button onClick={() => router.push("/cuenta/metas")} className="menu-item">
-            <div className="menu-item-icon"><Icon name="edit" size={22} color="var(--lime)" /></div>
-            <div><div className="menu-item-label">Metas de salud</div><div className="menu-item-desc">Pasos, sueño y entrenamientos</div></div>
-          </button>
-          <button onClick={() => router.push("/cuenta/wearable")} className="menu-item">
-            <div className="menu-item-icon"><Icon name="watch" size={22} color="var(--lime)" /></div>
-            <div><div className="menu-item-label">Dispositivos</div><div className="menu-item-desc">Garmin, Google Health, Strava</div></div>
-          </button>
-          <button onClick={() => router.push("/cuenta/mediciones")} className="menu-item">
-            <div className="menu-item-icon"><Icon name="chart" size={22} color="var(--lime)" /></div>
-            <div><div className="menu-item-label">Mediciones</div><div className="menu-item-desc">Peso y medidas corporales</div></div>
-          </button>
-          <button disabled className="menu-item disabled">
-            <div className="menu-item-icon" style={{ background: 'var(--bg-2)', opacity: 0.5 }}><Icon name="star" size={22} color="var(--text-mute)" /></div>
-            <div><div className="menu-item-label" style={{ color: 'var(--text-mute)' }}>Logros</div><div className="menu-item-desc" style={{ color: 'var(--text-mute)' }}>Próximamente</div></div>
-          </button>
-          <button onClick={toggle} className="menu-item">
-            <div className="menu-item-icon"><Icon name={theme === "dark" ? "sun" : "moon"} size={22} color="var(--lime)" /></div>
-            <div><div className="menu-item-label">Apariencia</div><div className="menu-item-desc">{theme === "dark" ? "Modo oscuro" : "Modo claro"}</div></div>
-          </button>
+        <div className="section-label">Salud y actividad</div>
+        <div className="card-cuenta">
+          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/metas")}>
+            <div className="card-cuenta-left">
+              <Icon name="target" size={20} color="var(--lime)" />
+              <span>Metas</span>
+            </div>
+            <Icon name="chevR" size={18} color="var(--text-dim)" />
+          </div>
+          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/wearable")}>
+            <div className="card-cuenta-left">
+              <Icon name="watch" size={20} color="var(--lime)" />
+              <span>Dispositivos</span>
+            </div>
+            <Icon name="chevR" size={18} color="var(--text-dim)" />
+          </div>
+          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/mediciones")}>
+            <div className="card-cuenta-left">
+              <Icon name="activity" size={20} color="var(--lime)" />
+              <span>Mediciones</span>
+            </div>
+            <Icon name="chevR" size={18} color="var(--text-dim)" />
+          </div>
         </div>
       </div>
 
@@ -156,6 +179,122 @@ export default function CuentaPage() {
           white-space: nowrap;
         }
 
+        .card-cuenta {
+          background: var(--bg-1);
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          overflow: hidden;
+        }
+
+        .card-cuenta-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px;
+          cursor: pointer;
+          transition: background 0.2s;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .card-cuenta-row:last-child {
+          border-bottom: none;
+        }
+
+        .card-cuenta-row:hover {
+          background: var(--bg-2);
+        }
+
+        .card-cuenta-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--text);
+        }
+
+        .toggle-tema {
+          width: 50px;
+          height: 28px;
+          border-radius: 14px;
+          background: var(--bg-3);
+          border: none;
+          padding: 3px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .toggle-tema.light {
+          background: var(--lime);
+        }
+
+        .toggle-tema-knob {
+          display: block;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: white;
+          transition: transform 0.2s;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-tema.light .toggle-tema-knob {
+          transform: translateX(22px);
+        }
+
+        .menu-item-link {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          margin-top: 10px;
+          padding: 14px 16px;
+          background: var(--bg-1);
+          border: 1px solid var(--line);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .menu-item-link-content {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .menu-item-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: rgba(215, 255, 58, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .menu-item-label {
+          font-family: var(--font-mono);
+          font-size: 9px;
+          color: var(--text-mute);
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .menu-item-desc {
+          font-size: 14px;
+          color: var(--text);
+          font-weight: 600;
+          letter-spacing: -0.01em;
+        }
+
+        .menu-item-link:hover {
+          background: var(--bg-2);
+          border-color: var(--lime);
+        }
+
         .menu-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -238,17 +377,6 @@ export default function CuentaPage() {
           background: rgba(255, 91, 91, 0.1);
         }
 
-        .menu-item.disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .menu-item.disabled:hover {
-          background: var(--bg-1);
-          border-color: var(--line);
-          transform: none;
-        }
-
         @media (min-width: 768px) {
           .cuenta-page {
             padding-bottom: 32px;
@@ -329,6 +457,10 @@ export default function CuentaPage() {
             max-width: 300px;
             margin: 0 auto;
             padding: 14px 24px;
+          }
+
+          .menu-item-link {
+            padding: 18px 20px;
           }
         }
 

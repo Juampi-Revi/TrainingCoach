@@ -14,6 +14,8 @@ interface ButtonProps {
   icon?: IconName;
   iconRight?: IconName;
   disabled?: boolean;
+  title?: string;
+  ariaLabel?: string;
   style?: CSSProperties;
   className?: string;
   type?: "button" | "submit" | "reset";
@@ -45,6 +47,8 @@ export function Button({
   icon,
   iconRight,
   disabled,
+  title,
+  ariaLabel,
   style,
   className,
   type = "button",
@@ -61,6 +65,8 @@ export function Button({
       type={Tag === "button" ? type : undefined}
       disabled={disabled}
       onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
       className={`ta-btn${className ? " " + className : ""}`}
       style={{
         display: "inline-flex",

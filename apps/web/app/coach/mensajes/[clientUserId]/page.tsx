@@ -35,6 +35,26 @@ type ClientDetailResponse = {
   }>;
 };
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function readString(obj: Record<string, unknown>, key: string): string | null {
+  const v = obj[key];
+  return typeof v === "string" ? v : null;
+}
+
+function readStringArray(obj: Record<string, unknown>, key: string): string[] {
+  const v = obj[key];
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === "string");
+}
+
+function readArray(obj: Record<string, unknown>, key: string): unknown[] {
+  const v = obj[key];
+  return Array.isArray(v) ? v : [];
+}
+
 export default function CoachChatPage() {
   const { api, user } = useAuth();
   const router = useRouter();
@@ -50,7 +70,7 @@ export default function CoachChatPage() {
   const [refPickerOpen, setRefPickerOpen] = useState(false);
   const [recentSessions, setRecentSessions] = useState<ClientDetailResponse["recentSessions"]>([]);
   const [refDetail, setRefDetail] = useState<RefPayload | null>(null);
-  const [refDetailData, setRefDetailData] = useState<any | null | undefined>(null);
+  const [refDetailData, setRefDetailData] = useState<unknown | null | undefined>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -202,6 +222,12 @@ export default function CoachChatPage() {
             {messages.map((m) => {
               const isMe = m.author.id === user?.id;
               const authorName = isMe ? "Vos" : (m.author.name ?? m.author.role);
+              const refLabel =
+                m.reference?.kind === "session"
+                  ? `Alumnos / ${clientName} / ${m.reference.label ?? "Sesión"}`
+                  : m.reference?.kind === "workoutTemplate"
+                    ? `Entrenamientos / ${m.reference.label ?? "Entrenamiento"}`
+                    : null;
               return (
                 <div
                   key={m.id}
@@ -239,7 +265,7 @@ export default function CoachChatPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <Icon name="book" size={14} color="var(--text-mute)" />
                           <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>
-                            {m.reference.kind === "session" ? "Sesión" : "Entrenamiento"}{m.reference.label ? ` · ${m.reference.label}` : ""}
+                            {refLabel ?? "Referencia"}
                           </div>
                         </div>
                       </button>
@@ -272,7 +298,7 @@ export default function CoachChatPage() {
               <div style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "center" }}>
                 <div style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--bg-1)" }}>
                   <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>
-                    {ref.kind === "session" ? "Sesión" : "Entrenamiento"}{ref.label ? ` · ${ref.label}` : ""}
+                    {ref.kind === "session" ? `Alumnos / ${clientName} / ${ref.label ?? "Sesión"}` : `Entrenamientos / ${ref.label ?? "Entrenamiento"}`}
                   </div>
                 </div>
                 <Button variant="secondary" onClick={() => setRef(null)} style={{ height: 36 }}>
@@ -434,49 +460,94 @@ export default function CoachChatPage() {
               <StateBlock kind="loading" title="Cargando…" />
             ) : refDetailData ? (
               <div>
+                {(() => {
+                  const data = isRecord(refDetailData) ? refDetailData : null;
+                  const wt = data && isRecord(data.workoutTemplate) ? data.workoutTemplate : null;
+                  const title =
+                    (data && readString(data, "title")) ||
+                    (wt && readString(wt, "title")) ||
+                    refDetail.label ||
+                    "Detalle";
+                  const performedAt = data ? readString(data, "performedAt") : null;
+                  const tags = data ? readStringArray(data, "tags") : [];
+                  const description = data ? readString(data, "description") : null;
+                  const exercises = data ? readArray(data, "exercises") : [];
+
+                  return (
+                    <>
                 <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.01em", color: "var(--text)" }}>
-                  {refDetailData.title ?? refDetailData.workoutTemplate?.title ?? refDetail.label ?? "Detalle"}
+                  {title}
                 </div>
-                {refDetail.kind === "session" && refDetailData.performedAt && (
+                {refDetail.kind === "session" && performedAt && (
                   <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4 }}>
-                    {new Date(refDetailData.performedAt).toLocaleString("es", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    {new Date(performedAt).toLocaleString("es", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </div>
                 )}
-                {refDetail.kind === "workoutTemplate" && refDetailData.tags?.length > 0 && (
+                {refDetail.kind === "workoutTemplate" && tags.length > 0 && (
                   <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {(refDetailData.tags ?? []).slice(0, 4).map((t: string) => (
+                    {tags.slice(0, 4).map((t) => (
                       <span key={t} className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
                         #{t}
                       </span>
                     ))}
                   </div>
                 )}
-                {!!refDetailData.description && (
+                {!!description && (
                   <div style={{ marginTop: 8, fontSize: 13, color: "var(--text-mute)", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-                    {refDetailData.description}
+                    {description}
                   </div>
                 )}
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {(refDetailData.exercises ?? []).slice(0, 20).map((ex: any) => (
-                    <div key={ex.id} style={{ padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                  {exercises.slice(0, 20).map((ex, idx) => {
+                    const exObj = isRecord(ex) ? ex : null;
+                    const id = exObj && typeof exObj.id === "string" ? exObj.id : `ex_${idx}`;
+                    const exercise =
+                      exObj && isRecord(exObj.exercise) ? exObj.exercise : null;
+                    const performedExercise =
+                      exObj && isRecord(exObj.performedExercise) ? exObj.performedExercise : null;
+                    const workoutExercise =
+                      exObj && isRecord(exObj.workoutExercise) ? exObj.workoutExercise : null;
+                    const workoutExerciseExercise =
+                      workoutExercise && isRecord(workoutExercise.exercise) ? workoutExercise.exercise : null;
+                    const name =
+                      (exercise && readString(exercise, "name")) ||
+                      (performedExercise && readString(performedExercise, "name")) ||
+                      (workoutExerciseExercise && readString(workoutExerciseExercise, "name")) ||
+                      (exObj && readString(exObj, "name")) ||
+                      "Ejercicio";
+
+                    const sets = exObj && Array.isArray(exObj.sets) ? exObj.sets : [];
+                    const target = exObj && isRecord(exObj.target) ? exObj.target : null;
+
+                    const targetSets = exObj && typeof exObj.targetSets === "number" ? exObj.targetSets : null;
+                    const targetReps = exObj && typeof exObj.targetReps === "number" ? exObj.targetReps : null;
+                    const intensityType = exObj && typeof exObj.intensityType === "string" ? exObj.intensityType : null;
+                    const intensityTarget = exObj && exObj.intensityTarget != null ? String(exObj.intensityTarget) : null;
+
+                    return (
+                      <div key={id} style={{ padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 12 }}>
                       <div className="ta-ellipsis" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
-                        {ex.exercise?.name ?? ex.performedExercise?.name ?? ex.workoutExercise?.exercise?.name ?? ex.name ?? "Ejercicio"}
+                        {name}
                       </div>
                       {refDetail.kind === "session" ? (
                         <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-                          {ex.sets?.length ? `${ex.sets.length} serie${ex.sets.length !== 1 ? "s" : ""}` : "—"}
-                          {ex.target?.reps ? ` · ${ex.target.reps} reps` : ""}
+                          {sets.length ? `${sets.length} serie${sets.length !== 1 ? "s" : ""}` : "—"}
+                          {target && typeof target.reps === "number" ? ` · ${target.reps} reps` : ""}
                         </div>
                       ) : (
                         <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-                          {ex.targetSets ? `${ex.targetSets} series` : "—"}
-                          {ex.targetReps ? ` · ${ex.targetReps} reps` : ""}
-                          {ex.intensityType && ex.intensityTarget ? ` · ${String(ex.intensityType).toUpperCase()} ${ex.intensityTarget}` : ""}
+                          {targetSets != null ? `${targetSets} series` : "—"}
+                          {targetReps != null ? ` · ${targetReps} reps` : ""}
+                          {intensityType && intensityTarget ? ` · ${String(intensityType).toUpperCase()} ${intensityTarget}` : ""}
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               <div style={{ fontSize: 13, color: "var(--text-mute)" }}>No se pudo cargar el detalle.</div>

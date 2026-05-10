@@ -52,6 +52,7 @@ export interface CoachNote {
 export interface HealthData {
   entries: HealthEntry[];
   metrics: HealthMetric[];
+  metricsShared: boolean;
   coachNotes: CoachNote[];
 }
 

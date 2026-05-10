@@ -5,6 +5,7 @@ import type { GoalItem } from "./_types";
 
 interface GoalsTabProps {
   goals: GoalItem[] | null;
+  shared: boolean | null;
   goalsLoading: boolean;
   goalKind: string;
   setGoalKind: (kind: string) => void;
@@ -16,13 +17,13 @@ interface GoalsTabProps {
 }
 
 const GOAL_PLACEHOLDER: Record<string, string> = {
-  steps_daily: "8000",
-  sleep_daily: "7.5",
+  steps_daily: "6000",
+  sleep_daily: "7",
   workouts_weekly: "3",
 };
 
 export function GoalsTab({
-  goals, goalsLoading, goalKind, setGoalKind, goalTarget, setGoalTarget, onAdd, onDelete, onReload,
+  goals, shared, goalsLoading, goalKind, setGoalKind, goalTarget, setGoalTarget, onAdd, onDelete, onReload,
 }: GoalsTabProps) {
   return (
     <div>
@@ -30,8 +31,14 @@ export function GoalsTab({
         <div style={{ fontSize: 13, fontWeight: 600 }}>Metas</div>
         <Button variant="ghost" size="sm" onClick={onReload}>Recargar</Button>
       </div>
-      {goalsLoading || goals === null ? (
+      {goalsLoading || goals === null || shared === null ? (
         <StateBlock kind="loading" title="Cargando metas…" />
+      ) : shared === false ? (
+        <StateBlock
+          kind="empty"
+          title="Metas no compartidas"
+          body="El alumno decidió no compartir sus metas con el coach."
+        />
       ) : (
         <>
           {goals.length === 0 ? (

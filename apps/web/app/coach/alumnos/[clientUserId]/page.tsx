@@ -8,17 +8,20 @@ import { Button, ConfirmModal, StateBlock, Tabs } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import { useClientDetail } from "./_hooks/use-client-detail";
 import { useTabData } from "./_hooks/use-tab-data";
+import { useOverviewData } from "./_hooks/use-overview-data";
+import { useProgressData } from "./_hooks/use-progress-data";
 import { AssignPlanModal } from "./_components/assign-plan-modal";
 import { ClientHeader } from "./_components/client-header";
-import { SummaryTab } from "./_components/summary-tab";
+import { OverviewTab } from "./_components/overview-tab";
 import { SessionsList } from "./_components/sessions-list";
 import { HealthTab } from "./_components/health-tab";
 import { FoodTab } from "./_components/food-tab";
 import { GoalsTab } from "./_components/goals-tab";
 import { MetricsTab } from "./_components/metrics-tab";
+import { ProgressTab } from "./_components/progress-tab";
 import { RightSidebar } from "./_components/right-sidebar";
 
-const TABS = ["Resumen", "Sesiones", "Salud", "Comidas", "Métricas", "Metas"] as const;
+const TABS = ["Resumen", "Entrenos", "Actividad", "Progreso", "Privado"] as const;
 
 export default function AthleteDetailPage() {
   const { api, user } = useAuth();
@@ -29,6 +32,8 @@ export default function AthleteDetailPage() {
   const { client, loading, setClient } = useClientDetail(clientUserId);
 
   const tabData = useTabData(clientUserId);
+  const overview = useOverviewData(clientUserId);
+  const progressData = useProgressData(clientUserId);
 
   const [tab, setTab] = useState("Resumen");
   const [showAssign, setShowAssign] = useState(false);
@@ -37,25 +42,25 @@ export default function AthleteDetailPage() {
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
-    tabData.loadSummaryData(false);
-    tabData.loadHealthData(false);
+    overview.load(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleTabChange(next: string) {
     setTab(next);
     if (next === "Resumen") {
-      tabData.loadSummaryData(false);
-      tabData.loadHealthData(false);
+      overview.load(false);
     }
-    if (next === "Salud" || next === "Métricas") {
+    if (next === "Actividad") {
       tabData.loadHealthData(false);
-    }
-    if (next === "Comidas") {
       tabData.loadFoodData(false);
     }
-    if (next === "Metas") {
+    if (next === "Privado") {
       tabData.loadGoalsData(false);
+      tabData.loadHealthData(false);
+    }
+    if (next === "Progreso") {
+      progressData.load(false);
     }
   }
 
@@ -164,52 +169,54 @@ export default function AthleteDetailPage() {
 
           <div className="coach-two-col" style={{ padding: "18px 0 28px" }}>
             {tab === "Resumen" && (
-              <SummaryTab
+              <OverviewTab
                 client={client}
-                summary={tabData.summary}
-                summaryLoading={tabData.summaryLoading}
                 clientUserId={clientUserId}
-                onViewAllSessions={() => handleTabChange("Sesiones")}
+                today={overview.today}
+                week={overview.week}
+                month={overview.month}
+                loading={overview.loading}
+                onViewTraining={() => handleTabChange("Entrenos")}
               />
             )}
-            {tab === "Sesiones" && (
+            {tab === "Entrenos" && (
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Sesiones recientes</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Entrenos recientes</div>
                 <SessionsList sessions={client.recentSessions ?? []} clientUserId={clientUserId} showStatus />
               </div>
             )}
-            {tab === "Salud" && (
-              <HealthTab
-                health={tabData.health}
-                healthLoading={tabData.healthLoading}
-                onSelectDay={tabData.setNoteDay}
-              />
+            {tab === "Actividad" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                <HealthTab health={tabData.health} healthLoading={tabData.healthLoading} onSelectDay={tabData.setNoteDay} />
+                <FoodTab
+                  food={tabData.food}
+                  foodLoading={tabData.foodLoading}
+                  foodCommentDrafts={tabData.foodCommentDrafts}
+                  onDraftChange={(id, val) => tabData.setFoodCommentDrafts((prev) => ({ ...prev, [id]: val }))}
+                  onPostComment={tabData.postFoodComment}
+                  onReload={() => tabData.loadFoodData(true)}
+                />
+              </div>
             )}
-            {tab === "Comidas" && (
-              <FoodTab
-                food={tabData.food}
-                foodLoading={tabData.foodLoading}
-                foodCommentDrafts={tabData.foodCommentDrafts}
-                onDraftChange={(id, val) => tabData.setFoodCommentDrafts((prev) => ({ ...prev, [id]: val }))}
-                onPostComment={tabData.postFoodComment}
-                onReload={() => tabData.loadFoodData(true)}
-              />
+            {tab === "Progreso" && (
+              <ProgressTab progress={progressData.progress} loading={progressData.loading} />
             )}
-            {tab === "Métricas" && (
-              <MetricsTab health={tabData.health} healthLoading={tabData.healthLoading} />
-            )}
-            {tab === "Metas" && (
-              <GoalsTab
-                goals={tabData.goals}
-                goalsLoading={tabData.goalsLoading}
-                goalKind={tabData.goalKind}
-                setGoalKind={tabData.setGoalKind}
-                goalTarget={tabData.goalTarget}
-                setGoalTarget={tabData.setGoalTarget}
-                onAdd={tabData.addGoal}
-                onDelete={tabData.deleteGoal}
-                onReload={() => tabData.loadGoalsData(true)}
-              />
+            {tab === "Privado" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                <GoalsTab
+                  goals={tabData.goals}
+                  shared={tabData.goalsShared}
+                  goalsLoading={tabData.goalsLoading}
+                  goalKind={tabData.goalKind}
+                  setGoalKind={tabData.setGoalKind}
+                  goalTarget={tabData.goalTarget}
+                  setGoalTarget={tabData.setGoalTarget}
+                  onAdd={tabData.addGoal}
+                  onDelete={tabData.deleteGoal}
+                  onReload={() => tabData.loadGoalsData(true)}
+                />
+                <MetricsTab health={tabData.health} healthLoading={tabData.healthLoading} />
+              </div>
             )}
 
             <RightSidebar
