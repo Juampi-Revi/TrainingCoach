@@ -66,12 +66,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     const {
       workoutTemplateId,
+      planWeekWorkoutId,
       performedAt,
       completedAt,
       status,
       sessionNotes,
     } = (body ?? {}) as {
       workoutTemplateId?: unknown;
+      planWeekWorkoutId?: unknown;
       performedAt?: unknown;
       completedAt?: unknown;
       status?: unknown;
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
     };
 
     const workoutTemplateIdStr = typeof workoutTemplateId === "string" ? workoutTemplateId : null;
+    const planWeekWorkoutIdStr = typeof planWeekWorkoutId === "string" ? planWeekWorkoutId : null;
     const statusStr = typeof status === "string" ? status : null;
     const sessionNotesStr = typeof sessionNotes === "string" ? sessionNotes : null;
 
@@ -133,21 +136,46 @@ export async function POST(req: NextRequest) {
       return ok({ id: session.id, created: true }, 201);
     }
 
-    const authorized = await prisma.planAssignment.findFirst({
-      where: {
-        clientUserId: auth.user.sub,
-        status: "active",
-        plan: {
-          OR: [
-            { weeks: { some: { workoutTemplates: { some: { id: workoutTemplateIdStr } } } } },
-            { weeks: { some: { workouts: { some: { workoutTemplateId: workoutTemplateIdStr } } } } },
-            { workouts: { some: { workoutTemplateId: workoutTemplateIdStr } } },
-          ],
+    let resolvedPwwId: string | null = null;
+    if (planWeekWorkoutIdStr) {
+      const pww = await prisma.planWeekWorkout.findFirst({
+        where: {
+          id: planWeekWorkoutIdStr,
+          planWeek: {
+            plan: {
+              assignments: {
+                some: {
+                  clientUserId: auth.user.sub,
+                  OR: [{ status: "active" }, { status: "paused" }],
+                },
+              },
+            },
+          },
         },
-      },
-      select: { id: true },
-    });
-    if (!authorized) return forbidden("Workout not in your plan");
+        select: { id: true, workoutTemplateId: true },
+      });
+      if (!pww) return err("planWeekWorkoutId inválido", 400);
+      if (pww.workoutTemplateId !== workoutTemplateIdStr) {
+        return err("planWeekWorkoutId no corresponde al workoutTemplateId", 400);
+      }
+      resolvedPwwId = pww.id;
+    } else {
+      const authorized = await prisma.planAssignment.findFirst({
+        where: {
+          clientUserId: auth.user.sub,
+          OR: [{ status: "active" }, { status: "paused" }],
+          plan: {
+            OR: [
+              { weeks: { some: { workoutTemplates: { some: { id: workoutTemplateIdStr } } } } },
+              { weeks: { some: { workouts: { some: { workoutTemplateId: workoutTemplateIdStr } } } } },
+              { workouts: { some: { workoutTemplateId: workoutTemplateIdStr } } },
+            ],
+          },
+        },
+        select: { id: true },
+      });
+      if (!authorized) return forbidden("Workout not in your plan");
+    }
 
     const template = await prisma.workoutTemplate.findUnique({
       where: { id: workoutTemplateIdStr },
@@ -161,6 +189,7 @@ export async function POST(req: NextRequest) {
         clientUserId: auth.user.sub,
         workoutTemplateId: workoutTemplateIdStr,
         status: "in_progress",
+        ...(resolvedPwwId ? { planWeekWorkoutId: resolvedPwwId } : {}),
       },
       select: { id: true },
     });
@@ -170,6 +199,7 @@ export async function POST(req: NextRequest) {
       data: {
         clientUserId: auth.user.sub,
         workoutTemplateId: workoutTemplateIdStr,
+        planWeekWorkoutId: resolvedPwwId,
         performedAt: new Date(),
         status: "in_progress",
         exercises: {

@@ -159,7 +159,7 @@ export default function SessionInProgressPage() {
     setResetting(true);
     try {
       await api.patch(`/client/sessions/${sessionId}`, { status: "discarded" });
-      const res = await api.post<{ id: string }>("/client/sessions", { workoutTemplateId: session.workoutTemplate.id });
+      const res = await api.post<{ id: string }>("/client/sessions", { workoutTemplateId: session.workoutTemplate.id, planWeekWorkoutId: session.planWeekWorkoutId });
       try { localStorage.removeItem(warmupDoneKey); } catch {}
       try { localStorage.removeItem(warmupTimerKey); } catch {}
       try { localStorage.removeItem(queueKey); } catch {}
@@ -211,6 +211,17 @@ export default function SessionInProgressPage() {
         time={fmtDuration(workoutElapsedMs)}
         onExit={() => router.push("/semana")}
       />
+
+      {session?.progressionNote && (
+        <div style={{ margin: "10px 16px 0", padding: "10px 12px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 10 }}>
+          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, marginBottom: 4 }}>
+            PROGRESIÓN DE ESTA SEMANA
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.45 }}>
+            {session.progressionNote}
+          </div>
+        </div>
+      )}
 
       {offlineCount > 0 && (
         <div style={{ background: "var(--warn)", color: "#0B0B0C", padding: "8px 16px", margin: "8px 16px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>

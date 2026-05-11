@@ -130,6 +130,7 @@ model PlanWeekWorkout {
 
   planWeek        PlanWeek        @relation(fields: [planWeekId], references: [id], onDelete: Cascade)
   workoutTemplate WorkoutTemplate @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
+  sessions        WorkoutSession[]
 
   @@index([planWeekId, sortOrder])
   @@index([workoutTemplateId])
@@ -283,6 +284,7 @@ model WorkoutSession {
   id                String   @id @default(uuid())
   clientUserId      String
   workoutTemplateId String?
+  planWeekWorkoutId String?
   performedAt       DateTime @db.Timestamptz
   completedAt       DateTime? @db.Timestamptz
   status            String   // 'in_progress' | 'completed' | 'discarded'
@@ -293,11 +295,13 @@ model WorkoutSession {
 
   client          User                     @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
   workoutTemplate WorkoutTemplate?         @relation(fields: [workoutTemplateId], references: [id], onDelete: SetNull)
+  planWeekWorkout  PlanWeekWorkout?        @relation(fields: [planWeekWorkoutId], references: [id], onDelete: SetNull)
   exercises       WorkoutSessionExercise[]
   comments        SessionComment[]
 
   @@index([clientUserId, performedAt(sort: Desc)])
   @@index([workoutTemplateId])
+  @@index([planWeekWorkoutId])
 }
 
 model WorkoutSessionExercise {

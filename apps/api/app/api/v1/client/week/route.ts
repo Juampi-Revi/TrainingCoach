@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!assignment) {
-      return ok({ plan: null, weekNumber: 0, totalWeeks: 0, days: [] });
+      return ok({ plan: null, weekNumber: 0, totalWeeks: 0, assignmentStatus: "active", workouts: [] });
     }
 
     const plan = assignment.plan;
@@ -112,11 +112,13 @@ export async function GET(req: NextRequest) {
       const session = templateSessions.shift() ?? null; // Remove from array so next instance gets the next session
       
       return {
+        pwwId: pw.id,
         workoutTemplateId: tpl.id,
         title: tpl.title,
         description: tpl.description,
         tags: tpl.tags,
         exerciseCount: tpl.workoutExercises.length,
+        progressionNote: pw.progressionNote ?? null,
         session: session
           ? { id: session.id, status: session.status, performedAt: session.performedAt }
           : null,

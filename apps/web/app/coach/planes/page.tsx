@@ -18,6 +18,7 @@ export default function PlanesPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,26 @@ export default function PlanesPage() {
           toast.error(err instanceof Error ? err.message : "No se pudo eliminar el plan");
         } finally {
           setDeletingId(null);
+        }
+      },
+    });
+  }
+
+  function duplicatePlan(e: React.MouseEvent, planId: string, planTitle: string) {
+    e.stopPropagation();
+    setConfirmDialog({
+      message: `¿Duplicar "${planTitle}"? Se creará una copia en borrador.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setDuplicatingId(planId);
+        try {
+          const res = await api.post<{ id: string }>(`/coach/plans/${planId}/duplicate`, {});
+          toast.success("Plan duplicado");
+          router.push(`/coach/planes/${res.id}`);
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "No se pudo duplicar el plan");
+        } finally {
+          setDuplicatingId(null);
         }
       },
     });
@@ -121,14 +142,26 @@ export default function PlanesPage() {
                     )}
                     {p.status === "draft" && <Badge tone="neutral">Borrador</Badge>}
                   </div>
-                  <button
-                    onClick={(e) => deletePlan(e, p.id, p.title)}
-                    disabled={deletingId === p.id}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 4, opacity: deletingId === p.id ? 0.4 : 1, display: "flex", alignItems: "center" }}
-                    title="Eliminar plan"
-                  >
-                    <Icon name="trash" size={14} color="var(--text-mute)" />
-                  </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      onClick={(e) => duplicatePlan(e, p.id, p.title)}
+                      disabled={duplicatingId === p.id || deletingId === p.id}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 4, opacity: duplicatingId === p.id ? 0.4 : 1, display: "flex", alignItems: "center" }}
+                      title="Duplicar plan"
+                      aria-label="Duplicar plan"
+                    >
+                      <Icon name="repeat" size={14} color="var(--text-mute)" />
+                    </button>
+                    <button
+                      onClick={(e) => deletePlan(e, p.id, p.title)}
+                      disabled={deletingId === p.id || duplicatingId === p.id}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 4, opacity: deletingId === p.id ? 0.4 : 1, display: "flex", alignItems: "center" }}
+                      title="Eliminar plan"
+                      aria-label="Eliminar plan"
+                    >
+                      <Icon name="trash" size={14} color="var(--text-mute)" />
+                    </button>
+                  </div>
                 </div>
 
                 <div>

@@ -21,6 +21,9 @@ export async function GET(
         workoutTemplate: {
           select: { id: true, title: true, description: true, tags: true },
         },
+        planWeekWorkout: {
+          select: { id: true, progressionNote: true },
+        },
         exercises: {
           orderBy: { sortOrder: "asc" },
           include: {
@@ -79,6 +82,8 @@ export async function GET(
       completedAt: session.completedAt ?? null,
       energyRating: session.energyRating,
       sessionNotes: session.sessionNotes,
+      planWeekWorkoutId: session.planWeekWorkout?.id ?? null,
+      progressionNote: session.planWeekWorkout?.progressionNote ?? null,
       workoutTemplate: session.workoutTemplate,
       exercises: session.exercises.map((ex) => ({
         id: ex.id,

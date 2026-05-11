@@ -243,7 +243,7 @@ export default function SemanaPage() {
                 </Link>
               ) : (
                 <Link
-                  href={`/semana/${today.workoutTemplateId}`}
+                  href={`/semana/${today.workoutTemplateId}?pwwId=${encodeURIComponent(today.pwwId)}`}
                   style={{ flex: 1, textDecoration: "none" }}
                 >
                   <Button
@@ -256,7 +256,7 @@ export default function SemanaPage() {
                   </Button>
                 </Link>
               )}
-              <Link href={`/semana/${today.workoutTemplateId}`} style={{ textDecoration: "none" }}>
+              <Link href={`/semana/${today.workoutTemplateId}?pwwId=${encodeURIComponent(today.pwwId)}`} style={{ textDecoration: "none" }}>
                 <Button
                   size="lg"
                   variant="ghost"
@@ -270,6 +270,11 @@ export default function SemanaPage() {
                 </Button>
               </Link>
             </div>
+            {today.progressionNote && (
+              <div style={{ marginTop: 12, fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
+                {today.progressionNote}
+              </div>
+            )}
           </div>
         ) : (
           <div
@@ -297,7 +302,7 @@ export default function SemanaPage() {
             {pending.map((w, i) => (
               <Link
                 key={i}
-                href={`/semana/${w.workoutTemplateId}`}
+                href={`/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`}
                 style={{ textDecoration: "none", display: "block" }}
               >
                 <div
@@ -334,6 +339,11 @@ export default function SemanaPage() {
                     >
                       {w.description ?? w.tags.join(" · ")} · {w.exerciseCount} ej
                     </div>
+                    {w.progressionNote && (
+                      <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--accent-text)", marginTop: 4, fontWeight: 700 }}>
+                        {w.progressionNote}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>
@@ -349,7 +359,7 @@ export default function SemanaPage() {
             {completed.map((w, i) => (
               <Link
                 key={i}
-                href={`/semana/${w.workoutTemplateId}`}
+                href={`/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`}
                 style={{ textDecoration: "none", display: "block" }}
               >
                 <div
@@ -387,6 +397,11 @@ export default function SemanaPage() {
                     >
                       {w.description ?? w.tags.join(" · ")} · {w.exerciseCount} ej
                     </div>
+                    {w.progressionNote && (
+                      <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--accent-text)", marginTop: 4, fontWeight: 700 }}>
+                        {w.progressionNote}
+                      </div>
+                    )}
                   </div>
                   <Badge tone="success" size="sm">
                     Lista

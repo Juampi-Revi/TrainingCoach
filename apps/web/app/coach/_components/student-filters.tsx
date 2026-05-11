@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Icon } from "@/components/ui";
 import type { CoachClientSummary } from "@regen/types";
 
@@ -72,7 +72,7 @@ export function StudentFilters({ students, onFilterChange }: StudentFiltersProps
   }, [students, searchQuery, statusFilter, sortBy]);
 
   // Notify parent of filter changes
-  useMemo(() => {
+  useEffect(() => {
     onFilterChange(filteredStudents);
   }, [filteredStudents, onFilterChange]);
 

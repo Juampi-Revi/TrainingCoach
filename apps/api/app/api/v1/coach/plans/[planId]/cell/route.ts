@@ -59,6 +59,35 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   });
 }
 
+// PATCH: update progressionNote of a cell (PlanWeekWorkout)
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  return withHandler(async () => {
+    const auth = requireRole(req, "coach");
+    if (!auth.ok) return unauthorized(auth.message);
+
+    const { planId } = await params;
+    if (!(await verifyOwner(planId, auth.user.sub))) return forbidden();
+
+    const body = await req.json().catch(() => ({}));
+    const { pwwId, progressionNote } = body as { pwwId?: string; progressionNote?: string | null };
+    if (!pwwId) return err("pwwId es requerido", 400);
+
+    const existing = await prisma.planWeekWorkout.findFirst({
+      where: { id: pwwId, planWeek: { planId } },
+      select: { id: true },
+    });
+    if (!existing) return notFound("Celda no encontrada");
+
+    const updated = await prisma.planWeekWorkout.update({
+      where: { id: pwwId },
+      data: { progressionNote: progressionNote ?? null },
+      select: { id: true, progressionNote: true },
+    });
+
+    return ok({ pwwId: updated.id, progressionNote: updated.progressionNote ?? null });
+  });
+}
+
 // DELETE: clear a cell
 export async function DELETE(req: NextRequest, { params }: Ctx) {
   return withHandler(async () => {

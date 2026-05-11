@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Avatar, Badge, Button, StateBlock, Table } from "@/components/ui";
@@ -30,6 +30,8 @@ export default function AlumnosPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
 
   useEffect(() => {
     api.get<CoachClientSummary[]>("/coach/clients")
@@ -38,9 +40,27 @@ export default function AlumnosPage() {
       .finally(() => setLoading(false));
   }, [api]);
 
-  const filtered = clients.filter(c => (c.name ?? c.email).toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => {
+    setPage(0);
+  }, [search]);
 
-  const rows = filtered.map((c, i) => {
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const base = q ? clients.filter((c) => (c.name ?? c.email).toLowerCase().includes(q)) : clients;
+    return [...base].sort((a, b) => {
+      const an = (a.name ?? a.email).toLowerCase();
+      const bn = (b.name ?? b.email).toLowerCase();
+      return an.localeCompare(bn);
+    });
+  }, [clients, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const start = safePage * pageSize;
+  const end = Math.min(filtered.length, start + pageSize);
+  const paged = filtered.slice(start, end);
+
+  const rows = paged.map((c, i) => {
     const days = daysSince(c.lastSession?.performedAt ?? undefined);
     const { label, tone } = clientStatus(c);
     const name = c.name ?? c.email;
@@ -76,6 +96,9 @@ export default function AlumnosPage() {
               </svg>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)" }} />
             </div>
+            <Button variant="outline" icon="history" onClick={() => router.push("/coach/calendario")}>
+              Agenda
+            </Button>
             <Button icon="plus" onClick={() => setShowAdd(true)}>Agregar alumno</Button>
           </>
         }
@@ -95,16 +118,44 @@ export default function AlumnosPage() {
           ) : filtered.length === 0 ? (
             <StateBlock kind="empty" title="Sin resultados" body="Ningún alumno coincide con tu búsqueda." />
           ) : (
-            <Table
-              cols={[
-                { key: "name", label: "Alumno", w: "2.5fr" },
-                { key: "plan", label: "Plan activo", w: "2.5fr" },
-                { key: "last", label: "Última sesión", w: "1.2fr" },
-                { key: "status", label: "", w: "1fr", align: "right" },
-              ]}
-              rows={rows}
-              onRowClick={i => router.push(`/coach/alumnos/${filtered[i].id}`)}
-            />
+            <>
+              <Table
+                cols={[
+                  { key: "name", label: "Alumno", w: "2.5fr" },
+                  { key: "plan", label: "Plan activo", w: "2.5fr" },
+                  { key: "last", label: "Última sesión", w: "1.2fr" },
+                  { key: "status", label: "", w: "1fr", align: "right" },
+                ]}
+                rows={rows}
+                onRowClick={(i) => router.push(`/coach/alumnos/${paged[i].id}`)}
+              />
+
+              {filtered.length > pageSize && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
+                  <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
+                    Mostrando {start + 1}-{end} de {filtered.length}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={safePage === 0}
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={safePage >= pageCount - 1}
+                      onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </DesktopShell>

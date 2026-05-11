@@ -193,6 +193,8 @@ export interface SessionDetail {
   completedAt: string | null;
   energyRating: number | null;
   sessionNotes: string | null;
+  planWeekWorkoutId: string | null;
+  progressionNote: string | null;
   workoutTemplate: { id: string; title: string; description: string | null; tags: string[] } | null;
   exercises: SessionExercise[];
 }
@@ -312,11 +314,13 @@ export interface Comment {
 // Client — Week
 // ─────────────────────────────────────────────────────────────
 export interface WeekWorkout {
+  pwwId: string;
   workoutTemplateId: string;
   title: string;
   description: string | null;
   tags: string[];
   exerciseCount: number;
+  progressionNote: string | null;
   session: { id: string; status: SessionStatus; performedAt: string } | null;
 }
 
@@ -326,6 +330,35 @@ export interface ClientWeekResponse {
   totalWeeks: number;
   assignmentStatus: AssignmentStatus;
   workouts: WeekWorkout[];
+}
+
+export interface CoachCalendarItem {
+  date: string; // YYYY-MM-DD
+  client: { id: string; name: string | null; email: string };
+  assignment: { id: string; status: AssignmentStatus; plan: { id: string; title: string }; startDate: string | null };
+  weekNumber: number | null;
+  sortOrder: number | null;
+  workout: {
+    pwwId: string;
+    workoutTemplateId: string;
+    title: string;
+    tags: string[];
+    exerciseCount: number;
+    progressionNote: string | null;
+  } | null;
+  session: { id: string; status: SessionStatus; performedAt: string } | null;
+}
+
+export interface CoachCalendarResponse {
+  range: { start: string; days: number };
+  mode?: "fixed" | "flex";
+  items: CoachCalendarItem[];
+  weekOverview?: Array<{
+    client: { id: string; name: string | null; email: string };
+    assignment: { id: string; status: AssignmentStatus; plan: { id: string; title: string }; startDate: string | null };
+    weekNumber: number | null;
+    workouts: WeekWorkout[];
+  }>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -338,7 +371,8 @@ export interface CoachClientSummary {
   relationStatus: string;
   assignment: {
     status: AssignmentStatus;
-    plan: { id: string; title: string; weeksCount: number } | null;
+    startDate?: string | null;
+    plan: { id: string; title: string; weeksCount: number; periodDays?: number } | null;
   } | null;
   lastSession: { performedAt: string; status: SessionStatus } | null;
 }

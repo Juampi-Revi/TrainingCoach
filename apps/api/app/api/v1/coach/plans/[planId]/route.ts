@@ -9,12 +9,24 @@ async function verifyPlanOwner(planId: string, coachUserId: string) {
   return prisma.plan.findFirst({ where: { id: planId, coachUserId }, select: { id: true } });
 }
 
+function startOfDayUTC(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function periodFromStart(startDate: Date, now: Date, periodDays: number) {
+  const start = startOfDayUTC(startDate).getTime();
+  const current = startOfDayUTC(now).getTime();
+  const diffDays = Math.floor((current - start) / 86_400_000);
+  return Math.floor(diffDays / Math.max(1, periodDays)) + 1;
+}
+
 export async function GET(req: NextRequest, { params }: Ctx) {
   return withHandler(async () => {
     const auth = requireRole(req, "coach");
     if (!auth.ok) return unauthorized(auth.message);
 
     const { planId } = await params;
+    const now = new Date();
     const plan = await prisma.plan.findFirst({
       where: { id: planId, coachUserId: auth.user.sub },
       include: {
@@ -63,6 +75,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         workouts: w.workouts.map((pw) => ({
           id: pw.id,
           sortOrder: pw.sortOrder,
+          progressionNote: pw.progressionNote ?? null,
           workoutTemplate: {
             id: pw.workoutTemplate.id,
             title: pw.workoutTemplate.title,
@@ -74,7 +87,10 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       assignments: plan.assignments.map((a) => ({
         id: a.id,
         status: a.status,
-        startDate: a.startDate,
+        startDate: a.startDate ? startOfDayUTC(a.startDate).toISOString().slice(0, 10) : null,
+        currentWeekNumber: a.startDate
+          ? Math.max(1, Math.min(plan.weeksCount || 1, periodFromStart(a.startDate, now, plan.periodDays)))
+          : 1,
         client: a.client,
       })),
     });

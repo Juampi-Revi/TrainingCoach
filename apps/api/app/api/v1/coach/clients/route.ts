@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
               take: 1,
               select: {
                 status: true,
-                plan: { select: { id: true, title: true, weeksCount: true } },
+                startDate: true,
+                plan: { select: { id: true, title: true, weeksCount: true, periodDays: true } },
               },
             },
             workoutSessions: {
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
           name: r.client.displayName,
           relationStatus: r.status,
           assignment: assignment
-            ? { status: assignment.status, plan: assignment.plan }
+            ? { status: assignment.status, startDate: assignment.startDate, plan: assignment.plan }
             : null,
           lastSession: lastSession
             ? { performedAt: lastSession.performedAt, status: lastSession.status }

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { Button, Icon, StateBlock } from "@/components/ui";
-import type { WorkoutTemplateDetail } from "@regen/types";
+import type { ClientWeekResponse, WorkoutTemplateDetail } from "@regen/types";
 import { ApiError } from "@/lib/api";
 
 const GROUP_COLORS: Record<string, string> = {
@@ -89,10 +89,13 @@ export default function WorkoutDetailPage() {
   const { api } = useAuth();
   const router = useRouter();
   const { workoutTemplateId } = useParams<{ workoutTemplateId: string }>();
+  const searchParams = useSearchParams();
+  const pwwId = searchParams.get("pwwId");
   const [data, setData] = useState<WorkoutTemplateDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progressionNote, setProgressionNote] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -102,11 +105,22 @@ export default function WorkoutDetailPage() {
       .finally(() => setLoading(false));
   }, [api, workoutTemplateId]);
 
+  useEffect(() => {
+    if (!pwwId) return;
+    api
+      .get<ClientWeekResponse>("/client/week")
+      .then((week) => {
+        const w = week.workouts.find((x) => x.pwwId === pwwId) ?? null;
+        setProgressionNote(w?.progressionNote ?? null);
+      })
+      .catch(() => setProgressionNote(null));
+  }, [api, pwwId]);
+
   async function startSession() {
     if (!data) return;
     setStarting(true);
     try {
-      const res = await api.post<{ id: string }>("/client/sessions", { workoutTemplateId: data.id });
+      const res = await api.post<{ id: string }>("/client/sessions", { workoutTemplateId: data.id, planWeekWorkoutId: pwwId });
       router.push(`/sesion/${res.id}`);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Error al iniciar sesión";
@@ -194,6 +208,28 @@ export default function WorkoutDetailPage() {
       </div>
 
       <div style={{ padding: "14px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {progressionNote && (
+          <div
+            style={{
+              background: "var(--bg-1)",
+              border: "1px solid var(--line)",
+              borderLeft: "3px solid var(--lime)",
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 4,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Icon name="info" size={14} color="var(--lime)" />
+              <span className="ta-mono" style={{ fontSize: 9, color: "var(--lime)", letterSpacing: ".1em", fontWeight: 700 }}>
+                PROGRESIÓN
+              </span>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 600, lineHeight: 1.35 }}>
+              {progressionNote}
+            </div>
+          </div>
+        )}
 
         {/* Warmup block */}
         {hasWarmup && (
