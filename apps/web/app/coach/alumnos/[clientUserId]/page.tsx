@@ -14,6 +14,7 @@ import { AssignPlanModal } from "./_components/assign-plan-modal";
 import { ClientHeader } from "./_components/client-header";
 import { OverviewTab } from "./_components/overview-tab";
 import { SessionsList } from "./_components/sessions-list";
+import { useSessionsData } from "./_hooks/use-sessions-data";
 import { HealthTab } from "./_components/health-tab";
 import { FoodTab } from "./_components/food-tab";
 import { GoalsTab } from "./_components/goals-tab";
@@ -30,6 +31,16 @@ export default function AthleteDetailPage() {
   const { clientUserId } = useParams<{ clientUserId: string }>();
 
   const { client, loading, setClient } = useClientDetail(clientUserId);
+
+  const {
+    sessions,
+    loading: sessionsLoading,
+    loadingMore: sessionsLoadingMore,
+    hasMore: sessionsHasMore,
+    statusFilter: sessionsStatusFilter,
+    setStatusFilter: setSessionsStatusFilter,
+    loadMore: loadMoreSessions,
+  } = useSessionsData(clientUserId);
 
   const tabData = useTabData(clientUserId);
   const overview = useOverviewData(clientUserId);
@@ -181,8 +192,18 @@ export default function AthleteDetailPage() {
             )}
             {tab === "Entrenos" && (
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Entrenos recientes</div>
-                <SessionsList sessions={client.recentSessions ?? []} clientUserId={clientUserId} showStatus />
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Entrenos</div>
+                <SessionsList
+                  sessions={sessions}
+                  clientUserId={clientUserId}
+                  loading={sessionsLoading}
+                  loadingMore={sessionsLoadingMore}
+                  hasMore={sessionsHasMore}
+                  onLoadMore={loadMoreSessions}
+                  statusFilter={sessionsStatusFilter}
+                  onStatusFilterChange={setSessionsStatusFilter}
+                  showStatus
+                />
               </div>
             )}
             {tab === "Actividad" && (
