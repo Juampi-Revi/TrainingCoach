@@ -49,6 +49,7 @@ model User {
   healthDataSyncs       HealthDataSync[]
   healthProviderConnections HealthProviderConnection[]
   notificationSettings      NotificationSettings?
+  exerciseFavorites         CoachExerciseFavorite[]
 }
 
 model CoachClient {
@@ -212,6 +213,8 @@ model Exercise {
   name          String
   primaryMuscle String?
   equipment     String?
+  difficulty    String?  // 'beginner' | 'intermediate' | 'advanced'
+  objective     String?  // 'strength' | 'hypertrophy' | 'conditioning' | 'mobility' | 'skill'
   isSystem      Boolean  @default(false)
   youtubeUrl    String?
   source        String?
@@ -226,11 +229,26 @@ model Exercise {
   plannedInSessionExercises     WorkoutSessionExercise[]     @relation("PlannedExercise")
   performedInSessionExercises   WorkoutSessionExercise[]     @relation("PerformedExercise")
   media                         ExerciseMedia[]
+  favoritedBy                   CoachExerciseFavorite[]
 
   @@unique([coachUserId, name])
   @@unique([source, sourceId])
   @@index([coachUserId])
   @@index([isSystem])
+}
+
+model CoachExerciseFavorite {
+  id          String   @id @default(uuid())
+  coachUserId String
+  exerciseId  String
+  createdAt   DateTime @default(now())
+
+  coach    User     @relation(fields: [coachUserId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([coachUserId, exerciseId])
+  @@index([coachUserId, createdAt(sort: Desc)])
+  @@index([exerciseId])
 }
 
 model WorkoutExercise {

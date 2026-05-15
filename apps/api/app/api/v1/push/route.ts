@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/api-auth";
+import { extractBearer } from "@/lib/api-auth";
 import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
 import { vapidPublicKey, isPushConfigured } from "@/lib/push-notifications";
 
 // GET - Obtener VAPID public key
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
-    const auth = requireRole(req, "client");
+    const auth = extractBearer(req);
     if (!auth.ok) return unauthorized(auth.message);
 
     return ok({
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 // POST - Suscribirse a notificaciones push
 export async function POST(req: NextRequest) {
   return withHandler(async () => {
-    const auth = requireRole(req, "client");
+    const auth = extractBearer(req);
     if (!auth.ok) return unauthorized(auth.message);
 
     const body = await req.json();
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 // DELETE - Cancelar suscripción
 export async function DELETE(req: NextRequest) {
   return withHandler(async () => {
-    const auth = requireRole(req, "client");
+    const auth = extractBearer(req);
     if (!auth.ok) return unauthorized(auth.message);
 
     const body = await req.json();

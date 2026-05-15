@@ -24,9 +24,12 @@ export interface ExerciseOption {
   name: string;
   primaryMuscle: string | null;
   equipment: string | null;
+  difficulty?: string | null;
+  objective?: string | null;
   isSystem: boolean;
   thumbnailUrl: string | null;
   youtubeUrl?: string | null;
+  isFavorite?: boolean;
 }
 
 export interface AltItem {

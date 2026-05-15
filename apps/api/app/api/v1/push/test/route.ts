@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { requireRole } from "@/lib/api-auth";
+import { extractBearer } from "@/lib/api-auth";
 import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
 import { sendPushNotification, isPushConfigured } from "@/lib/push-notifications";
 
 // POST - Enviar notificación de prueba
 export async function POST(req: NextRequest) {
   return withHandler(async () => {
-    const auth = requireRole(req, "client");
+    const auth = extractBearer(req);
     if (!auth.ok) return unauthorized(auth.message);
 
     if (!isPushConfigured()) {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       body: message || "Esta es una notificación de prueba",
       tag: type || "test",
       data: {
-        url: "/panel",
+        url: auth.user.role === "coach" ? "/coach/notificaciones" : "/panel",
         type: type || "test",
       },
     });

@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Icon } from "@/components/ui";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import type { WE, ExerciseOption } from "./_types";
+import { ExercisePickerFilters } from "./exercise-picker-filters";
 
 export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
   templateId: string;
@@ -15,6 +16,11 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
 }) {
   const { api } = useAuth();
   const [search, setSearch] = useState("");
+  const [muscle, setMuscle] = useState("");
+  const [equipment, setEquipment] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [objective, setObjective] = useState("");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [exercises, setExercises] = useState<ExerciseOption[] | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -24,10 +30,29 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
 
   useEffect(() => {
     const q = search.trim();
-    api.get<ExerciseOption[]>(`/coach/exercises${q ? `?q=${encodeURIComponent(q)}` : ""}`)
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (muscle) params.set("muscle", muscle);
+    if (equipment.trim()) params.set("equipment", equipment.trim());
+    if (difficulty) params.set("difficulty", difficulty);
+    if (objective) params.set("objective", objective);
+    if (favoritesOnly) params.set("favorites", "true");
+    params.set("limit", "60");
+    const qs = params.toString();
+    api.get<ExerciseOption[]>(`/coach/exercises${qs ? `?${qs}` : ""}`)
       .then(setExercises)
       .catch((e) => { console.error(e); setExercises([]); });
-  }, [api, search]);
+  }, [api, search, muscle, equipment, difficulty, objective, favoritesOnly]);
+
+  async function toggleFavorite(exerciseId: string, next: boolean) {
+    try {
+      if (next) await api.post(`/coach/exercises/${exerciseId}/favorite`, {});
+      else await api.del(`/coach/exercises/${exerciseId}/favorite`);
+      setExercises((prev) => (prev ? prev.map((x) => (x.id === exerciseId ? { ...x, isFavorite: next } : x)) : prev));
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
   async function handleAdd(ex: ExerciseOption) {
     setAdding(ex.id);
@@ -77,16 +102,28 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
         <div style={{ padding: "20px 20px 12px", borderBottom: "1px solid var(--line)" }}>
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Agregar ejercicio</div>
           {!creating ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, height: 40, background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "0 12px" }}>
-              <Icon name="search" size={14} color="var(--text-mute)" />
-              <input
-                autoFocus
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setExercises(null); }}
-                placeholder="Buscar ejercicio…"
-                style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)" }}
-              />
-            </div>
+            <ExercisePickerFilters
+              search={search}
+              setSearch={setSearch}
+              muscle={muscle}
+              setMuscle={setMuscle}
+              equipment={equipment}
+              setEquipment={setEquipment}
+              difficulty={difficulty}
+              setDifficulty={setDifficulty}
+              objective={objective}
+              setObjective={setObjective}
+              favoritesOnly={favoritesOnly}
+              setFavoritesOnly={setFavoritesOnly}
+              onDirty={() => setExercises(null)}
+              onClear={() => {
+                setMuscle("");
+                setEquipment("");
+                setDifficulty("");
+                setObjective("");
+                setFavoritesOnly(false);
+              }}
+            />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <input
@@ -120,9 +157,9 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
               <div style={{ padding: 24, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>Cargando…</div>
             ) : exercises.length === 0 ? (
               <div style={{ padding: 24, textAlign: "center", color: "var(--text-mute)", fontSize: 13 }}>
-                <div style={{ marginBottom: 12 }}>Sin resultados para "{search}"</div>
+                <div style={{ marginBottom: 12 }}>Sin resultados para {`"${search}"`}</div>
                 <button onClick={() => { setCreating(true); setNewName(search); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--line-2)", background: "var(--bg-2)", color: "var(--text)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  Crear "{search}"
+                  Crear {`"${search}"`}
                 </button>
               </div>
             ) : (
@@ -130,7 +167,11 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
                 {exercises.map((ex) => (
                   <div
                     key={ex.id}
-                    onClick={() => handleAdd(ex)}
+                    onClick={(e) => {
+                      const t = e.target as HTMLElement;
+                      if (t.closest("[data-stop-row-click='true']")) return;
+                      void handleAdd(ex);
+                    }}
                     style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid var(--line)", cursor: adding === ex.id ? "wait" : "pointer", opacity: adding === ex.id ? 0.5 : 1 }}
                     className="ta-row"
                   >
@@ -176,6 +217,15 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
                         {ex.equipment ? ` · ${ex.equipment}` : ""}
                       </div>
                     </div>
+                    <button
+                      data-stop-row-click="true"
+                      onClick={() => void toggleFavorite(ex.id, !ex.isFavorite)}
+                      style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid var(--line-2)", background: ex.isFavorite ? "rgba(215,255,58,.12)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      aria-label={ex.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+                      disabled={adding === ex.id}
+                    >
+                      <Icon name="star" size={14} color={ex.isFavorite ? "var(--lime)" : "var(--text-mute)"} />
+                    </button>
                     <Icon name="plus" size={16} color="var(--text-mute)" />
                   </div>
                 ))}

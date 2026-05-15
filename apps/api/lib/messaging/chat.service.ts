@@ -73,12 +73,13 @@ async function sendMessage(threadId: string, authorUserId: string, text: string,
 
   if (thread) {
     const recipientId = thread.coachUserId === authorUserId ? thread.clientUserId : thread.coachUserId;
+    const linkUrl = recipientId === thread.coachUserId ? `/coach/mensajes/${thread.clientUserId}` : "/mensajes";
     notify({
       userId: recipientId,
       type: "new_message",
       title: "Nuevo mensaje",
       body: text.slice(0, 100),
-      linkUrl: "/mensajes",
+      linkUrl,
     });
   }
 

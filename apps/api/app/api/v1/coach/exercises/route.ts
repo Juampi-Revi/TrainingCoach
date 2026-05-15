@@ -2,6 +2,23 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
+import { listCoachExercises } from "@/lib/training/exercise.service";
+
+const DIFFICULTY_VALUES = ["beginner", "intermediate", "advanced"] as const;
+const OBJECTIVE_VALUES = ["strength", "hypertrophy", "conditioning", "mobility", "skill"] as const;
+
+function toStringList(input: string | null): string[] | null {
+  if (!input) return null;
+  const parts = input.split(",").map((s) => s.trim()).filter(Boolean);
+  return parts.length ? parts : null;
+}
+
+function toBool(input: string | null): boolean | null {
+  if (!input) return null;
+  if (input === "true" || input === "1") return true;
+  if (input === "false" || input === "0") return false;
+  return null;
+}
 
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
@@ -10,60 +27,24 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = req.nextUrl;
     const q = searchParams.get("q") ?? "";
+    const muscles = toStringList(searchParams.get("muscle"));
+    const equipments = toStringList(searchParams.get("equipment"));
+    const difficulties = toStringList(searchParams.get("difficulty"));
+    const objectives = toStringList(searchParams.get("objective"));
+    const favoritesOnly = toBool(searchParams.get("favorites")) ?? false;
     const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "50"));
 
-    const exercises = await prisma.exercise.findMany({
-      where: {
-        OR: [
-          { isSystem: true },
-          { coachUserId: auth.user.sub },
-        ],
-        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-      },
-      orderBy: [{ isSystem: "desc" }, { name: "asc" }],
-      take: limit,
-      select: {
-        id: true,
-        name: true,
-        primaryMuscle: true,
-        equipment: true,
-        isSystem: true,
-        youtubeUrl: true,
-        source: true,
-        media: { 
-          select: { url: true, mediaType: true, publicId: true }, 
-          take: 1,
-          orderBy: { isPrimary: "desc" }
-        },
-      },
+    const items = await listCoachExercises({
+      coachUserId: auth.user.sub,
+      q: q.trim(),
+      muscles,
+      equipments,
+      difficulties,
+      objectives,
+      favoritesOnly,
+      limit,
     });
-
-    return ok(
-      exercises.map((e) => {
-        // Get thumbnail URL - prioritize image media, then generate from video
-        let thumbnailUrl = null;
-        const firstMedia = e.media[0];
-        
-        if (firstMedia) {
-          if (firstMedia.mediaType === "image") {
-            thumbnailUrl = firstMedia.url;
-          } else if (firstMedia.mediaType === "video" && firstMedia.publicId) {
-            // Generate YouTube thumbnail
-            thumbnailUrl = `https://img.youtube.com/vi/${firstMedia.publicId}/mqdefault.jpg`;
-          }
-        }
-
-        return {
-          id: e.id,
-          name: e.name,
-          primaryMuscle: e.primaryMuscle,
-          equipment: e.equipment,
-          isSystem: e.isSystem,
-          youtubeUrl: e.youtubeUrl,
-          thumbnailUrl,
-        };
-      }),
-    );
+    return ok(items);
   });
 }
 
@@ -76,6 +57,22 @@ export async function POST(req: NextRequest) {
     const name = (body.name ?? "").trim();
     if (!name) return err("El nombre es obligatorio", 400);
 
+    const difficulty =
+      typeof body.difficulty === "string" && body.difficulty.trim()
+        ? body.difficulty.trim()
+        : null;
+    const objective =
+      typeof body.objective === "string" && body.objective.trim()
+        ? body.objective.trim()
+        : null;
+
+    if (difficulty && !DIFFICULTY_VALUES.includes(difficulty as (typeof DIFFICULTY_VALUES)[number])) {
+      return err("Dificultad inválida", 400);
+    }
+    if (objective && !OBJECTIVE_VALUES.includes(objective as (typeof OBJECTIVE_VALUES)[number])) {
+      return err("Objetivo inválido", 400);
+    }
+
     let exercise;
     try {
       exercise = await prisma.exercise.create({
@@ -83,6 +80,8 @@ export async function POST(req: NextRequest) {
           name,
           primaryMuscle: body.primaryMuscle || null,
           equipment: body.equipment?.trim() || null,
+          difficulty,
+          objective,
           coachUserId: auth.user.sub,
           isSystem: false,
         },
@@ -98,6 +97,8 @@ export async function POST(req: NextRequest) {
       name: exercise.name,
       primaryMuscle: exercise.primaryMuscle,
       equipment: exercise.equipment,
+      difficulty: exercise.difficulty ?? null,
+      objective: exercise.objective ?? null,
       isSystem: exercise.isSystem,
       thumbnailUrl: null,
     });

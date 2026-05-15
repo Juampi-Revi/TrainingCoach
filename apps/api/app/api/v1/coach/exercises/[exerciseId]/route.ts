@@ -5,6 +5,9 @@ import { ok, unauthorized, err, notFound, withHandler } from "@/lib/api-response
 
 type Ctx = { params: Promise<{ exerciseId: string }> };
 
+const DIFFICULTY_VALUES = ["beginner", "intermediate", "advanced"] as const;
+const OBJECTIVE_VALUES = ["strength", "hypertrophy", "conditioning", "mobility", "skill"] as const;
+
 async function getOwned(exerciseId: string, coachId: string) {
   const ex = await prisma.exercise.findUnique({ where: { id: exerciseId } });
   if (!ex) return { ex: null, error: notFound("Ejercicio no encontrado") };
@@ -33,6 +36,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       name: ex.name,
       primaryMuscle: ex.primaryMuscle,
       equipment: ex.equipment,
+      difficulty: ex.difficulty ?? null,
+      objective: ex.objective ?? null,
       isSystem: ex.isSystem,
       youtubeUrl: ex.youtubeUrl ?? null,
       thumbnailUrl: ex.media[0]?.url ?? null,
@@ -53,6 +58,27 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const name = (body.name ?? ex!.name).trim();
     if (!name) return err("El nombre es obligatorio", 400);
 
+    const difficulty =
+      body.difficulty !== undefined
+        ? typeof body.difficulty === "string" && body.difficulty.trim()
+          ? body.difficulty.trim()
+          : null
+        : ex!.difficulty;
+
+    const objective =
+      body.objective !== undefined
+        ? typeof body.objective === "string" && body.objective.trim()
+          ? body.objective.trim()
+          : null
+        : ex!.objective;
+
+    if (difficulty && !DIFFICULTY_VALUES.includes(difficulty as (typeof DIFFICULTY_VALUES)[number])) {
+      return err("Dificultad inválida", 400);
+    }
+    if (objective && !OBJECTIVE_VALUES.includes(objective as (typeof OBJECTIVE_VALUES)[number])) {
+      return err("Objetivo inválido", 400);
+    }
+
     let updated;
     try {
       updated = await prisma.exercise.update({
@@ -62,6 +88,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
           primaryMuscle: body.primaryMuscle !== undefined ? (body.primaryMuscle || null) : ex!.primaryMuscle,
           equipment: body.equipment !== undefined ? (body.equipment?.trim() || null) : ex!.equipment,
           youtubeUrl: body.youtubeUrl !== undefined ? (body.youtubeUrl?.trim() || null) : ex!.youtubeUrl,
+          difficulty,
+          objective,
         },
       });
     } catch (e: unknown) {
@@ -75,6 +103,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       name: updated.name,
       primaryMuscle: updated.primaryMuscle,
       equipment: updated.equipment,
+      difficulty: updated.difficulty ?? null,
+      objective: updated.objective ?? null,
       isSystem: updated.isSystem,
       youtubeUrl: updated.youtubeUrl ?? null,
       thumbnailUrl: null,

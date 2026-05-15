@@ -29,6 +29,11 @@ next-env.d.ts
 # Prisma generated
 apps/api/node_modules/.prisma
 
+# Local DB backups (never commit)
+backups/
+*.dump
+*.sql
+
 # AI / IDE tooling
 .claude
 .agents

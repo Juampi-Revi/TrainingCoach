@@ -16,6 +16,20 @@ export const MUSCLE_LABEL: Record<string, string> = {
   full_body:  "Cuerpo completo",
 };
 
+export const EXERCISE_DIFFICULTY_LABEL: Record<string, string> = {
+  beginner: "Principiante",
+  intermediate: "Intermedio",
+  advanced: "Avanzado",
+};
+
+export const EXERCISE_OBJECTIVE_LABEL: Record<string, string> = {
+  strength: "Fuerza",
+  hypertrophy: "Hipertrofia",
+  conditioning: "Acondicionamiento",
+  mobility: "Movilidad",
+  skill: "Técnica / Skill",
+};
+
 // ─── Superset group colors ──────────────────────────────────────────────────────
 
 export const GROUP_COLORS: Record<string, string> = {
