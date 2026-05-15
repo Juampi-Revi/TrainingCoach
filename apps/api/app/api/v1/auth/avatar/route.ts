@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireRole } from "@/lib/api-auth";
+import { extractBearer } from "@/lib/api-auth";
 import { err, ok, unauthorized, withHandler } from "@/lib/api-response";
 import { cloudinary } from "@/lib/cloudinary";
 
@@ -7,7 +7,7 @@ const MAX_SIZE = 2 * 1024 * 1024; // 2MB for avatars
 
 export async function POST(req: NextRequest) {
   return withHandler(async () => {
-    const auth = requireRole(req, "client");
+    const auth = extractBearer(req);
     if (!auth.ok) return unauthorized(auth.message);
 
     const form = await req.formData().catch(() => null);

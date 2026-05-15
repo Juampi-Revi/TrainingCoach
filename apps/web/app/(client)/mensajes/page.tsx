@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { StateBlock } from "@/components/ui";
 import { ChatMessage, ChatEmptyState } from "./_components/chat-message";
 import { ChatInput } from "./_components/chat-input";
@@ -12,6 +13,7 @@ import "./_styles.css";
 
 export default function MensajesAlumnoPage() {
   const { api, user } = useAuth();
+  const toast = useToast();
   const [isDesktop, setIsDesktop] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [ref, setRef] = useState<RefPayload | null>(null);
@@ -40,13 +42,16 @@ export default function MensajesAlumnoPage() {
   }, []);
 
   const handleSend = useCallback(async () => {
-    if (!newMsg.trim()) return;
+    if (!newMsg.trim() || !user) return;
     stickToBottomRef.current = true;
-    await send(newMsg, ref ? { kind: ref.kind, id: ref.id, label: ref.label } : undefined);
-    setNewMsg("");
-    setRef(null);
-    await load();
-  }, [newMsg, ref, send, load]);
+    try {
+      await send(newMsg, { id: user.id, name: user.name }, ref ? { kind: ref.kind, id: ref.id, label: ref.label } : undefined);
+      setNewMsg("");
+      setRef(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo enviar el mensaje");
+    }
+  }, [newMsg, ref, send, user, toast]);
 
   useEffect(() => {
     if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });

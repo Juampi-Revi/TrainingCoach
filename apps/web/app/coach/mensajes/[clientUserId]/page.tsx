@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { Avatar, Button, Icon, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 
@@ -57,6 +58,7 @@ function readArray(obj: Record<string, unknown>, key: string): unknown[] {
 
 export default function CoachChatPage() {
   const { api, user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const { clientUserId } = useParams<{ clientUserId: string }>();
 
@@ -75,6 +77,7 @@ export default function CoachChatPage() {
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
+  const loadInFlightRef = useRef(false);
 
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 900px)");
@@ -94,15 +97,22 @@ export default function CoachChatPage() {
   }, []);
 
   const load = useCallback(() => {
+    if (loadInFlightRef.current) return;
+    loadInFlightRef.current = true;
     api
       .get<ChatResponse>(`/coach/chat/${clientUserId}?take=200`)
       .then((r) => {
         setClientName(r.client.name ?? "Alumno");
         setMessages(r.messages);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api, clientUserId]);
+      .catch((e) => {
+        if (loading) toast.error("No se pudo cargar el chat");
+      })
+      .finally(() => {
+        loadInFlightRef.current = false;
+        setLoading(false);
+      });
+  }, [api, clientUserId, loading, toast]);
 
   useEffect(() => {
     load();
@@ -114,7 +124,7 @@ export default function CoachChatPage() {
 
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") load();
-    }, 5000);
+    }, 2000);
 
     return () => {
       document.removeEventListener("visibilitychange", onVis);
@@ -163,17 +173,33 @@ export default function CoachChatPage() {
 
   async function send() {
     if (!newMsg.trim()) return;
+    const text = newMsg.trim();
+    const reference = ref ? { kind: ref.kind, id: ref.id, label: ref.label } as RefPayload : null;
+    const tempId = `temp-${Date.now()}`;
+
+    const optimistic: ChatMessageItem = {
+      id: tempId,
+      text,
+      createdAt: new Date().toISOString(),
+      author: { id: user!.id, name: user!.name, role: "coach" },
+      reference,
+    };
+
+    setNewMsg("");
+    setRef(null);
     setSending(true);
     stickToBottomRef.current = true;
+    setMessages((prev) => [...prev, optimistic]);
+
     try {
-      await api.post(`/coach/chat/${clientUserId}`, {
-        text: newMsg.trim(),
-        reference: ref ? { kind: ref.kind, id: ref.id, label: ref.label } : undefined,
+      const saved = await api.post<ChatMessageItem>(`/coach/chat/${clientUserId}`, {
+        text,
+        reference: reference ? { kind: reference.kind, id: reference.id, label: reference.label } : undefined,
       });
-      setNewMsg("");
-      setRef(null);
-      load();
-    } catch {
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
+    } catch (e) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      toast.error("No se pudo enviar el mensaje");
     } finally {
       setSending(false);
     }

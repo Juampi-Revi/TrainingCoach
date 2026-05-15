@@ -52,7 +52,7 @@ export default function MensajesPage() {
 
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") fetchThreads();
-    }, 8000);
+    }, 2000);
 
     return () => {
       document.removeEventListener("visibilitychange", onVis);

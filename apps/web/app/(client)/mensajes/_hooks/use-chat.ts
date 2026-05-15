@@ -1,22 +1,31 @@
-import { useState, useEffect, useCallback } from "react";
-import { ChatMessageItem, ChatData, SessionOption } from "../_types";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { ChatMessageItem, ChatData, SessionOption, RefPayload } from "../_types";
 
-export function useChat(api: { get: <T>(url: string) => Promise<T>; post: (url: string, body?: Record<string, unknown>) => Promise<unknown> }) {
+export function useChat(api: { get: <T>(url: string) => Promise<T>; post: <T>(url: string, body?: Record<string, unknown>) => Promise<T> }) {
   const [coachName, setCoachName] = useState("Coach");
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const loadInFlightRef = useRef(false);
 
   const load = useCallback(async () => {
-    const res = await api.get<ChatData>("/client/chat?take=160");
-    setCoachName(res.coach.name ?? "Coach");
-    setMessages(res.messages);
+    if (loadInFlightRef.current) return;
+    loadInFlightRef.current = true;
+    try {
+      const res = await api.get<ChatData>("/client/chat?take=160");
+      setCoachName(res.coach.name ?? "Coach");
+      setMessages(res.messages);
+    } catch {
+      // silent for background polling
+    } finally {
+      loadInFlightRef.current = false;
+    }
   }, [api]);
 
   useEffect(() => {
     let cancelled = false;
     const runLoad = () => {
-      load().catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+      load().finally(() => { if (!cancelled) setLoading(false); });
     };
     const t = window.setTimeout(runLoad, 0);
 
@@ -25,7 +34,7 @@ export function useChat(api: { get: <T>(url: string) => Promise<T>; post: (url: 
 
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") runLoad();
-    }, 5000);
+    }, 2000);
 
     return () => {
       cancelled = true;
@@ -35,11 +44,24 @@ export function useChat(api: { get: <T>(url: string) => Promise<T>; post: (url: 
     };
   }, [load]);
 
-  const send = useCallback(async (text: string, reference?: { kind: string; id: string; label?: string }) => {
+  const send = useCallback(async (text: string, user: { id: string; name: string | null }, reference?: RefPayload) => {
     if (!text.trim()) return;
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: ChatMessageItem = {
+      id: tempId,
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+      author: { id: user.id, name: user.name, role: "client" },
+      reference: reference ?? null,
+    };
+    setMessages((prev) => [...prev, optimistic]);
     setSending(true);
     try {
-      await api.post("/client/chat", { text: text.trim(), reference });
+      const saved = await api.post<ChatMessageItem>("/client/chat", { text: text.trim(), reference });
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      throw new Error("No se pudo enviar el mensaje");
     } finally {
       setSending(false);
     }
