@@ -6,7 +6,6 @@ import { DesktopShell } from "@/components/layout/desktop-shell";
 import { Icon, Button, Input } from "@/components/ui";
 import { useNotifications } from "@/lib/use-notifications";
 import type { CoachClientSummary } from "@regen/types";
-import { CoachNotificationSettingsCard } from "./_components/coach-notification-settings-card";
 import { GroupedNotificationsList } from "./_components/grouped-notifications-list";
 
 type TypeFilter = "all" | "messages" | "sessions" | "clients" | "plans" | "other";
@@ -30,7 +29,7 @@ function extractClientIdFromLinkUrl(url: string | null): string | null {
 
 export default function CoachNotificacionesPage() {
   const { user, api } = useAuth();
-  const { notifications, unreadCount, loading, markAllRead, refresh } = useNotifications();
+  const { notifications, unreadCount, loading, markAllRead } = useNotifications();
   const [clients, setClients] = useState<CoachClientSummary[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -116,8 +115,6 @@ export default function CoachNotificacionesPage() {
 
         <div className="coach-notifs-grid">
           <div className="coach-notifs-filters">
-            <CoachNotificationSettingsCard api={api} onAfterChange={refresh} />
-
             <Input
               label="Buscar"
               placeholder="Buscar por alumno, título o texto…"

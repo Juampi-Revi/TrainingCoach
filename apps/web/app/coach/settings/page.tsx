@@ -5,9 +5,10 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Avatar, Icon } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
+import { CoachNotificationSettingsCard } from "../notificaciones/_components/coach-notification-settings-card";
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, api, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const router = useRouter();
 
@@ -57,6 +58,11 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="cuenta-section">
+          <div className="section-label">Alertas</div>
+          <CoachNotificationSettingsCard api={api} />
         </div>
 
         <div className="cuenta-section">

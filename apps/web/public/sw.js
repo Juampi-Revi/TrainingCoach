@@ -1,6 +1,4 @@
-/// <reference lib="webworker" />
-
-const SW = self as ServiceWorkerGlobalScope;
+const SW = self;
 
 // Cache name
 const CACHE_NAME = "regen-app-v1";
@@ -21,7 +19,7 @@ SW.addEventListener("activate", (event) => {
 SW.addEventListener("push", (event) => {
   console.log("[SW] Push received:", event);
 
-  let data: { notification?: { title?: string; body?: string; icon?: string; badge?: string; tag?: string; data?: { url?: string } } } = {};
+  let data = {};
 
   try {
     data = event.data?.json() || {};
@@ -30,7 +28,7 @@ SW.addEventListener("push", (event) => {
   }
 
   const title = data.notification?.title || "Nueva notificación";
-  const options: NotificationOptions = {
+  const options = {
     body: data.notification?.body || "",
     icon: data.notification?.icon || "/icon-192x192.png",
     badge: data.notification?.badge || "/icon-192x192.png",
@@ -50,7 +48,7 @@ SW.addEventListener("notificationclick", (event) => {
 
   event.notification.close();
 
-  const data = event.notification.data as { url?: string };
+  const data = event.notification.data;
   const urlToOpen = data?.url || "/panel";
 
   event.waitUntil(
