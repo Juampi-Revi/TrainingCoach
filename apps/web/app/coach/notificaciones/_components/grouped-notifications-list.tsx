@@ -31,8 +31,9 @@ function groupKey(n: Enriched) {
 export function GroupedNotificationsList(props: {
   items: Enriched[];
   clientMap: Map<string, CoachClientSummary>;
+  onMarkRead?: (id: string) => void;
 }) {
-  const { items, clientMap } = props;
+  const { items, clientMap, onMarkRead } = props;
   const router = useRouter();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -183,6 +184,7 @@ export function GroupedNotificationsList(props: {
                       key={n.id}
                       type="button"
                       onClick={() => {
+                        if (isUnread) onMarkRead?.(n.id);
                         if (n.linkUrl) router.push(n.linkUrl);
                       }}
                       style={{

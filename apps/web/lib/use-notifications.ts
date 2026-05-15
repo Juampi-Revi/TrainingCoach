@@ -75,6 +75,15 @@ export function useNotifications() {
     };
   }, [fetch]);
 
+  const markOneRead = useCallback(async (id: string) => {
+    if (!token) return;
+    await api.patch(`/notifications/${id}`, {});
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  }, [api, token]);
+
   const markAllRead = useCallback(async () => {
     if (!token) return;
     await api.patch("/notifications/read-all", {});
@@ -82,5 +91,5 @@ export function useNotifications() {
     setUnreadCount(0);
   }, [api, token]);
 
-  return { notifications, unreadCount, loading, markAllRead, refresh: fetch };
+  return { notifications, unreadCount, loading, markOneRead, markAllRead, refresh: fetch };
 }

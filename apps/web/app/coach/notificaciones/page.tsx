@@ -29,7 +29,7 @@ function extractClientIdFromLinkUrl(url: string | null): string | null {
 
 export default function CoachNotificacionesPage() {
   const { user, api } = useAuth();
-  const { notifications, unreadCount, loading, markAllRead } = useNotifications();
+  const { notifications, unreadCount, loading, markOneRead, markAllRead } = useNotifications();
   const [clients, setClients] = useState<CoachClientSummary[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -43,6 +43,10 @@ export default function CoachNotificacionesPage() {
       .catch(() => {})
       .finally(() => setClientsLoading(false));
   }, [api]);
+
+  useEffect(() => {
+    if (!loading && unreadCount > 0) markAllRead();
+  }, [loading, unreadCount, markAllRead]);
 
   const clientMap = useMemo(() => {
     return new Map(clients.map((c) => [c.id, c]));
@@ -186,7 +190,7 @@ export default function CoachNotificacionesPage() {
                 No hay resultados con esos filtros.
               </div>
             ) : (
-              <GroupedNotificationsList items={filtered} clientMap={clientMap} />
+              <GroupedNotificationsList items={filtered} clientMap={clientMap} onMarkRead={markOneRead} />
             )}
           </div>
         </div>
