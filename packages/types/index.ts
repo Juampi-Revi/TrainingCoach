@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 // Primitives
 // ─────────────────────────────────────────────────────────────
-export type UserRole = "coach" | "client";
+export type UserRole = "coach" | "client" | "gym";
 export type BillingStatus = "good" | "due";
 
 /**
@@ -70,6 +70,7 @@ export interface AuthUser {
   avatarUrl: string | null;
   role: UserRole;
   billingStatus: BillingStatus;
+  emailVerified?: boolean;
 }
 
 export interface LoginRequest {

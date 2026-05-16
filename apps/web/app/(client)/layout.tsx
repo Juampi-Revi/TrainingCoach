@@ -99,6 +99,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
     if (user?.role === "coach") { router.replace("/coach"); }
+    if (user?.role === "gym") { router.replace("/gym"); }
   }, [ready, token, user, router]);
 
   // Request notification permission once
@@ -111,6 +112,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   if (!ready) return null;
   if (!token) return null;
   if (user && user.role === "coach") return null;
+  if (user && user.role === "gym") return null;
 
   const name = user?.name ?? user?.email ?? "Cliente";
   const hideMobileNav = pathname.startsWith("/sesion/");

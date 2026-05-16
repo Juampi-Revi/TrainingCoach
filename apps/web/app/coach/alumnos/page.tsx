@@ -99,6 +99,9 @@ export default function AlumnosPage() {
             <Button variant="outline" icon="history" onClick={() => router.push("/coach/calendario")}>
               Agenda
             </Button>
+            <Button variant="outline" icon="users" onClick={() => router.push("/coach/alumnos/grupos")}>
+              Grupos
+            </Button>
             <Button icon="plus" onClick={() => setShowAdd(true)}>Agregar alumno</Button>
           </>
         }

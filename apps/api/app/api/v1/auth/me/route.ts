@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: auth.user.sub },
-      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true },
+      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true, emailVerified: true },
     });
     if (!user) return unauthorized("User not found");
 
@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
       avatarUrl: user.avatarUrl,
       role: user.role,
       billingStatus: user.billingStatus,
+      emailVerified: user.emailVerified,
     });
   });
 }
@@ -44,7 +45,7 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.user.update({
       where: { id: auth.user.sub },
       data,
-      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true },
+      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true, emailVerified: true },
     });
 
     return ok({
@@ -54,6 +55,7 @@ export async function PATCH(req: NextRequest) {
       avatarUrl: updated.avatarUrl,
       role: updated.role,
       billingStatus: updated.billingStatus,
+      emailVerified: updated.emailVerified,
     });
   });
 }

@@ -21,11 +21,22 @@ export function extractBearer(req: NextRequest): AuthResult {
 
 export function requireRole(
   req: NextRequest,
-  role: "coach" | "client",
+  role: "coach" | "client" | "gym",
+): AuthResult;
+export function requireRole(
+  req: NextRequest,
+  roles: ("coach" | "client" | "gym")[],
+): AuthResult;
+export function requireRole(
+  req: NextRequest,
+  roleOrRoles: "coach" | "client" | "gym" | ("coach" | "client" | "gym")[],
 ): AuthResult {
   const auth = extractBearer(req);
   if (!auth.ok) return auth;
-  if (auth.user.role !== role) {
+  const allowed = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles];
+  // "gym" has all permissions of "coach"
+  if (allowed.includes("coach") && auth.user.role === "gym") return auth;
+  if (!allowed.includes(auth.user.role as "coach" | "client" | "gym")) {
     return { ok: false, status: 403, message: "Forbidden" };
   }
   return auth;

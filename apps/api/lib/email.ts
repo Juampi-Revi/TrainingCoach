@@ -27,6 +27,35 @@ export async function sendResetEmail({ to, name, resetUrl }: SendResetParams) {
   return { sent: res.ok };
 }
 
+type SendVerifyParams = {
+  to: string;
+  name: string;
+  verifyUrl: string;
+};
+
+export async function sendVerifyEmail({ to, name, verifyUrl }: SendVerifyParams) {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.EMAIL_FROM?.trim();
+  if (!apiKey || !from) return { sent: false };
+
+  const subject = "Verificá tu email — Training Challenge";
+  const text = `Hola ${name},\n\nVerificá tu email haciendo clic en este link (válido por 24 horas):\n\n${verifyUrl}\n\nSi no creaste esta cuenta, ignoralo.`;
+  const html = `
+    <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
+      <p>Hola <strong>${escapeHtml(name)}</strong>,</p>
+      <p>Verificá tu email haciendo clic abajo (válido por 24 horas):</p>
+      <p><a href="${verifyUrl}" style="background:#D7FF3A;color:#0B0B0C;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;">Verificar email</a></p>
+      <p style="color:#888;font-size:12px;">Si no creaste esta cuenta, ignoralo.</p>
+    </div>`;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to, subject, text, html }),
+  });
+  return { sent: res.ok };
+}
+
 type SendInviteParams = {
   to: string;
   coachName: string;

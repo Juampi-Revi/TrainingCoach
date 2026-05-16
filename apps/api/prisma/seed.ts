@@ -511,7 +511,269 @@ async function main() {
 
   console.log('Created robust demo dataset')
 
-  console.log('Seed completed successfully')
+  // ────────────────────────────────────────────────────────────────
+  // 9. Gym user, groups, and classes
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n--- Seeding gym data ---')
+
+  const gymPass = await bcrypt.hash('123456', 10)
+
+  const gymUser = await prisma.user.upsert({
+    where: { email: 'gym@example.com' },
+    update: { passwordHash: gymPass, role: 'gym', displayName: 'CrossFit Box Pro', emailVerified: true },
+    create: { email: 'gym@example.com', passwordHash: gymPass, role: 'gym', displayName: 'CrossFit Box Pro', emailVerified: true },
+  })
+  console.log(`  Gym: ${gymUser.displayName}`)
+
+  // Gym clients
+  const gymClientSeeds = [
+    { email: 'gymclient1@example.com', name: 'Pedro Gómez' },
+    { email: 'gymclient2@example.com', name: 'María López' },
+    { email: 'gymclient3@example.com', name: 'Carlos Díaz' },
+    { email: 'gymclient4@example.com', name: 'Ana Ruiz' },
+    { email: 'gymclient5@example.com', name: 'Luis Torres' },
+    { email: 'gymclient6@example.com', name: 'Sofía Vega' },
+  ]
+
+  const gymClients = []
+  for (const c of gymClientSeeds) {
+    const u = await prisma.user.upsert({
+      where: { email: c.email },
+      update: { passwordHash: gymPass, role: 'client', displayName: c.name, emailVerified: true },
+      create: { email: c.email, passwordHash: gymPass, role: 'client', displayName: c.name, emailVerified: true },
+    })
+    gymClients.push(u)
+    await prisma.coachClient.upsert({
+      where: { coachUserId_clientUserId: { coachUserId: gymUser.id, clientUserId: u.id } },
+      update: { status: 'active' },
+      create: { coachUserId: gymUser.id, clientUserId: u.id, status: 'active' },
+    })
+  }
+  console.log(`  Gym clients: ${gymClients.length}`)
+
+  // Groups
+  const groupBeginner = await prisma.coachGroup.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Principiantes' } },
+    update: { level: 'beginner' },
+    create: { coachUserId: gymUser.id, name: 'Principiantes', level: 'beginner' },
+  })
+  const groupIntermediate = await prisma.coachGroup.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Intermedios' } },
+    update: { level: 'intermediate' },
+    create: { coachUserId: gymUser.id, name: 'Intermedios', level: 'intermediate' },
+  })
+  const groupAdvanced = await prisma.coachGroup.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Avanzados' } },
+    update: { level: 'advanced' },
+    create: { coachUserId: gymUser.id, name: 'Avanzados', level: 'advanced' },
+  })
+  console.log(`  Groups: 3`)
+
+  // Assign clients to groups
+  for (const [i, c] of gymClients.entries()) {
+    const groupId = i < 2 ? groupBeginner.id : i < 4 ? groupIntermediate.id : groupAdvanced.id
+    await prisma.coachGroupMember.upsert({
+      where: { groupId_clientUserId: { groupId, clientUserId: c.id } },
+      update: {},
+      create: { groupId, clientUserId: c.id },
+    })
+  }
+  console.log(`  Group members assigned`)
+
+  // Create gym workout templates (simpler, no blocks - just exercises directly for gym classes)
+  const gymTemplateSeed1 = await prisma.workoutTemplate.upsert({
+    where: { id: 'gym-wod-1' },
+    update: {},
+    create: {
+      id: 'gym-wod-1',
+      coachUserId: gymUser.id,
+      title: 'WOD CrossFit',
+      description: 'Entrenamiento del día - alta intensidad',
+      type: 'strength',
+      sortOrder: 0,
+    },
+  })
+  const gymTemplateSeed2 = await prisma.workoutTemplate.upsert({
+    where: { id: 'gym-wod-2' },
+    update: {},
+    create: {
+      id: 'gym-wod-2',
+      coachUserId: gymUser.id,
+      title: 'Funcional HIIT',
+      description: 'Intervalos de alta intensidad',
+      type: 'cardio',
+      sortOrder: 1,
+    },
+  })
+
+  // Ensure exercises exist for gym (reuse from seed or create)
+  const gymEx1 = await prisma.exercise.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Burpees' } },
+    update: { primaryMuscle: 'full_body', equipment: 'Peso corporal', difficulty: 'intermediate', objective: 'conditioning' },
+    create: { coachUserId: gymUser.id, name: 'Burpees', primaryMuscle: 'full_body', equipment: 'Peso corporal', difficulty: 'intermediate', objective: 'conditioning', isSystem: false },
+  })
+  const gymEx2 = await prisma.exercise.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Kettlebell Swing' } },
+    update: { primaryMuscle: 'glutes', equipment: 'Kettlebell', difficulty: 'beginner', objective: 'conditioning' },
+    create: { coachUserId: gymUser.id, name: 'Kettlebell Swing', primaryMuscle: 'glutes', equipment: 'Kettlebell', difficulty: 'beginner', objective: 'conditioning', isSystem: false },
+  })
+  const gymEx3 = await prisma.exercise.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Box Jump' } },
+    update: { primaryMuscle: 'legs', equipment: 'Cajón', difficulty: 'intermediate', objective: 'strength' },
+    create: { coachUserId: gymUser.id, name: 'Box Jump', primaryMuscle: 'legs', equipment: 'Cajón', difficulty: 'intermediate', objective: 'strength', isSystem: false },
+  })
+  const gymEx4 = await prisma.exercise.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Wall Ball' } },
+    update: { primaryMuscle: 'full_body', equipment: 'Pelota', difficulty: 'beginner', objective: 'conditioning' },
+    create: { coachUserId: gymUser.id, name: 'Wall Ball', primaryMuscle: 'full_body', equipment: 'Pelota', difficulty: 'beginner', objective: 'conditioning', isSystem: false },
+  })
+  const gymEx5 = await prisma.exercise.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Thruster' } },
+    update: { primaryMuscle: 'full_body', equipment: 'Barra', difficulty: 'advanced', objective: 'strength' },
+    create: { coachUserId: gymUser.id, name: 'Thruster', primaryMuscle: 'full_body', equipment: 'Barra', difficulty: 'advanced', objective: 'strength', isSystem: false },
+  })
+  const gymEx6 = await prisma.exercise.upsert({
+    where: { coachUserId_name: { coachUserId: gymUser.id, name: 'Double Under' } },
+    update: { primaryMuscle: 'full_body', equipment: 'Soga', difficulty: 'intermediate', objective: 'skill' },
+    create: { coachUserId: gymUser.id, name: 'Double Under', primaryMuscle: 'full_body', equipment: 'Soga', difficulty: 'intermediate', objective: 'skill', isSystem: false },
+  })
+
+  // Add exercises to gym WOD template
+  const block1 = await prisma.workoutBlock.upsert({
+    where: { id: 'gym-block-1' },
+    update: {},
+    create: { id: 'gym-block-1', workoutTemplateId: gymTemplateSeed1.id, type: 'warmup', label: 'Entrada en calor', sortOrder: 0, targetMinutes: 8 },
+  })
+  const block2 = await prisma.workoutBlock.upsert({
+    where: { id: 'gym-block-2' },
+    update: {},
+    create: { id: 'gym-block-2', workoutTemplateId: gymTemplateSeed1.id, type: 'strength', label: 'WOD', sortOrder: 1 },
+  })
+  const block3 = await prisma.workoutBlock.upsert({
+    where: { id: 'gym-block-3' },
+    update: {},
+    create: { id: 'gym-block-3', workoutTemplateId: gymTemplateSeed1.id, type: 'cooldown', label: 'Vuelta a la calma', sortOrder: 2, targetMinutes: 5 },
+  })
+
+  await prisma.workoutExercise.upsert({
+    where: { id: 'gym-we-1' },
+    update: {},
+    create: { id: 'gym-we-1', workoutTemplateId: gymTemplateSeed1.id, workoutBlockId: block1.id, exerciseId: gymEx1.id, sortOrder: 0, durationSeconds: 120, notes: 'Ritmo suave' },
+  })
+  await prisma.workoutExercise.upsert({
+    where: { id: 'gym-we-2' },
+    update: {},
+    create: { id: 'gym-we-2', workoutTemplateId: gymTemplateSeed1.id, workoutBlockId: block2.id, exerciseId: gymEx2.id, sortOrder: 0, targetSets: 3, targetReps: '15', restSeconds: 60 },
+  })
+  await prisma.workoutExercise.upsert({
+    where: { id: 'gym-we-3' },
+    update: {},
+    create: { id: 'gym-we-3', workoutTemplateId: gymTemplateSeed1.id, workoutBlockId: block2.id, exerciseId: gymEx3.id, sortOrder: 1, targetSets: 3, targetReps: '10', restSeconds: 60 },
+  })
+  await prisma.workoutExercise.upsert({
+    where: { id: 'gym-we-4' },
+    update: {},
+    create: { id: 'gym-we-4', workoutTemplateId: gymTemplateSeed1.id, workoutBlockId: block2.id, exerciseId: gymEx4.id, sortOrder: 2, targetSets: 3, targetReps: '12', restSeconds: 60 },
+  })
+  await prisma.workoutExercise.upsert({
+    where: { id: 'gym-we-5' },
+    update: {},
+    create: { id: 'gym-we-5', workoutTemplateId: gymTemplateSeed1.id, workoutBlockId: block2.id, exerciseId: gymEx5.id, sortOrder: 3, targetSets: 3, targetReps: '8', restSeconds: 90, intensityType: 'rpe', intensityTarget: 8 },
+  })
+  await prisma.workoutExercise.upsert({
+    where: { id: 'gym-we-6' },
+    update: {},
+    create: { id: 'gym-we-6', workoutTemplateId: gymTemplateSeed1.id, workoutBlockId: block3.id, exerciseId: gymEx6.id, sortOrder: 0, durationSeconds: 180, notes: 'Soltar, técnica' },
+  })
+
+  console.log(`  Gym workout templates with exercises created`)
+
+  // Gym classes
+  const now = new Date()
+  const class1 = await prisma.gymClass.upsert({
+    where: { id: 'gym-class-1' },
+    update: {},
+    create: {
+      id: 'gym-class-1',
+      gymUserId: gymUser.id,
+      name: 'CrossFit AM',
+      description: 'Clase de la mañana - todos los niveles',
+      workoutTemplateId: gymTemplateSeed1.id,
+      groupId: groupIntermediate.id,
+      scheduledAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0),
+      durationMinutes: 60,
+      status: 'scheduled',
+    },
+  })
+  const class2 = await prisma.gymClass.upsert({
+    where: { id: 'gym-class-2' },
+    update: {},
+    create: {
+      id: 'gym-class-2',
+      gymUserId: gymUser.id,
+      name: 'Funcional PM',
+      description: 'Clase de la tarde - principiantes',
+      workoutTemplateId: gymTemplateSeed1.id,
+      groupId: groupBeginner.id,
+      scheduledAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0),
+      durationMinutes: 45,
+      status: 'scheduled',
+    },
+  })
+  console.log(`  Gym classes: 2 scheduled`)
+
+  // ────────────────────────────────────────────────────────────────
+  // 10. Solo client (no coach) + public plan for exploring
+  // ────────────────────────────────────────────────────────────────
+  console.log('\n--- Seeding solo client data ---')
+
+  const soloClient = await prisma.user.upsert({
+    where: { email: 'solo@example.com' },
+    update: { passwordHash: gymPass, role: 'client', displayName: 'Jorge Solo', emailVerified: true },
+    create: { email: 'solo@example.com', passwordHash: gymPass, role: 'client', displayName: 'Jorge Solo', emailVerified: true },
+  })
+  console.log(`  Solo client: ${soloClient.displayName} (sin coach)`)
+
+  // Create a public self-guided plan
+  const publicPlan = await prisma.plan.upsert({
+    where: { id: 'public-plan-1' },
+    update: { isPublic: true, planType: 'self_guided', status: 'published' },
+    create: {
+      id: 'public-plan-1',
+      coachUserId: gymUser.id,
+      title: 'Plan Full Body (Autoguiado)',
+      goal: 'Mejorar condición física general',
+      notes: 'Plan de 4 semanas para hacer a tu ritmo. 3 entrenos por semana.',
+      weeksCount: 4,
+      periodDays: 7,
+      status: 'published',
+      planType: 'self_guided',
+      isPublic: true,
+    },
+  })
+
+  // Assign workouts to the public plan
+  for (let w = 1; w <= 4; w++) {
+    const pWeek = await prisma.planWeek.upsert({
+      where: { planId_weekNumber: { planId: publicPlan.id, weekNumber: w } },
+      update: {},
+      create: { planId: publicPlan.id, weekNumber: w, title: `Semana ${w}` },
+    })
+    const tLower = await prisma.workoutTemplate.findFirst({ where: { coachUserId: '3ea05db0-6372-4532-9418-d5e31f6ffa67', title: 'Día A (Lower)' }, select: { id: true } })
+    const tUpper = await prisma.workoutTemplate.findFirst({ where: { coachUserId: '3ea05db0-6372-4532-9418-d5e31f6ffa67', title: 'Día B (Upper)' }, select: { id: true } })
+    const tCond = await prisma.workoutTemplate.findFirst({ where: { coachUserId: '3ea05db0-6372-4532-9418-d5e31f6ffa67', title: 'Día C (Conditioning)' }, select: { id: true } })
+    const templates = [tLower, tUpper, tCond].filter(Boolean)
+    for (let d = 0; d < templates.length; d++) {
+      await prisma.planWeekWorkout.upsert({
+        where: { id: `public-pww-${w}-${d}` },
+        update: {},
+        create: { id: `public-pww-${w}-${d}`, planWeekId: pWeek.id, workoutTemplateId: templates[d]!.id, sortOrder: d },
+      })
+    }
+  }
+  console.log(`  Public self-guided plan: ${publicPlan.title}`)
+
+  console.log('\nSeed completed successfully')
 }
 
 main()

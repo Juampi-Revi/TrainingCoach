@@ -21,12 +21,12 @@ export default function CoachLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
-    if (user?.role !== "coach") { router.replace("/semana"); }
+    if (user?.role !== "coach" && user?.role !== "gym") { router.replace("/semana"); }
   }, [ready, token, user, router]);
 
   if (!ready) return null;
   if (!token) return null;
-  if (user && user.role !== "coach") return null;
+  if (user && user.role !== "coach" && user.role !== "gym") return null;
 
   return <>{children}</>;
 }

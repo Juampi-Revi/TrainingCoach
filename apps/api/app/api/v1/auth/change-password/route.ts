@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) return unauthorized("Usuario no encontrado");
+    if (!user.passwordHash) return err("Esta cuenta no tiene contraseña (usa Google para ingresar)", 400);
 
     // Verify current password
     const isValid = await bcrypt.compare(currentPassword, user.passwordHash);

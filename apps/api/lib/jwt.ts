@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 
 const EXPIRES_IN = "30d";
+const TWO_FACTOR_EXPIRES_IN = "5m";
 
 function getSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -9,7 +10,7 @@ function getSecret(): string {
 }
 
 export interface TokenPayload {
-  sub: string;      // userId
+  sub: string;
   email: string;
   role: string;
   billingStatus: string;
@@ -17,6 +18,10 @@ export interface TokenPayload {
 
 export function signToken(payload: TokenPayload): string {
   return jwt.sign(payload, getSecret(), { expiresIn: EXPIRES_IN });
+}
+
+export function signTwoFactorToken(payload: TokenPayload): string {
+  return jwt.sign(payload, getSecret(), { expiresIn: TWO_FACTOR_EXPIRES_IN });
 }
 
 export function verifyToken(token: string): TokenPayload {

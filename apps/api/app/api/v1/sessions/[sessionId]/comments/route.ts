@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { extractBearer } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, err, withHandler } from "@/lib/api-response";
 import { notify } from "@/lib/notify";
+import { sendCommentEmail, getAppUrl } from "@/lib/email";
 
 type Ctx = { params: Promise<{ sessionId: string }> };
 
@@ -87,6 +88,25 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         body: text.trim().slice(0, 120),
         linkUrl: auth.user.role === "coach" ? `/comentarios/${sessionId}` : `/coach/alumnos/${session.clientUserId}/sesiones/${sessionId}`,
       });
+
+      // Send email if coach commented on client's session
+      if (auth.user.role === "coach" && recipientId) {
+        const recipient = await prisma.user.findUnique({
+          where: { id: recipientId },
+          select: { email: true, displayName: true },
+        });
+        if (recipient) {
+          const frontendUrl = process.env.FRONTEND_URL?.trim() || "http://localhost:3001";
+          sendCommentEmail({
+            to: recipient.email,
+            clientName: recipient.displayName ?? "Alumno",
+            coachName: comment.author.displayName ?? "Coach",
+            sessionTitle: "Tu sesión",
+            commentText: text.trim(),
+            sessionUrl: `${frontendUrl}/sesion/${sessionId}`,
+          }).catch(() => {});
+        }
+      }
     }
 
     return ok(

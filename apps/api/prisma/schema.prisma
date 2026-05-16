@@ -13,14 +13,20 @@ datasource db {
 
 model User {
   id           String   @id @default(uuid())
-  role         String   // 'coach' | 'client'
+  role         String   // 'coach' | 'client' | 'gym'
   email        String   @unique
-  passwordHash String
+  passwordHash String?
+  googleId   String?   @unique
   displayName  String?
   avatarUrl    String?
   billingStatus       String    @default("good") // 'good' | 'due'
   passwordResetToken  String?   @unique
   passwordResetExpiry DateTime?
+  emailVerified       Boolean   @default(false)
+  emailVerifyToken    String?   @unique
+  emailVerifyExpiry   DateTime?
+  twoFactorSecret     String?
+  twoFactorEnabled    Boolean   @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -50,6 +56,10 @@ model User {
   healthProviderConnections HealthProviderConnection[]
   notificationSettings      NotificationSettings?
   exerciseFavorites         CoachExerciseFavorite[]
+  coachInvites              CoachInvite[]
+  coachGroups               CoachGroup[]
+  groupMemberships          CoachGroupMember[]
+  gymClasses                GymClass[]
 }
 
 model CoachClient {
@@ -68,6 +78,74 @@ model CoachClient {
   @@index([clientUserId])
 }
 
+model CoachInvite {
+  id          String   @id @default(uuid())
+  coachUserId String
+  email       String
+  token       String   @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  coach User @relation(fields: [coachUserId], references: [id], onDelete: Cascade)
+
+  @@unique([coachUserId, email])
+  @@index([token])
+}
+
+model CoachGroup {
+  id          String   @id @default(uuid())
+  coachUserId String
+  name        String
+  level       String?  // 'beginner' | 'intermediate' | 'advanced'
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+
+  coach   User               @relation(fields: [coachUserId], references: [id], onDelete: Cascade)
+  members CoachGroupMember[]
+  classes  GymClass[]
+
+  @@unique([coachUserId, name])
+  @@index([coachUserId])
+}
+
+model CoachGroupMember {
+  id           String   @id @default(uuid())
+  groupId      String
+  clientUserId String
+  createdAt    DateTime @default(now())
+
+  group  CoachGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  client User       @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, clientUserId])
+  @@index([clientUserId])
+}
+
+model GymClass {
+  id                String   @id @default(uuid())
+  gymUserId         String
+  name              String
+  description       String?
+  workoutTemplateId String
+  groupId           String?
+  scheduledAt       DateTime @db.Timestamptz
+  durationMinutes   Int      @default(60)
+  status            String   @default("scheduled") // scheduled|in_progress|completed|cancelled
+  currentExercise   Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  gym             User              @relation(fields: [gymUserId], references: [id], onDelete: Cascade)
+  workoutTemplate WorkoutTemplate   @relation(fields: [workoutTemplateId], references: [id], onDelete: Restrict)
+  group           CoachGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  sessions        WorkoutSession[]
+
+  @@index([gymUserId, scheduledAt(sort: Desc)])
+  @@index([workoutTemplateId])
+  @@index([groupId])
+}
+
 model Plan {
   id           String   @id @default(uuid())
   coachUserId  String
@@ -77,6 +155,8 @@ model Plan {
   weeksCount   Int      @default(4)
   periodDays   Int      @default(7)
   status       String   // 'draft' | 'published' | 'archived'
+  planType     String   @default("personal") // 'personal' | 'gym' | 'self_guided' | 'ai'
+  isPublic     Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -156,6 +236,7 @@ model WorkoutTemplate {
   workoutSessions  WorkoutSession[]
   scheduledInWeeks PlanWeekWorkout[]
   inPlans          PlanWorkout[]
+  gymClasses        GymClass[]
 
   @@index([planWeekId])
   @@index([coachUserId])
@@ -303,9 +384,10 @@ model WorkoutSession {
   clientUserId      String
   workoutTemplateId String?
   planWeekWorkoutId String?
+  gymClassId        String?
   performedAt       DateTime @db.Timestamptz
   completedAt       DateTime? @db.Timestamptz
-  status            String   // 'in_progress' | 'completed' | 'discarded'
+  status            String   // 'in_progress' | 'completed' | 'discarded' | 'pending'
   energyRating      Int?
   sessionNotes      String?
   createdAt         DateTime @default(now())
@@ -314,12 +396,15 @@ model WorkoutSession {
   client          User                     @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
   workoutTemplate WorkoutTemplate?         @relation(fields: [workoutTemplateId], references: [id], onDelete: SetNull)
   planWeekWorkout  PlanWeekWorkout?        @relation(fields: [planWeekWorkoutId], references: [id], onDelete: SetNull)
+  gymClass        GymClass?                @relation(fields: [gymClassId], references: [id], onDelete: SetNull)
   exercises       WorkoutSessionExercise[]
   comments        SessionComment[]
 
   @@index([clientUserId, performedAt(sort: Desc)])
   @@index([workoutTemplateId])
   @@index([planWeekWorkoutId])
+  @@index([gymClassId])
+  @@unique([clientUserId, gymClassId])
 }
 
 model WorkoutSessionExercise {

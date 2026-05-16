@@ -16,11 +16,14 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
-      select: { id: true, email: true, displayName: true },
+      select: { id: true, email: true, displayName: true, passwordHash: true, googleId: true },
     });
 
     // Always respond ok to avoid user enumeration
     if (!user) return ok({ sent: false });
+
+    // Google-only users don't have a password to reset
+    if (!user.passwordHash && user.googleId) return ok({ sent: false });
 
     const rawToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");

@@ -6,8 +6,9 @@ import { Icon, Avatar } from "@/components/ui";
 import type { IconName } from "@/components/ui";
 import { CoachBottomNav } from "./coach-bottom-nav";
 import { useNotifications } from "@/lib/use-notifications";
+import { useAuth } from "@/lib/auth";
 
-type NavId = "dashboard" | "athletes" | "plans" | "templates" | "library" | "messages" | "notifications";
+export type NavId = "dashboard" | "athletes" | "plans" | "templates" | "library" | "messages" | "notifications" | "classes" | "groups";
 
 interface DesktopShellProps {
   children: ReactNode;
@@ -18,7 +19,9 @@ interface DesktopShellProps {
   coachName?: string;
 }
 
-const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
+interface NavItem { id: NavId; icon: IconName; label: string; href: string }
+
+const COACH_NAV: NavItem[] = [
   { id: "dashboard", icon: "home",     label: "Dashboard",      href: "/coach"            },
   { id: "athletes",  icon: "users",    label: "Alumnos",        href: "/coach/alumnos"    },
   { id: "plans",     icon: "calendar", label: "Planes",         href: "/coach/planes"     },
@@ -27,14 +30,21 @@ const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
   { id: "messages",  icon: "msg",      label: "Mensajes",       href: "/coach/mensajes"   },
 ];
 
-const BOTTOM_NAV_MAP: Record<NavId, "dashboard" | "athletes" | "plans" | "library" | "notifications" | "settings"> = {
-  dashboard: "dashboard",
-  athletes:  "athletes",
-  plans:     "plans",
-  templates: "plans",
-  library:   "library",
-  messages:  "dashboard",
-  notifications: "notifications",
+const GYM_NAV: NavItem[] = [
+  { id: "dashboard", icon: "home",     label: "Dashboard",      href: "/gym"                 },
+  { id: "athletes",  icon: "users",    label: "Alumnos",        href: "/coach/alumnos"       },
+  { id: "classes",   icon: "calendar", label: "Clases",         href: "/gym/clases"          },
+  { id: "plans",     icon: "calendar", label: "Planes",         href: "/coach/planes"        },
+  { id: "templates", icon: "book",     label: "Entrenamientos", href: "/coach/workouts"      },
+  { id: "library",   icon: "dumbbell", label: "Ejercicios",     href: "/coach/ejercicios"    },
+  { id: "messages",  icon: "msg",      label: "Mensajes",       href: "/coach/mensajes"      },
+  { id: "groups",    icon: "users",    label: "Grupos",         href: "/coach/alumnos/grupos" },
+];
+
+const BOTTOM_NAV_MAP: Record<string, string> = {
+  dashboard: "dashboard", athletes: "athletes", plans: "plans", templates: "plans",
+  library: "library", messages: "dashboard", notifications: "notifications",
+  classes: "plans", groups: "athletes",
 };
 
 export function DesktopShell({
@@ -45,11 +55,16 @@ export function DesktopShell({
   actions,
   coachName = "Coach",
 }: DesktopShellProps) {
+  const { user } = useAuth();
   const { unreadCount } = useNotifications();
+  const isGym = user?.role === "gym";
+  const roleLabel = isGym ? "Gym" : "Coach";
+  const settingsHref = isGym ? "/gym/settings" : "/coach/settings";
+  const notificationsHref = isGym ? "/gym/notificaciones" : "/coach/notificaciones";
+  const nav = isGym ? GYM_NAV : COACH_NAV;
 
   return (
     <div className="coach-layout">
-      {/* Sidebar */}
       <aside
         className="coach-sidebar"
         style={{
@@ -66,29 +81,25 @@ export function DesktopShell({
         </div>
 
         <div style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: ".1em", padding: "4px 10px 8px" }}>
-          Coach
+          {roleLabel}
         </div>
 
-        {NAV.map((n) => {
-          const isActive = n.id === active;
-          return (
-            <Link key={n.id} href={n.href} className="ta-nav-item" style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 10px", borderRadius: 8, marginBottom: 2,
-              background: isActive ? "var(--bg-3)" : "transparent",
-              color: isActive ? "var(--text)" : "var(--text-mute)",
-              fontSize: 13, fontWeight: isActive ? 600 : 500, textDecoration: "none",
-            }}>
-              <Icon name={n.icon} size={16} />
-              {n.label}
-            </Link>
-          );
-        })}
+        {nav.map((n) => (
+          <Link key={n.id} href={n.href} className="ta-nav-item" style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 10px", borderRadius: 8, marginBottom: 2,
+            background: n.id === active ? "var(--bg-3)" : "transparent",
+            color: n.id === active ? "var(--text)" : "var(--text-mute)",
+            fontSize: 13, fontWeight: n.id === active ? 600 : 500, textDecoration: "none",
+          }}>
+            <Icon name={n.icon} size={16} />
+            {n.label}
+          </Link>
+        ))}
 
         <div style={{ flex: 1 }} />
 
-        {/* Notifications bell */}
-        <Link href="/coach/notificaciones" className="ta-nav-item" style={{
+        <Link href={notificationsHref} className="ta-nav-item" style={{
           display: "flex", alignItems: "center", gap: 10,
           padding: "8px 10px", borderRadius: 8, marginBottom: 2,
           background: "transparent", color: "var(--text-mute)",
@@ -109,13 +120,12 @@ export function DesktopShell({
           <Avatar name={coachName} size={28} tone="var(--lime)" textColor="#0B0B0C" />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>{coachName}</div>
-            <div style={{ fontSize: 10, color: "var(--text-mute)" }}>Coach · PRO</div>
+            <div style={{ fontSize: 10, color: "var(--text-mute)" }}>{roleLabel} · PRO</div>
           </div>
-          <Link href="/coach/settings"><Icon name="settings" size={14} color="var(--text-mute)" /></Link>
+          <Link href={settingsHref}><Icon name="settings" size={14} color="var(--text-mute)" /></Link>
         </div>
       </aside>
 
-      {/* Main */}
       <main className="coach-main">
         {title && (
           <header style={{
@@ -133,7 +143,7 @@ export function DesktopShell({
         <div className="ta-scroll coach-scroll">{children}</div>
       </main>
 
-      <CoachBottomNav active={BOTTOM_NAV_MAP[active]} />
+      <CoachBottomNav active={BOTTOM_NAV_MAP[active] as "dashboard" | "athletes" | "plans" | "library" | "notifications" | "settings"} />
     </div>
   );
 }

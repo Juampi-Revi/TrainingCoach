@@ -12,6 +12,7 @@ export default function Page() {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
     if (user?.role === "coach") { router.replace("/coach"); return; }
+    if (user?.role === "gym") { router.replace("/gym"); return; }
     router.replace("/semana");
   }, [ready, token, user, router]);
 
