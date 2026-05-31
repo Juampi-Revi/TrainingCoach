@@ -7,6 +7,14 @@ import { listCoachExercises } from "@/lib/training/exercise.service";
 const DIFFICULTY_VALUES = ["beginner", "intermediate", "advanced"] as const;
 const OBJECTIVE_VALUES = ["strength", "hypertrophy", "conditioning", "mobility", "skill"] as const;
 
+function messageOf(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+function looksLikeSchemaOutOfDate(msg: string): boolean {
+  return msg.includes("does not exist") && (msg.includes("difficulty") || msg.includes("objective"));
+}
+
 function toStringList(input: string | null): string[] | null {
   if (!input) return null;
   const parts = input.split(",").map((s) => s.trim()).filter(Boolean);
@@ -87,7 +95,10 @@ export async function POST(req: NextRequest) {
         },
       });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "";
+      const msg = messageOf(e);
+      if (looksLikeSchemaOutOfDate(msg)) {
+        return err("La base de datos no está actualizada para crear ejercicios. Corré las migraciones de Prisma.", 409);
+      }
       if (msg.includes("Unique constraint")) return err("Ya existe un ejercicio con ese nombre", 409);
       throw e;
     }

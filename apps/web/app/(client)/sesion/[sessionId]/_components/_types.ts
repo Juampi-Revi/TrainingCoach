@@ -12,6 +12,10 @@ export interface SheetRow {
   duration: string;
   kg: string;
   effort: string;
+  repsPlaceholder?: string;
+  durationPlaceholder?: string;
+  kgPlaceholder?: string;
+  effortPlaceholder?: string;
   existingId?: string;
 }
 

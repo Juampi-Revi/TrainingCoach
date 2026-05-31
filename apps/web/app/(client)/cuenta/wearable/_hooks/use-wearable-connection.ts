@@ -24,7 +24,12 @@ export function useProviderConnection() {
     finally { setFetchingStatus(false); }
   }, []);
 
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void fetchStatus();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [fetchStatus]);
 
   const connect = useCallback(async (providerId: string, extra?: Record<string, string>) => {
     setLoading(prev => ({ ...prev, [providerId]: true }));

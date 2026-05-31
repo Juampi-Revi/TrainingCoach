@@ -90,9 +90,10 @@ export default function SessionCompletadaPage() {
     return <div style={{ minHeight: "100dvh", background: "var(--bg)" }}><StateBlock kind="loading" title="Cargando…" /></div>;
   }
 
-  const totalSets = session.exercises.reduce((acc, e) => acc + e.sets.length, 0);
-  const targetSets = session.exercises.reduce((acc, e) => acc + (e.target?.sets ?? 0), 0);
-  const totalVol = session.exercises.reduce((acc, e) => {
+  const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
+  const totalSets = workExercises.reduce((acc, e) => acc + e.sets.length, 0);
+  const targetSets = workExercises.reduce((acc, e) => acc + (e.target?.sets ?? 0), 0);
+  const totalVol = workExercises.reduce((acc, e) => {
     return acc + e.sets.reduce((a, s) => a + (Number(s.reps ?? 0) * Number(s.weight ?? 0)), 0);
   }, 0);
 
@@ -107,7 +108,7 @@ export default function SessionCompletadaPage() {
   const kindStr = session.workoutTemplate ? null : manualMeta.type;
 
   // Find top sets for highlights (heaviest weight per exercise)
-  const highlights = session.exercises
+  const highlights = workExercises
     .map((e) => {
       const best = e.sets.reduce<{ weight: number; reps: number } | null>((acc, s) => {
         const w = Number(s.weight ?? 0);
@@ -216,7 +217,7 @@ export default function SessionCompletadaPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 16 }}>
           <StatCard label="VOLUMEN" value={Math.round(totalVol).toLocaleString("es")} unit="kg" />
           <StatCard label="SERIES" value={`${totalSets}${targetSets > 0 ? `/${targetSets}` : ""}`} />
-          <StatCard label="EJERCICIOS" value={String(session.exercises.length)} />
+          <StatCard label="EJERCICIOS" value={String(workExercises.length)} />
         </div>
       </div>
 

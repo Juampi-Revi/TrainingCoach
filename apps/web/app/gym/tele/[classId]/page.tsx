@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { Icon } from "@/components/ui";
 
@@ -64,9 +65,11 @@ export default function TelePage() {
       .finally(() => setLoading(false));
   }, [classId]);
 
+  const teleMode = data?.teleMode;
+
   // Poll every 10s for currentExercise updates from the coach
   useEffect(() => {
-    if (!data || data.teleMode !== "timed") return;
+    if (teleMode !== "timed") return;
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003/api/v1";
     const interval = setInterval(() => {
       fetch(`${apiBase}/public/classes/${classId}`)
@@ -77,7 +80,7 @@ export default function TelePage() {
         .catch(() => {});
     }, 10000);
     return () => clearInterval(interval);
-  }, [classId, data?.teleMode]);
+  }, [classId, teleMode]);
 
   // Timer logic
   useEffect(() => {
@@ -216,7 +219,7 @@ function TimedView({ exercise, currentIndex, total, onPrev, onNext }: {
       {/* Image/video */}
       <div style={{ width: "100%", maxWidth: 600, aspectRatio: "16/10", background: "rgba(255,255,255,.05)", borderRadius: 16, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
         {thumb ? (
-          <img src={thumb} alt={exercise.exercise.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <Image src={thumb} alt={exercise.exercise.name} fill unoptimized style={{ objectFit: "cover" }} />
         ) : (
           <Icon name="dumbbell" size={48} color="rgba(255,255,255,.2)" />
         )}
@@ -244,8 +247,8 @@ function ExerciseCard({ we, blockType }: { we: ExerciseItem; blockType: string }
   const thumb = getThumbnail(we.exercise);
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 14px", background: "rgba(255,255,255,.04)", borderRadius: 14, border: "1px solid rgba(255,255,255,.06)" }}>
-      <div style={{ width: 50, height: 50, borderRadius: 10, background: "rgba(255,255,255,.06)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {thumb ? <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Icon name="dumbbell" size={20} color="rgba(255,255,255,.2)" />}
+      <div style={{ width: 50, height: 50, borderRadius: 10, background: "rgba(255,255,255,.06)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+        {thumb ? <Image src={thumb} alt="" fill unoptimized style={{ objectFit: "cover" }} /> : <Icon name="dumbbell" size={20} color="rgba(255,255,255,.2)" />}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>{we.exercise.name}</div>

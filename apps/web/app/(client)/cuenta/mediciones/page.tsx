@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
 import { createClient } from "@/lib/api";
@@ -36,7 +36,7 @@ export default function MedicionesPage() {
   const [updatingShare, setUpdatingShare] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
 
-  async function loadMetrics() {
+  const loadMetrics = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.get<MetricEntry[]>("/client/metrics");
@@ -46,14 +46,14 @@ export default function MedicionesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [api, toast]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      loadMetrics();
+      void loadMetrics();
     }, 0);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [loadMetrics]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

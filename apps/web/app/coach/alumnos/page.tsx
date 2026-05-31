@@ -40,10 +40,6 @@ export default function AlumnosPage() {
       .finally(() => setLoading(false));
   }, [api]);
 
-  useEffect(() => {
-    setPage(0);
-  }, [search]);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const base = q ? clients.filter((c) => (c.name ?? c.email).toLowerCase().includes(q)) : clients;
@@ -94,7 +90,7 @@ export default function AlumnosPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-mute)" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M11 19a8 8 0 1 1 5.3-14 8 8 0 0 1-5.3 14zM21 21l-4.3-4.3" />
               </svg>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)" }} />
+              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)" }} />
             </div>
             <Button variant="outline" icon="history" onClick={() => router.push("/coach/calendario")}>
               Agenda
@@ -111,7 +107,7 @@ export default function AlumnosPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-mute)" strokeWidth="1.8" strokeLinecap="round">
               <path d="M11 19a8 8 0 1 1 5.3-14 8 8 0 0 1-5.3 14zM21 21l-4.3-4.3" />
             </svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar alumno…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)" }} />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar alumno…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)" }} />
           </div>
 
           {loading ? (

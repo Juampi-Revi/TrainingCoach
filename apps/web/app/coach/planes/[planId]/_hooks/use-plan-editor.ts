@@ -56,7 +56,7 @@ export function usePlanEditor(planId: string) {
   const load = useCallback(() => {
     api.get<PlanDetail>(`/coach/plans/${planId}`)
       .then((p) => {
-        const meta: Record<number, { title: string; notes: string }> = {};
+        const meta: WeekMetaState = {};
         p.weeks.forEach((w) => { meta[w.weekNumber] = { title: w.title ?? "", notes: w.notes ?? "" }; });
         const cols = p.periodDays ?? 7;
         const g: Array<Array<CellData | null>> = Array.from({ length: p.weeksCount }, (_, wi) => {
@@ -101,10 +101,11 @@ export function usePlanEditor(planId: string) {
   const saveWeekMeta = useCallback(async (weekNumber: number) => {
     const meta = state.weekMeta[weekNumber] ?? { title: "", notes: "" };
     try {
-      await api.patch(`/coach/plans/${planId}/weeks/${weekNumber}`, {
+      const payload: Record<string, unknown> = {
         title: meta.title || null,
         notes: meta.notes || null,
-      });
+      };
+      await api.patch(`/coach/plans/${planId}/weeks/${weekNumber}`, payload);
     } catch (e) { console.error(e); }
   }, [api, planId, state.weekMeta]);
 

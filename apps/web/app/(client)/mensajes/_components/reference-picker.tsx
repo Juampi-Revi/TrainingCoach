@@ -47,21 +47,21 @@ export function RefPicker({ sessions, onClose, onSelect }: RefPickerProps) {
 }
 
 interface RefDetailProps {
-  ref: RefPayload;
+  reference: RefPayload;
   data: unknown;
   loading: boolean;
   isDesktop: boolean;
   onClose: () => void;
 }
 
-export function RefDetail({ ref, data, loading, isDesktop, onClose }: RefDetailProps) {
+export function RefDetail({ reference, data, loading, isDesktop, onClose }: RefDetailProps) {
   const d = data as { title?: string; performedAt?: string; workoutTemplate?: { title: string }; exercises?: Array<{ id: string; exercise?: { name: string }; performedExercise?: { name: string } }> } | null;
 
   return (
     <div className="picker-overlay" onClick={onClose}>
       <div className={`ref-detail-panel ${isDesktop ? "desktop" : "mobile"}`} onClick={e => e.stopPropagation()}>
         <div className="picker-header">
-          <div>{ref.kind === "session" ? "Sesión" : "Entrenamiento"}</div>
+          <div>{reference.kind === "session" ? "Sesión" : "Entrenamiento"}</div>
           <button onClick={onClose} className="picker-close"><Icon name="x" size={18} /></button>
         </div>
         {loading ? (
@@ -69,9 +69,9 @@ export function RefDetail({ ref, data, loading, isDesktop, onClose }: RefDetailP
         ) : d ? (
           <div className="ref-detail-content">
             <div className="ref-detail-title">
-              {d.title ?? d.workoutTemplate?.title ?? ref.label ?? "Detalle"}
+              {d.title ?? d.workoutTemplate?.title ?? reference.label ?? "Detalle"}
             </div>
-            {ref.kind === "session" && d.performedAt && (
+            {reference.kind === "session" && d.performedAt && (
               <div className="ta-mono ref-detail-date">
                 {new Date(d.performedAt).toLocaleString("es", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
               </div>

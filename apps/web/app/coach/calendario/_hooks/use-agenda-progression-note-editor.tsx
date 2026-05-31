@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useToast } from "@/lib/toast";
 import { PlanProgressionNoteModal } from "../../planes/[planId]/_components/plan-progression-note-modal";
 import type { CoachCalendarResponse } from "@regen/types";
@@ -17,15 +17,15 @@ export function useAgendaProgressionNoteEditor(args: {
   const [workoutTitle, setWorkoutTitle] = useState("");
   const [value, setValue] = useState("");
 
-  function openNote(next: { planId: string; pwwId: string; workoutTitle: string; value: string | null }) {
+  const openNote = useCallback((next: { planId: string; pwwId: string; workoutTitle: string; value: string | null }) => {
     setPlanId(next.planId);
     setPwwId(next.pwwId);
     setWorkoutTitle(next.workoutTitle);
     setValue(next.value ?? "");
     setOpen(true);
-  }
+  }, []);
 
-  async function save() {
+  const save = useCallback(async () => {
     if (!planId || !pwwId) return;
     setSaving(true);
     try {
@@ -56,7 +56,7 @@ export function useAgendaProgressionNoteEditor(args: {
     } finally {
       setSaving(false);
     }
-  }
+  }, [args, planId, pwwId, toast, value]);
 
   const modal = useMemo(() => {
     return (
@@ -74,4 +74,3 @@ export function useAgendaProgressionNoteEditor(args: {
 
   return { openNote, modal };
 }
-

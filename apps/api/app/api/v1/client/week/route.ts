@@ -90,14 +90,40 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         workoutTemplateId: true,
+        planWeekWorkoutId: true,
         status: true,
         performedAt: true,
       },
     });
 
-    // Group sessions by workoutTemplateId to handle multiple instances
-    const sessionsByTemplate = new Map<string, typeof sessions>();
+    const planWeekWorkoutIds = new Set((planWeek?.workouts ?? []).map((w) => w.id));
+
+    const sessionsByPww = new Map<string, typeof sessions>();
+    const unassigned: typeof sessions = [];
     for (const session of sessions) {
+      const pwwId = session.planWeekWorkoutId;
+      if (pwwId && planWeekWorkoutIds.has(pwwId)) {
+        const existing = sessionsByPww.get(pwwId) ?? [];
+        existing.push(session);
+        sessionsByPww.set(pwwId, existing);
+      } else {
+        unassigned.push(session);
+      }
+    }
+
+    const pickedByPww = new Map<string, (typeof sessions)[number]>();
+    for (const [pwwId, list] of sessionsByPww) {
+      const sorted = [...list].sort((a, b) => {
+        if (a.status === "in_progress" && b.status !== "in_progress") return -1;
+        if (b.status === "in_progress" && a.status !== "in_progress") return 1;
+        return b.performedAt.getTime() - a.performedAt.getTime();
+      });
+      const best = sorted[0];
+      if (best) pickedByPww.set(pwwId, best);
+    }
+
+    const sessionsByTemplate = new Map<string, typeof sessions>();
+    for (const session of unassigned) {
       if (session.workoutTemplateId) {
         const existing = sessionsByTemplate.get(session.workoutTemplateId) ?? [];
         existing.push(session);
@@ -107,9 +133,10 @@ export async function GET(req: NextRequest) {
 
     const workouts = (planWeek?.workouts ?? []).map((pw) => {
       const tpl = pw.workoutTemplate;
-      // Get sessions for this template and pick the first available one
+      const direct = pickedByPww.get(pw.id) ?? null;
       const templateSessions = sessionsByTemplate.get(tpl.id) ?? [];
-      const session = templateSessions.shift() ?? null; // Remove from array so next instance gets the next session
+      const fallback = templateSessions.shift() ?? null;
+      const session = direct ?? fallback;
       
       return {
         pwwId: pw.id,

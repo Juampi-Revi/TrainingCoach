@@ -96,8 +96,7 @@ export default function MensajesAlumnoPage() {
             onChange={setNewMsg}
             onSend={handleSend}
             sending={sending}
-            ref={ref}
-            onRef={ref}
+            reference={ref}
             onClearRef={() => setRef(null)}
             onOpenRefPicker={() => setRefPickerOpen(true)}
           />
@@ -114,7 +113,7 @@ export default function MensajesAlumnoPage() {
 
       {refDetail && (
         <RefDetail
-          ref={refDetail}
+          reference={refDetail}
           data={refDetailData}
           loading={refDetailData === undefined}
           isDesktop={isDesktop}

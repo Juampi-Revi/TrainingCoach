@@ -27,6 +27,7 @@ export default function TemplateEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [showPicker, setShowPicker] = useState(false);
@@ -65,6 +66,18 @@ export default function TemplateEditorPage() {
       toast.error("No se pudo guardar");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function duplicateTemplate() {
+    setDuplicating(true);
+    try {
+      const res = await api.post<{ id: string }>(`/coach/workouts/${workoutTemplateId}/duplicate`, {});
+      toast.success("Entrenamiento duplicado");
+      router.push(`/coach/workouts/${res.id}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo duplicar");
+      setDuplicating(false);
     }
   }
 
@@ -151,6 +164,9 @@ export default function TemplateEditorPage() {
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => router.push("/coach/workouts")}>Volver</Button>
+            <Button variant="outline" size="sm" icon="repeat" disabled={duplicating || saving} onClick={duplicateTemplate}>
+              {duplicating ? "Duplicando…" : "Duplicar"}
+            </Button>
             <Button size="sm" icon="check" disabled={saving} onClick={save}>
               {saving ? "Guardando…" : "Guardar"}
             </Button>

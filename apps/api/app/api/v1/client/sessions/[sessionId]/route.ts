@@ -4,6 +4,20 @@ import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, err, withHandler } from "@/lib/api-response";
 import { notify } from "@/lib/notify";
 import { sessionPatchSchema } from "@/lib/schemas";
+import { updateWorkoutStreak } from "@/lib/gamification/streaks.service";
+import { awardXpFromSource, XP_REWARDS } from "@/lib/gamification/xp.service";
+import { checkMultipleMetrics } from "@/lib/badge-checker";
+
+// Helper function to get user's total workout count
+async function getUserWorkoutCount(userId: string): Promise<number> {
+  const count = await prisma.workoutSession.count({
+    where: {
+      clientUserId: userId,
+      status: "completed",
+    },
+  });
+  return count;
+}
 
 // GET /api/v1/client/sessions/:sessionId
 export async function GET(
@@ -210,8 +224,12 @@ export async function PATCH(
           : body.completedAt
         : body.completedAt;
 
-    if (body.performedAt && finalCompletedAt && finalCompletedAt.getTime() < body.performedAt.getTime()) {
-      return err("completedAt must be after performedAt", 400);
+    if (body.performedAt && finalCompletedAt) {
+      const performedAtDate = new Date(body.performedAt);
+      const completedAtDate = new Date(finalCompletedAt);
+      if (completedAtDate.getTime() < performedAtDate.getTime()) {
+        return err("completedAt must be after performedAt", 400);
+      }
     }
 
     const updated = await prisma.workoutSession.update({
@@ -226,8 +244,48 @@ export async function PATCH(
       select: { id: true, status: true, energyRating: true, sessionNotes: true, completedAt: true },
     });
 
-    // Notify coach when client completes session
+    // Handle gamification when session is completed
     if (body.status === "completed") {
+      const gamificationResults: {
+        streak?: { currentStreak: number; longestStreak: number };
+        xp?: { xpEarned: number; newTotal: number; newLevel: number; leveledUp: boolean };
+        badges?: string[];
+      } = {};
+
+      // Update workout streak
+      const streakStats = await updateWorkoutStreak(auth.user.sub);
+      gamificationResults.streak = {
+        currentStreak: streakStats.currentStreak,
+        longestStreak: streakStats.longestStreak,
+      };
+
+      // Award XP for completing workout
+      const xpSource = body.energyRating && body.energyRating >= 4
+        ? "COMPLETE_WORKOUT_WITH_HIGH_ENERGY"
+        : "COMPLETE_WORKOUT";
+      const xpResult = await awardXpFromSource(auth.user.sub, xpSource, false);
+      gamificationResults.xp = xpResult;
+
+      // Check for badge unlocks - pass metrics to check
+      const userStats = await prisma.user.findUnique({
+        where: { id: auth.user.sub },
+        select: { currentWorkoutStreak: true },
+      });
+      
+      const newBadges = await checkMultipleMetrics(auth.user.sub, [
+        { metric: "workouts_completed", value: await getUserWorkoutCount(auth.user.sub) },
+        { metric: "workout_streak", value: userStats?.currentWorkoutStreak ?? 0 },
+      ]);
+      
+      if (newBadges.length > 0) {
+        gamificationResults.badges = newBadges.map(b => b.id);
+        // Award XP for each new badge
+        for (const _badge of newBadges) {
+          await awardXpFromSource(auth.user.sub, "UNLOCK_BADGE", false);
+        }
+      }
+
+      // Notify coach
       const rel = await prisma.coachClient.findFirst({
         where: { clientUserId: auth.user.sub, status: "active" },
         select: { coachUserId: true },
@@ -245,6 +303,11 @@ export async function PATCH(
           linkUrl: `/coach/alumnos/${auth.user.sub}`,
         });
       }
+
+      return ok({
+        ...updated,
+        gamification: gamificationResults,
+      });
     }
 
     return ok(updated);

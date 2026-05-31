@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { Icon } from "@/components/ui";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import type { WE, ExerciseOption } from "./_types";
@@ -15,6 +16,7 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
   onClose: () => void;
 }) {
   const { api } = useAuth();
+  const toast = useToast();
   const [search, setSearch] = useState("");
   const [muscle, setMuscle] = useState("");
   const [equipment, setEquipment] = useState("");
@@ -41,8 +43,11 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
     const qs = params.toString();
     api.get<ExerciseOption[]>(`/coach/exercises${qs ? `?${qs}` : ""}`)
       .then(setExercises)
-      .catch((e) => { console.error(e); setExercises([]); });
-  }, [api, search, muscle, equipment, difficulty, objective, favoritesOnly]);
+      .catch((e) => {
+        toast.error(e instanceof Error ? e.message : "No se pudo cargar ejercicios");
+        setExercises([]);
+      });
+  }, [api, search, muscle, equipment, difficulty, objective, favoritesOnly, toast]);
 
   async function toggleFavorite(exerciseId: string, next: boolean) {
     try {
@@ -50,7 +55,7 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
       else await api.del(`/coach/exercises/${exerciseId}/favorite`);
       setExercises((prev) => (prev ? prev.map((x) => (x.id === exerciseId ? { ...x, isFavorite: next } : x)) : prev));
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "No se pudo guardar favorito");
     }
   }
 
@@ -64,7 +69,7 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
       onAdd(we);
       onClose();
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "No se pudo agregar el ejercicio");
     } finally {
       setAdding(null);
     }
@@ -74,7 +79,7 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
     const name = newName.trim();
     if (!name) return;
     if (!blockId) {
-      console.error("blockId is required");
+      toast.error("No se pudo crear: falta el bloque");
       return;
     }
     setCreatingLoading(true);
@@ -84,7 +89,7 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
       onAdd(we);
       onClose();
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "No se pudo crear el ejercicio");
     } finally {
       setCreatingLoading(false);
     }

@@ -27,12 +27,15 @@ export function Toast({ id, kind, message, onDismiss }: ToastProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(true);
+    const showT = setTimeout(() => setVisible(true), 0);
     const timer = setTimeout(() => {
       setVisible(false);
       setTimeout(() => onDismiss(id), 180);
     }, 3500);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(showT);
+      clearTimeout(timer);
+    };
   }, [id, onDismiss]);
 
   return (

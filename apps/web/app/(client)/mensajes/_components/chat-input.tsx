@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button, Icon } from "@/components/ui";
 import { RefPayload } from "../_types";
 
@@ -9,19 +8,18 @@ interface ChatInputProps {
   onChange: (v: string) => void;
   onSend: () => void;
   sending: boolean;
-  ref: RefPayload | null;
-  onRef: RefPayload | null;
+  reference: RefPayload | null;
   onClearRef: () => void;
   onOpenRefPicker: () => void;
 }
 
-export function ChatInput({ value, onChange, onSend, sending, ref, onClearRef, onOpenRefPicker }: ChatInputProps) {
+export function ChatInput({ value, onChange, onSend, sending, reference, onClearRef, onOpenRefPicker }: ChatInputProps) {
   return (
     <div className="chat-input-area">
-      {ref && (
+      {reference && (
         <div className="ref-preview">
           <div className="ref-preview-content ta-ellipsis">
-            {ref.kind === "session" ? "Sesión" : "Entrenamiento"}{ref.label ? ` · ${ref.label}` : ""}
+            {reference.kind === "session" ? "Sesión" : "Entrenamiento"}{reference.label ? ` · ${reference.label}` : ""}
           </div>
           <Button variant="secondary" onClick={onClearRef} style={{ height: 36 }}>Quitar</Button>
         </div>

@@ -125,7 +125,9 @@ export function TabataRunner({
   );
 
   const stateRef = useRef({ phase, exIdx, round, setsCount, exercises, saveSet });
-  stateRef.current = { phase, exIdx, round, setsCount, exercises, saveSet };
+  useEffect(() => {
+    stateRef.current = { phase, exIdx, round, setsCount, exercises, saveSet };
+  }, [phase, exIdx, round, setsCount, exercises, saveSet]);
 
   useEffect(() => {
     if (!started || paused || done) return;

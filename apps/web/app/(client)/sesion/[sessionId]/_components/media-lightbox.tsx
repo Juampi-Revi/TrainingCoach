@@ -31,8 +31,6 @@ export function MediaLightbox({
   const [idx, setIdx] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
   const m = media[idx];
-  
-  if (!m) return null;
 
   // Keyboard navigation
   useEffect(() => {
@@ -44,6 +42,8 @@ export function MediaLightbox({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [idx, media.length, onClose]);
+
+  if (!m) return null;
 
   const isYouTubeVideo = m.mediaType === "video" && m.embedUrl;
 

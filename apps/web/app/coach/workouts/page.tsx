@@ -25,6 +25,7 @@ export default function WorkoutsPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
@@ -50,6 +51,26 @@ export default function WorkoutsPage() {
           toast.error(err instanceof Error ? err.message : "No se pudo eliminar el entrenamiento");
         } finally {
           setDeletingId(null);
+        }
+      },
+    });
+  }
+
+  function duplicateTemplate(e: React.MouseEvent, templateId: string, title: string) {
+    e.stopPropagation();
+    setConfirmDialog({
+      message: `¿Duplicar "${title}"? Se creará una copia para editar.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setDuplicatingId(templateId);
+        try {
+          const res = await api.post<{ id: string }>(`/coach/workouts/${templateId}/duplicate`, {});
+          toast.success("Entrenamiento duplicado");
+          router.push(`/coach/workouts/${res.id}`);
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "No se pudo duplicar el entrenamiento");
+        } finally {
+          setDuplicatingId(null);
         }
       },
     });
@@ -109,7 +130,7 @@ export default function WorkoutsPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px",
+                gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px 32px",
                 padding: "10px 16px",
                 background: "var(--bg-2)",
                 borderBottom: "1px solid var(--line)",
@@ -125,6 +146,7 @@ export default function WorkoutsPage() {
               <div>Etiquetas</div>
               <div style={{ textAlign: "center" }}>Ejercicios</div>
               <div>Actualizado</div>
+              <div />
               <div />
               <div />
             </div>
@@ -143,7 +165,7 @@ export default function WorkoutsPage() {
                   className="ta-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px",
+                    gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px 32px",
                     padding: "12px 16px",
                     borderBottom:
                       i < templates.length - 1 ? "1px solid var(--line)" : "none",
@@ -177,8 +199,16 @@ export default function WorkoutsPage() {
                   </div>
                   <Icon name="chevR" size={14} color="var(--text-mute)" />
                   <button
+                    onClick={(e) => duplicateTemplate(e, t.id, t.title)}
+                    disabled={duplicatingId === t.id || deletingId === t.id}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 4, opacity: duplicatingId === t.id ? 0.4 : 1, display: "flex", alignItems: "center" }}
+                    title="Duplicar entrenamiento"
+                  >
+                    <Icon name="repeat" size={13} color="var(--text-mute)" />
+                  </button>
+                  <button
                     onClick={(e) => deleteTemplate(e, t.id, t.title)}
-                    disabled={deletingId === t.id}
+                    disabled={deletingId === t.id || duplicatingId === t.id}
                     style={{ background: "none", border: "none", cursor: "pointer", padding: 4, opacity: deletingId === t.id ? 0.4 : 1, display: "flex", alignItems: "center" }}
                     title="Eliminar entrenamiento"
                   >

@@ -7,8 +7,7 @@ const METRIC_FIELDS = ["weightKg", "waistCm", "chestCm", "hipsCm", "armCm", "thi
 
 function toStr(v: unknown): string | null {
   if (v == null) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return v ? String(v as any) : null;
+  return v ? String(v) : null;
 }
 
 export async function GET(req: NextRequest) {

@@ -200,6 +200,7 @@ export default function HistorialPage() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("Mes");
+  const [nowMs, setNowMs] = useState<number | null>(null);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, SessionDetail>>({});
@@ -225,6 +226,12 @@ export default function HistorialPage() {
   }, [api]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setNowMs(Date.now());
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   const toggleExpand = useCallback(async (id: string) => {
     if (expandedId === id) { setExpandedId(null); return; }
@@ -289,9 +296,9 @@ export default function HistorialPage() {
 
   const completed = sessions.filter((s) => s.status === "completed");
   const filtered =
-    filter === "Mes"
+    filter === "Mes" && nowMs != null
       ? completed.filter((s) => {
-          const diff = (Date.now() - new Date(s.performedAt).getTime()) / 86400000;
+          const diff = (nowMs - new Date(s.performedAt).getTime()) / 86400000;
           return diff <= 30;
         })
       : completed;

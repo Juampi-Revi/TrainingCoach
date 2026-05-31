@@ -6,21 +6,31 @@
     "build": "next build",
     "start": "next start -p ${PORT:-3001}",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --passWithNoTests",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage --passWithNoTests"
   },
   "dependencies": {
     "@regen/types": "workspace:*",
+    "canvas-confetti": "^1.9.4",
     "next": "^16.2.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-dropzone": "^15.0.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitest/ui": "^4.1.6",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.3",
-    "typescript": "^6.0.2"
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.6"
   }
 }

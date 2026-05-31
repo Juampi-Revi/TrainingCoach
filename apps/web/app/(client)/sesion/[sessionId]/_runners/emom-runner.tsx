@@ -58,7 +58,6 @@ export function EmomRunner({
   const [paused, setPaused] = useState(false);
   const [seconds, setSeconds] = useState(minuteSeconds);
   const [minute, setMinute] = useState(1);
-  const [repsInput, setRepsInput] = useState<string>("");
   const [done, setDone] = useState(false);
 
   const exIdx = (minute - 1) % exercises.length;
@@ -90,11 +89,6 @@ export function EmomRunner({
       playComplete();
     }
   }, [done, playComplete]);
-
-  useEffect(() => {
-    const target = currentEx.target?.reps ?? "";
-    setRepsInput(target ?? "");
-  }, [currentEx]);
 
   const saveCurrentSet = useCallback(
     async (reps: string) => {
@@ -129,9 +123,14 @@ export function EmomRunner({
   );
 
   const advanceMinuteRef = useRef(advanceMinute);
-  advanceMinuteRef.current = advanceMinute;
-  const repsInputRef = useRef(repsInput);
-  repsInputRef.current = repsInput;
+  useEffect(() => {
+    advanceMinuteRef.current = advanceMinute;
+  }, [advanceMinute]);
+
+  const repsInputRef = useRef<string>("");
+  useEffect(() => {
+    repsInputRef.current = String(currentEx.target?.reps ?? "");
+  }, [currentEx.id, currentEx.target?.reps]);
 
   useEffect(() => {
     if (!started || paused || done) return;
@@ -186,10 +185,13 @@ export function EmomRunner({
                 REPS COMPLETADAS
               </div>
               <input
+                key={currentEx.id}
                 type="number"
                 inputMode="numeric"
-                value={repsInput}
-                onChange={(e) => setRepsInput(e.target.value)}
+                defaultValue={currentEx.target?.reps ?? ""}
+                onChange={(e) => {
+                  repsInputRef.current = e.target.value;
+                }}
                 placeholder={currentEx.target?.reps ?? "0"}
                 style={{
                   width: "100%",
@@ -229,7 +231,10 @@ export function EmomRunner({
             </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button onClick={() => advanceMinute(repsInput)} style={primaryButtonStyle("var(--lime)", "#000")}>
+              <button
+                onClick={() => advanceMinute(repsInputRef.current)}
+                style={primaryButtonStyle("var(--lime)", "#000")}
+              >
                 <Icon name="check" size={18} color="#000" />
                 <span>Completé</span>
               </button>

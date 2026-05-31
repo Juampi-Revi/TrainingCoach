@@ -27,6 +27,16 @@ model User {
   emailVerifyExpiry   DateTime?
   twoFactorSecret     String?
   twoFactorEnabled    Boolean   @default(false)
+  refreshToken        String?   @unique
+  refreshTokenExpiry  DateTime?
+  
+  // Gamification fields
+  currentWorkoutStreak   Int       @default(0)
+  longestWorkoutStreak   Int       @default(0)
+  lastWorkoutDate        DateTime?
+  xp                     Int       @default(0)
+  level                  Int       @default(1)
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -60,6 +70,17 @@ model User {
   coachGroups               CoachGroup[]
   groupMemberships          CoachGroupMember[]
   gymClasses                GymClass[]
+  
+  // Challenges
+  challengesCreated         Challenge[] @relation("CoachChallenges")
+  challengeParticipations   ChallengeParticipant[]
+  
+  // Social / Friends
+  following                 UserFollow[] @relation("UserFollowing")
+  followers                 UserFollow[] @relation("UserFollowers")
+  
+  // Athlete Solo
+  athleteOnboarding         AthleteOnboarding?
 }
 
 model CoachClient {
@@ -104,6 +125,7 @@ model CoachGroup {
   coach   User               @relation(fields: [coachUserId], references: [id], onDelete: Cascade)
   members CoachGroupMember[]
   classes  GymClass[]
+  challenges Challenge[]
 
   @@unique([coachUserId, name])
   @@index([coachUserId])
@@ -773,4 +795,123 @@ model HealthSyncedActivity {
   @@unique([userId, provider, providerRef])
   @@index([userId, date(sort: Desc)])
   @@index([connectionId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Challenges / Gamification
+// ─────────────────────────────────────────────────────────────
+
+model Challenge {
+  id          String   @id @default(uuid())
+  type        String   // '30_day' | 'weekly_volume' | 'coach_challenge' | 'community'
+  title       String
+  description String?
+  
+  // Challenge configuration
+  targetValue Float    // Target value to complete (e.g., 30 workouts, 10000 kg volume)
+  unit        String   // 'workouts' | 'volume' | 'steps' | 'minutes'
+  
+  // Time period
+  startDate   DateTime
+  endDate     DateTime?
+  durationDays Int?    // For fixed duration challenges
+  
+  // Creator (null = global/system challenge)
+  createdByCoachId String?
+  coach     User?    @relation("CoachChallenges", fields: [createdByCoachId], references: [id], onDelete: SetNull)
+  
+  // For coach challenges - target specific group
+  targetGroupId String?
+  group     CoachGroup? @relation(fields: [targetGroupId], references: [id], onDelete: SetNull)
+  
+  // Visibility
+  isPublic    Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  
+  // Rewards
+  xpReward    Int      @default(200)
+  badgeId     String?  // Optional badge for completing
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  participants ChallengeParticipant[]
+  
+  @@index([isPublic, isActive])
+  @@index([createdByCoachId])
+  @@index([startDate])
+}
+
+model ChallengeParticipant {
+  id          String   @id @default(uuid())
+  
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Progress
+  currentValue Float   @default(0)
+  completedAt  DateTime?
+  
+  // Ranking info
+  rank         Int?
+  
+  // Notifications
+  lastProgressNotifiedAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([challengeId, userId])
+  @@index([userId])
+  @@index([challengeId, currentValue(sort: Desc)])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Social / Friends System
+// ─────────────────────────────────────────────────────────────
+
+model UserFollow {
+  id          String   @id @default(uuid())
+  
+  followerId  String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  
+  followingId String
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Athlete Solo / Self-Service Mode
+// ─────────────────────────────────────────────────────────────
+
+model AthleteOnboarding {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Onboarding preferences
+  goal            String   // 'lose_weight' | 'build_muscle' | 'maintain' | 'improve_endurance' | 'general_fitness'
+  experience      String   // 'beginner' | 'intermediate' | 'advanced'
+  daysPerWeek     Int      // 2-6
+  sessionDuration Int      // 30, 45, 60, 90
+  equipment       String[] // ['gym', 'dumbbells', 'home', 'bodyweight']
+  focusAreas      String[] // ['upper', 'lower', 'core', 'cardio', 'full_body']
+  
+  // AI recommendations generated
+  aiRecommendations Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
 }

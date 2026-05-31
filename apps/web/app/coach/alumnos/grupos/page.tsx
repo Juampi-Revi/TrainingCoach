@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Button, Icon, Input, ConfirmModal } from "@/components/ui";
@@ -32,15 +32,20 @@ export default function GruposPage() {
   const [addingMember, setAddingMember] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
-  function load() {
+  const load = useCallback(() => {
     api
       .get<GroupItem[]>("/coach/groups")
       .then(setGroups)
       .catch(() => toast.error("No se pudieron cargar los grupos"))
       .finally(() => setLoading(false));
-  }
+  }, [api, toast]);
 
-  useEffect(() => { load(); }, [api]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [load]);
 
   useEffect(() => {
     api

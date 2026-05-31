@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
 import { createClient } from "@/lib/api";
@@ -70,7 +70,7 @@ export default function MetasPage() {
   const [editValue, setEditValue] = useState<string>("");
   const [updatingShare, setUpdatingShare] = useState(false);
 
-  async function loadGoals() {
+  const loadGoals = useCallback(async () => {
     try {
       setLoading(true);
       const goalsData = await api.get<GoalsData>("/client/goals");
@@ -80,14 +80,14 @@ export default function MetasPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [api, toast]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      loadGoals();
+      void loadGoals();
     }, 0);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [loadGoals]);
 
   function getGoalByKind(kind: keyof typeof GOAL_CONFIGS): Goal | undefined {
     return data?.goals.find((g) => g.kind === kind);

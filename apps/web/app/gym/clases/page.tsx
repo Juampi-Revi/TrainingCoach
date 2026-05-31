@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -54,15 +54,18 @@ export default function GymClasesPage() {
   const [saving, setSaving] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
-  function load() {
+  const load = useCallback(() => {
     api.get<ClassItem[]>("/gym/classes").then(setClasses).catch(() => toast.error("No se pudieron cargar las clases")).finally(() => setLoading(false));
-  }
+  }, [api, toast]);
 
   useEffect(() => {
-    load();
+    const t = setTimeout(() => {
+      load();
+    }, 0);
     api.get<GroupOption[]>("/coach/groups").then(setGroups).catch(() => {});
     api.get<TemplateOption[]>("/coach/workouts").then(setTemplates).catch(() => {});
-  }, [api]);
+    return () => clearTimeout(t);
+  }, [api, load]);
 
   async function handleCreate() {
     if (!name.trim() || !workoutTemplateId) return toast.error("Nombre y entrenamiento requeridos");

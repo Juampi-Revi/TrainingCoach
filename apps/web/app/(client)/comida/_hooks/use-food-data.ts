@@ -56,7 +56,10 @@ export function useFoodData() {
   }, [loadEntries, loadDashboard]);
 
   useEffect(() => {
-    loadAll();
+    const t = setTimeout(() => {
+      void loadAll();
+    }, 0);
+    return () => clearTimeout(t);
   }, [loadAll]);
 
   return {

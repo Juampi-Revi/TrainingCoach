@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { Icon } from "@/components/ui";
 
@@ -60,8 +61,10 @@ export default function PublicTelePage() {
       .finally(() => setLoading(false));
   }, [classId]);
 
+  const teleMode = data?.teleMode;
+
   useEffect(() => {
-    if (!data || data.teleMode !== "timed") return;
+    if (teleMode !== "timed") return;
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003/api/v1";
     const interval = setInterval(() => {
       fetch(`${apiBase}/public/classes/${classId}`)
@@ -72,7 +75,7 @@ export default function PublicTelePage() {
         .catch(() => {});
     }, 10000);
     return () => clearInterval(interval);
-  }, [classId, data?.teleMode]);
+  }, [classId, teleMode]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -113,28 +116,33 @@ export default function PublicTelePage() {
                 <div key={i} style={{ width: i === exIndex ? 20 : 8, height: 8, borderRadius: 4, background: i === exIndex ? "var(--lime)" : "rgba(255,255,255,.15)", transition: "all .3s" }} />
               ))}
             </div>
-            {exercises[exIndex] && (
+            {(() => {
+              const current = exercises[exIndex];
+              const thumb = current ? getThumbnail(current.exercise) : null;
+              if (!current) return null;
+              return (
               <>
-                <div style={{ width: "100%", maxWidth: 600, aspectRatio: "16/10", background: "rgba(255,255,255,.05)", borderRadius: 16, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {getThumbnail(exercises[exIndex].exercise) ? (
-                    <img src={getThumbnail(exercises[exIndex].exercise)!} alt={exercises[exIndex].exercise.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <div style={{ width: "100%", maxWidth: 600, aspectRatio: "16/10", background: "rgba(255,255,255,.05)", borderRadius: 16, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  {thumb ? (
+                    <Image src={thumb} alt={current.exercise.name} fill unoptimized style={{ objectFit: "cover" }} />
                   ) : (
                     <Icon name="dumbbell" size={48} color="rgba(255,255,255,.2)" />
                   )}
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 26, fontWeight: 900 }}>{exercises[exIndex].exercise.name}</div>
-                  <div style={{ fontSize: 14, color: "rgba(255,255,255,.5)", marginTop: 4 }}>{exercises[exIndex].blockLabel}</div>
+                  <div style={{ fontSize: 26, fontWeight: 900 }}>{current.exercise.name}</div>
+                  <div style={{ fontSize: 14, color: "rgba(255,255,255,.5)", marginTop: 4 }}>{current.blockLabel}</div>
                 </div>
                 <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center", fontSize: 15, color: "var(--lime)", fontWeight: 700 }}>
-                  {exercises[exIndex].targetSets ? <span>{exercises[exIndex].targetSets} series</span> : null}
-                  {exercises[exIndex].targetReps ? <span>× {exercises[exIndex].targetReps} reps</span> : null}
-                  {exercises[exIndex].durationSeconds ? <span>{exercises[exIndex].durationSeconds}s</span> : null}
-                  {exercises[exIndex].restSeconds ? <span>· Desc {exercises[exIndex].restSeconds}s</span> : null}
-                  {exercises[exIndex].intensityType ? <span>· {exercises[exIndex].intensityType.toUpperCase()} {exercises[exIndex].intensityTarget}</span> : null}
+                  {current.targetSets ? <span>{current.targetSets} series</span> : null}
+                  {current.targetReps ? <span>× {current.targetReps} reps</span> : null}
+                  {current.durationSeconds ? <span>{current.durationSeconds}s</span> : null}
+                  {current.restSeconds ? <span>· Desc {current.restSeconds}s</span> : null}
+                  {current.intensityType ? <span>· {current.intensityType.toUpperCase()} {current.intensityTarget}</span> : null}
                 </div>
               </>
-            )}
+              );
+            })()}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -144,8 +152,8 @@ export default function PublicTelePage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {block.exercises.map((we) => (
                     <div key={we.id} style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 14px", background: "rgba(255,255,255,.04)", borderRadius: 14, border: "1px solid rgba(255,255,255,.06)" }}>
-                      <div style={{ width: 50, height: 50, borderRadius: 10, background: "rgba(255,255,255,.06)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {getThumbnail(we.exercise) ? <img src={getThumbnail(we.exercise)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Icon name="dumbbell" size={20} color="rgba(255,255,255,.2)" />}
+                      <div style={{ width: 50, height: 50, borderRadius: 10, background: "rgba(255,255,255,.06)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                        {getThumbnail(we.exercise) ? <Image src={getThumbnail(we.exercise)!} alt="" fill unoptimized style={{ objectFit: "cover" }} /> : <Icon name="dumbbell" size={20} color="rgba(255,255,255,.2)" />}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 15, fontWeight: 700 }}>{we.exercise.name}</div>

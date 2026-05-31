@@ -59,7 +59,10 @@ export function useSessionsData(clientUserId: string): SessionsDataResult {
 
   useEffect(() => {
     cursorRef.current = null;
-    void fetch(true);
+    const t = setTimeout(() => {
+      void fetch(true);
+    }, 0);
+    return () => clearTimeout(t);
   }, [fetch, clientUserId]);
 
   const loadMore = useCallback(() => {

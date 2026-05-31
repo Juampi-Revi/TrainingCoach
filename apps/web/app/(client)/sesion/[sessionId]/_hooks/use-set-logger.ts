@@ -74,14 +74,27 @@ export function useSetLogger({
           };
         }
         
-        // Otherwise, prefill from lastRef (last workout data)
         const effort = effortMode === "RPE" ? lastRef?.rpe : lastRef?.rir;
+        const repsPh =
+          lastRef?.reps != null
+            ? String(lastRef.reps)
+            : target.target?.reps != null
+              ? String(target.target.reps)
+              : "";
+        const kgPh = lastRef?.weight != null ? String(lastRef.weight) : "";
+        const effortPh = effort != null ? String(effort) : target.target?.intensityTarget != null ? String(target.target.intensityTarget) : "";
+        const durationPh = target.target?.durationSeconds != null ? String(target.target.durationSeconds) : "";
+
         return {
           setNumber,
-          reps: lastRef?.reps != null ? String(lastRef.reps) : (target.target?.reps != null ? String(target.target.reps) : ""),
-          duration: target.target?.durationSeconds != null ? String(target.target.durationSeconds) : "",
-          kg: lastRef?.weight != null ? String(lastRef.weight) : "",
-          effort: effort != null ? String(effort) : "",
+          reps: "",
+          duration: "",
+          kg: "",
+          effort: "",
+          repsPlaceholder: repsPh || undefined,
+          durationPlaceholder: durationPh || undefined,
+          kgPlaceholder: kgPh || undefined,
+          effortPlaceholder: effortPh || undefined,
           existingId: undefined,
         };
       }));
@@ -99,10 +112,13 @@ export function useSetLogger({
   useEffect(() => {
     if (activeTimerRow === null || timerSecondsLeft > 0) return;
     const targetSec = session?.exercises[currentExIdx]?.target?.durationSeconds ?? 30;
-    setSheetRows((prev) =>
-      prev.map((r) => r.setNumber === activeTimerRow ? { ...r, duration: String(targetSec) } : r),
-    );
-    setActiveTimerRow(null);
+    const t = setTimeout(() => {
+      setSheetRows((prev) =>
+        prev.map((r) => r.setNumber === activeTimerRow ? { ...r, duration: String(targetSec) } : r),
+      );
+      setActiveTimerRow(null);
+    }, 0);
+    return () => clearTimeout(t);
   }, [activeTimerRow, timerSecondsLeft, session, currentExIdx]);
 
   // Fetch last set reference when logger opens
@@ -110,9 +126,12 @@ export function useSetLogger({
     if (!loggerOpen || !session) return;
     const target = session.exercises[currentExIdx];
     if (!target || target.block.type === "warmup") return;
-    setLastRef(null);
+    const t = setTimeout(() => {
+      setLastRef(null);
+    }, 0);
     api.get<LastRef | null>(`/client/exercises/${target.exercise.id}/last-set`)
       .then((r) => setLastRef(r)).catch(() => {});
+    return () => clearTimeout(t);
   }, [loggerOpen, session, currentExIdx, api]);
 
   // Rest countdown
@@ -125,14 +144,14 @@ export function useSetLogger({
   // Re-open logger when rest ends
   useEffect(() => {
     if (restSeconds !== null || !restFromLogger) return;
-    setRestFromLogger(false);
-    setLoggerOpen(true);
+    const t = setTimeout(() => {
+      setRestFromLogger(false);
+      setLoggerOpen(true);
+    }, 0);
+    return () => clearTimeout(t);
   }, [restSeconds, restFromLogger]);
 
   const openLogger = useCallback((target: SessionExercise) => {
-    const existing = target.sets ?? [];
-    const baseCount = Math.max(existing.length, target.target?.sets ?? 0, 1);
-    
     // Pre-fill equipment type from saved sets, localStorage, or lastRef
     const savedEquip = target.sets.find((s) => s.notes === "barra" || s.notes === "mancuernas" || s.notes === "maquina");
     if (savedEquip) {
@@ -154,7 +173,7 @@ export function useSetLogger({
     
     // Rows will be initialized by the useEffect that depends on lastRef
     setLoggerOpen(true);
-  }, [effortMode, sessionId, lastRef]);
+  }, [sessionId, lastRef]);
 
   const deleteSet = useCallback(async (setNumber: number) => {
     const ex = session?.exercises[currentExIdx];
@@ -172,12 +191,19 @@ export function useSetLogger({
     const isTimed = !!(ex.target?.durationSeconds);
     try {
       for (const row of sheetRows) {
-        const body: Record<string, string> = { weight: row.kg };
-        if (isTimed) { if (row.duration) body.durationSeconds = row.duration; }
-        else { body.reps = row.reps; }
-        if (effortMode === "RPE") body.rpe = row.effort; else body.rir = row.effort;
+        const body: Record<string, string> = {};
+        if (row.kg) body.weight = row.kg;
+        if (isTimed) {
+          if (row.duration) body.durationSeconds = row.duration;
+        } else {
+          if (row.reps) body.reps = row.reps;
+        }
+        if (row.effort) {
+          if (effortMode === "RPE") body.rpe = row.effort;
+          else body.rir = row.effort;
+        }
         if (equipmentType) body.notes = equipmentType;
-        const hasAny = isTimed ? !!(row.duration || row.kg) : !!(row.reps || row.kg || row.effort);
+        const hasAny = isTimed ? !!(row.duration || row.kg || row.effort) : !!(row.reps || row.kg || row.effort);
         if (!hasAny) continue;
         try {
           await api.put(`/client/sessions/${sessionId}/exercises/${ex.id}/sets/${row.setNumber}`, body);

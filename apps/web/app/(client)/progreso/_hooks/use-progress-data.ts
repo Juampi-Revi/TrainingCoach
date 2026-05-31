@@ -23,7 +23,12 @@ export function useProgressData() {
     }
   }, [api]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void fetch();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [fetch]);
 
   return { data, loading, error, refetch: fetch };
 }

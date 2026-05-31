@@ -26,8 +26,6 @@ export function AgendaWeekOverview({
   weekOverview: NonNullable<CoachCalendarResponse["weekOverview"]>;
   onEditNote?: (args: { planId: string; pwwId: string; workoutTitle: string; value: string | null }) => void;
 }) {
-  if (weekOverview.length === 0) return null;
-
   const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({});
   const totals = useMemo(() => {
     let completed = 0;
@@ -38,6 +36,8 @@ export function AgendaWeekOverview({
     }
     return { completed, total };
   }, [weekOverview]);
+
+  if (weekOverview.length === 0) return null;
 
   return (
     <Card pad={14} style={{ marginBottom: 12, position: "sticky", top: 12, zIndex: 5 }}>

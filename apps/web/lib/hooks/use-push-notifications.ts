@@ -13,10 +13,12 @@ interface PushSubscriptionState {
 }
 
 export function usePushNotifications() {
+  const isSupported =
+    typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
   const [state, setState] = useState<PushSubscriptionState>({
-    isSupported: false,
+    isSupported,
     isSubscribed: false,
-    isLoading: true,
+    isLoading: isSupported,
     error: null,
   });
   const { token } = useAuth();
@@ -25,39 +27,31 @@ export function usePushNotifications() {
   // Create API client
   const api = createClient(token);
 
-  // Check if push is supported
-  useEffect(() => {
-    const checkSupport = () => {
-      const supported =
-        typeof window !== "undefined" &&
-        "serviceWorker" in navigator &&
-        "PushManager" in window;
-
-      setState((prev) => ({ ...prev, isSupported: supported, isLoading: false }));
-    };
-
-    checkSupport();
-  }, []);
-
   // Check existing subscription
   const checkSubscription = useCallback(async () => {
     if (!state.isSupported) return;
 
     try {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
 
       setState((prev) => ({
         ...prev,
         isSubscribed: !!subscription,
+        isLoading: false,
       }));
     } catch (err) {
       console.error("Failed to check subscription:", err);
+      setState((prev) => ({ ...prev, isLoading: false }));
     }
   }, [state.isSupported]);
 
   useEffect(() => {
-    checkSubscription();
+    const t = setTimeout(() => {
+      void checkSubscription();
+    }, 0);
+    return () => clearTimeout(t);
   }, [checkSubscription]);
 
   // Subscribe to push notifications

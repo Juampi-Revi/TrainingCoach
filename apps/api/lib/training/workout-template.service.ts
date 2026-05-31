@@ -181,3 +181,105 @@ export async function addAlternative(weId: string, exerciseId: string, priority:
 export function removeAlternative(altId: string) {
   return prisma.workoutExerciseAlternative.delete({ where: { id: altId } });
 }
+
+export async function duplicateWorkoutTemplate(args: { coachUserId: string; workoutTemplateId: string }) {
+  const { coachUserId, workoutTemplateId } = args;
+
+  return prisma.$transaction(async (tx) => {
+    const src = await tx.workoutTemplate.findFirst({
+      where: { id: workoutTemplateId, coachUserId },
+      include: {
+        workoutBlocks: { orderBy: { sortOrder: "asc" } },
+        workoutExercises: {
+          orderBy: { sortOrder: "asc" },
+          include: { alternatives: { orderBy: [{ priority: "asc" }, { createdAt: "asc" }] } },
+        },
+      },
+    });
+    if (!src) return null;
+
+    const created = await tx.workoutTemplate.create({
+      data: {
+        coachUserId,
+        title: `${src.title} (copia)`,
+        description: src.description,
+        tags: src.tags,
+        type: src.type,
+      },
+      select: { id: true },
+    });
+
+    const blockIdMap = new Map<string, string>();
+    for (const b of src.workoutBlocks) {
+      const nb = await tx.workoutBlock.create({
+        data: {
+          workoutTemplateId: created.id,
+          sortOrder: b.sortOrder,
+          type: b.type,
+          label: b.label,
+          description: b.description,
+          restAfterSeconds: b.restAfterSeconds,
+          intervalType: b.intervalType,
+          workSeconds: b.workSeconds,
+          restSeconds: b.restSeconds,
+          rounds: b.rounds,
+          totalDurationSeconds: b.totalDurationSeconds,
+          restBetweenExercisesSeconds: b.restBetweenExercisesSeconds,
+          targetMinutes: b.targetMinutes,
+          targetZone: b.targetZone,
+        },
+        select: { id: true },
+      });
+      blockIdMap.set(b.id, nb.id);
+    }
+
+    const weIdMap = new Map<string, string>();
+    for (const we of src.workoutExercises) {
+      const newBlockId = blockIdMap.get(we.workoutBlockId) ?? null;
+      if (!newBlockId) continue;
+
+      const nwe = await tx.workoutExercise.create({
+        data: {
+          workoutTemplateId: created.id,
+          workoutBlockId: newBlockId,
+          exerciseId: we.exerciseId,
+          sortOrder: we.sortOrder,
+          supersetGroup: we.supersetGroup,
+          targetSets: we.targetSets,
+          targetReps: we.targetReps,
+          durationSeconds: we.durationSeconds,
+          targetLoadNote: we.targetLoadNote,
+          intensityType: we.intensityType,
+          intensityTarget: we.intensityTarget,
+          restSeconds: we.restSeconds,
+          tempo: we.tempo,
+          notes: we.notes,
+          groupNote: we.groupNote,
+        },
+        select: { id: true },
+      });
+      weIdMap.set(we.id, nwe.id);
+    }
+
+    const altCreates: Array<ReturnType<typeof tx.workoutExerciseAlternative.create>> = [];
+    for (const we of src.workoutExercises) {
+      const newWeId = weIdMap.get(we.id);
+      if (!newWeId) continue;
+      for (const alt of we.alternatives) {
+        altCreates.push(
+          tx.workoutExerciseAlternative.create({
+            data: {
+              workoutExerciseId: newWeId,
+              alternativeExerciseId: alt.alternativeExerciseId,
+              priority: alt.priority,
+              note: alt.note,
+            },
+          }),
+        );
+      }
+    }
+    if (altCreates.length) await Promise.all(altCreates);
+
+    return created;
+  });
+}

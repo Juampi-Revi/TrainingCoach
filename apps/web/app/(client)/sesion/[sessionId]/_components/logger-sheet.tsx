@@ -151,7 +151,7 @@ export function LoggerSheet({
                     <input
                       type="number" inputMode="decimal" value={row.duration}
                       onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, duration: e.target.value } : r))}
-                      placeholder={String(ex.target.durationSeconds)}
+                      placeholder={row.durationPlaceholder ?? String(ex.target.durationSeconds)}
                       style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                     />
                   )}
@@ -159,13 +159,13 @@ export function LoggerSheet({
                 <input
                   type="number" inputMode="decimal" value={row.kg}
                   onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
-                  placeholder="—"
+                  placeholder={row.kgPlaceholder ?? "—"}
                   style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                 />
                 <input
                   type="number" inputMode="decimal" value={row.effort}
                   onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
-                  placeholder={ex.target?.intensityTarget ?? "—"}
+                  placeholder={row.effortPlaceholder ?? (ex.target?.intensityTarget != null ? String(ex.target.intensityTarget) : "—")}
                   style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                 />
                 {isTimingThis ? (
@@ -188,19 +188,19 @@ export function LoggerSheet({
                 <input
                   type="number" inputMode="decimal" value={row.kg}
                   onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
-                  placeholder="—"
+                  placeholder={row.kgPlaceholder ?? "—"}
                   style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                 />
                 <input
                   type="number" inputMode="decimal" value={row.reps}
                   onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, reps: e.target.value } : r))}
-                  placeholder={ex.target?.reps ?? "—"}
+                  placeholder={row.repsPlaceholder ?? (ex.target?.reps != null ? String(ex.target.reps) : "—")}
                   style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                 />
                 <input
                   type="number" inputMode="decimal" value={row.effort}
                   onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
-                  placeholder={ex.target?.intensityTarget ?? "—"}
+                  placeholder={row.effortPlaceholder ?? (ex.target?.intensityTarget != null ? String(ex.target.intensityTarget) : "—")}
                   style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                 />
                 {row.existingId ? (
@@ -229,7 +229,37 @@ export function LoggerSheet({
             − Quitar serie
           </button>
           <button
-            onClick={() => setSheetRows((prev) => [...prev, { setNumber: prev.length + 1, reps: "", duration: "", kg: "", effort: "" }])}
+            onClick={() => {
+              const repsPh =
+                lastRef?.reps != null
+                  ? String(lastRef.reps)
+                  : ex.target?.reps != null
+                    ? String(ex.target.reps)
+                    : undefined;
+              const kgPh = lastRef?.weight != null ? String(lastRef.weight) : undefined;
+              const effortPh = (() => {
+                const last = effortMode === "RPE" ? lastRef?.rpe : lastRef?.rir;
+                if (last != null) return String(last);
+                if (ex.target?.intensityTarget != null) return String(ex.target.intensityTarget);
+                return undefined;
+              })();
+              const durationPh = ex.target?.durationSeconds != null ? String(ex.target.durationSeconds) : undefined;
+
+              setSheetRows((prev) => [
+                ...prev,
+                {
+                  setNumber: prev.length + 1,
+                  reps: "",
+                  duration: "",
+                  kg: "",
+                  effort: "",
+                  repsPlaceholder: repsPh,
+                  durationPlaceholder: durationPh,
+                  kgPlaceholder: kgPh,
+                  effortPlaceholder: effortPh,
+                },
+              ]);
+            }}
             style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
           >
             + Agregar serie

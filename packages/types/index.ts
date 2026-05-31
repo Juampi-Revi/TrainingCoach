@@ -80,6 +80,19 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
+  refreshToken?: string;
+  refreshTokenExpiresAt?: string;
+  user: AuthUser;
+  twoFactorRequired?: boolean;
+  twoFactorToken?: string;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  token: string;
   user: AuthUser;
 }
 
@@ -616,4 +629,145 @@ export interface NotificationSettings {
   weeklySummaryDay: string;
   emailNotifications: boolean;
   pushNotifications: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Gamification
+// ─────────────────────────────────────────────────────────────
+export interface StreakStats {
+  currentStreak: number;
+  longestStreak: number;
+  lastWorkoutDate: string | null;
+  streakActive: boolean;
+}
+
+export interface XpStats {
+  currentXp: number;
+  level: number;
+  xpToNextLevel: number;
+  progressPercent: number;
+  totalXpEarned: number;
+  title: string;
+}
+
+export interface XpActionResult {
+  xpEarned: number;
+  newTotal: number;
+  newLevel: number;
+  leveledUp: boolean;
+}
+
+export interface BadgeDefinition {
+  id: string;
+  name: string;
+  description: string;
+  category: "steps" | "workouts" | "streak" | "nutrition" | "social" | "special";
+  tier: "bronze" | "silver" | "gold" | "platinum";
+  icon: string;
+  requirement: {
+    type: string;
+    value: number;
+  };
+}
+
+export interface UserBadge {
+  id: string;
+  badgeId: string;
+  unlockedAt: string;
+  viewed: boolean;
+  badge: BadgeDefinition;
+}
+
+export type XpSource =
+  | "COMPLETE_WORKOUT"
+  | "COMPLETE_WORKOUT_WITH_HIGH_ENERGY"
+  | "SET_PERSONAL_RECORD"
+  | "LOG_FOOD"
+  | "LOG_FOOD_STREAK_7"
+  | "ACHIEVE_STREAK_7"
+  | "ACHIEVE_STREAK_30"
+  | "UNLOCK_BADGE"
+  | "CONNECT_WEARABLE"
+  | "LOG_BODY_METRICS"
+  | "SET_HEALTH_GOAL"
+  | "COMPLETE_CHALLENGE"
+  | "INVITE_FRIEND";
+
+// ─────────────────────────────────────────────────────────────
+// Leaderboards
+// ─────────────────────────────────────────────────────────────
+export type LeaderboardPeriod = "weekly" | "monthly" | "allTime";
+export type LeaderboardMetric = "workouts" | "volume" | "xp" | "streak";
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  value: number;
+  isCurrentUser: boolean;
+}
+
+export interface LeaderboardResult {
+  entries: LeaderboardEntry[];
+  currentUserRank: number | null;
+  currentUserValue: number | null;
+  totalParticipants: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Friends / Social
+// ─────────────────────────────────────────────────────────────
+export interface FriendProfile {
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  level: number;
+  currentStreak: number;
+  isFollowing: boolean;
+}
+
+export interface FriendCounts {
+  following: number;
+  followers: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Challenges
+// ─────────────────────────────────────────────────────────────
+export interface Challenge {
+  id: string;
+  type: "30_day" | "weekly_volume" | "coach_challenge" | "community";
+  title: string;
+  description: string | null;
+  targetValue: number;
+  unit: string;
+  startDate: string;
+  endDate: string | null;
+  xpReward: number;
+  participantCount: number;
+  joined: boolean;
+  createdBy?: string;
+  progress?: ChallengeProgress | null;
+}
+
+export interface ChallengeProgress {
+  currentValue: number;
+  targetValue: number;
+  percentComplete: number;
+  completed: boolean;
+  rank?: number;
+}
+
+export interface ChallengeParticipant {
+  rank: number;
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  currentValue: number;
+  completedAt: string | null;
+}
+
+export interface ChallengeDetail extends Challenge {
+  leaderboard: ChallengeParticipant[];
 }

@@ -13,11 +13,7 @@ function VerifyEmailHandler() {
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setErrorMsg("Token no encontrado en el link.");
-      return;
-    }
+    if (!token) return;
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003/api/v1";
     fetch(`${apiBase}/auth/verify-email`, {
@@ -38,6 +34,9 @@ function VerifyEmailHandler() {
         setErrorMsg("Error de conexión. Intentá de nuevo.");
       });
   }, [token]);
+
+  const effectiveStatus = token ? status : "error";
+  const effectiveErrorMsg = token ? errorMsg : "Token no encontrado en el link.";
 
   return (
     <div
@@ -70,7 +69,7 @@ function VerifyEmailHandler() {
           <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>
 
-        {status === "loading" && (
+        {effectiveStatus === "loading" && (
           <>
             <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 6 }}>
               Verificando email…
@@ -81,7 +80,7 @@ function VerifyEmailHandler() {
           </>
         )}
 
-        {status === "success" && (
+        {effectiveStatus === "success" && (
           <>
             <Icon name="check" size={48} color="var(--lime)" />
             <div style={{ fontSize: 20, fontWeight: 700, marginTop: 16 }}>Email verificado</div>
@@ -94,12 +93,12 @@ function VerifyEmailHandler() {
           </>
         )}
 
-        {status === "error" && (
+        {effectiveStatus === "error" && (
           <>
             <Icon name="alert" size={48} color="var(--danger)" />
             <div style={{ fontSize: 20, fontWeight: 700, marginTop: 16 }}>Error</div>
             <div style={{ fontSize: 14, color: "var(--text-mute)", marginTop: 6, marginBottom: 28 }}>
-              {errorMsg}
+              {effectiveErrorMsg}
             </div>
             <Link href="/login">
               <Button block size="lg" variant="secondary">

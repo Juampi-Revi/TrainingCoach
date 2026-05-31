@@ -115,11 +115,17 @@ export function AmrapRunner({
   );
 
   const finalizeRef = useRef(finalize);
-  finalizeRef.current = finalize;
+  useEffect(() => {
+    finalizeRef.current = finalize;
+  }, [finalize]);
   const checkedRef = useRef(checked);
-  checkedRef.current = checked;
+  useEffect(() => {
+    checkedRef.current = checked;
+  }, [checked]);
   const completionsRef = useRef(completions);
-  completionsRef.current = completions;
+  useEffect(() => {
+    completionsRef.current = completions;
+  }, [completions]);
 
   useEffect(() => {
     if (!started || paused || done) return;

@@ -2,15 +2,29 @@ import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken, signTwoFactorToken } from "@/lib/jwt";
-import { ok, err, withHandler } from "@/lib/api-response";
+import { ok, err, withValidatedHandler, ValidationError } from "@/lib/api-response";
 import { rateLimit } from "@/lib/rate-limit";
+import { loginRequestSchema } from "@/lib/schemas";
+import { createRefreshToken } from "@/lib/auth/refresh-token.service";
+import { z } from "zod";
+
+const twoFactorLoginSchema = z.object({
+  twoFactorToken: z.string().min(1),
+  twoFactorCode: z.string().length(6),
+});
 
 export async function POST(req: NextRequest) {
-  return withHandler(async () => {
+  return withValidatedHandler(async () => {
     const body = await req.json().catch(() => null);
 
     // 2FA step: verify code and issue token
     if (body?.twoFactorToken && body?.twoFactorCode) {
+      // Validate 2FA login request
+      const validationResult = twoFactorLoginSchema.safeParse(body);
+      if (!validationResult.success) {
+        throw new ValidationError(validationResult.error);
+      }
+
       const jwt = await import("@/lib/jwt");
       let payload: { sub: string; email: string; role: string; billingStatus: string };
       try {
@@ -29,20 +43,26 @@ export async function POST(req: NextRequest) {
       const { verifyTOTP } = await import("@/lib/totp");
       if (!verifyTOTP(user.twoFactorSecret, body.twoFactorCode)) return err("Código 2FA inválido", 401);
 
-      const token = signToken({ sub: user.id, email: user.email, role: user.role, billingStatus: user.billingStatus });
+      // Generate tokens
+      const accessToken = signToken({ sub: user.id, email: user.email, role: user.role, billingStatus: user.billingStatus });
+      const refreshTokenResult = await createRefreshToken(user.id);
+
       return ok({
-        token,
+        token: accessToken,
+        refreshToken: refreshTokenResult.token,
+        refreshTokenExpiresAt: refreshTokenResult.expiresAt.toISOString(),
         user: { id: user.id, email: user.email, name: user.displayName ?? user.email, role: user.role, billingStatus: user.billingStatus, emailVerified: user.emailVerified },
       });
     }
 
-    // Regular login
-    const { email, password } = body ?? {};
-
-    if (!email || !password) return err("email and password required", 400);
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    if (!normalizedEmail || !normalizedEmail.includes("@")) return err("email inválido", 400);
+    // Regular login with Zod validation
+    const validationResult = loginRequestSchema.safeParse(body);
+    if (!validationResult.success) {
+      throw new ValidationError(validationResult.error);
+    }
+    
+    const { email, password } = validationResult.data;
+    const normalizedEmail = email.trim().toLowerCase();
 
     const key = `login:${normalizedEmail}`;
     if (!rateLimit(key, 10, 60_000)) return err("Demasiados intentos, esperá 1 minuto", 429);
@@ -75,15 +95,19 @@ export async function POST(req: NextRequest) {
       return ok({ twoFactorRequired: true, twoFactorToken: tempToken, email: user.email });
     }
 
-    const token = signToken({
+    // Generate tokens
+    const accessToken = signToken({
       sub: user.id,
       email: user.email,
       role: user.role,
       billingStatus: user.billingStatus,
     });
+    const refreshTokenResult = await createRefreshToken(user.id);
 
     return ok({
-      token,
+      token: accessToken,
+      refreshToken: refreshTokenResult.token,
+      refreshTokenExpiresAt: refreshTokenResult.expiresAt.toISOString(),
       user: {
         id: user.id,
         email: user.email,

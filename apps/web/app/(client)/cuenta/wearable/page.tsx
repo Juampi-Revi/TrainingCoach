@@ -23,9 +23,12 @@ export default function WearableSettingsPage() {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get("connected");
     const err = params.get("error");
-    if (connected) setSuccess(`${PROVIDER_NAMES[connected] || connected} conectado exitosamente`);
-    else if (err) setError(PROVIDER_ERROR_MESSAGES[err] || "Error desconocido");
+    const t = setTimeout(() => {
+      if (connected) setSuccess(`${PROVIDER_NAMES[connected] || connected} conectado exitosamente`);
+      else if (err) setError(PROVIDER_ERROR_MESSAGES[err] || "Error desconocido");
+    }, 0);
     window.history.replaceState({}, "", window.location.pathname);
+    return () => clearTimeout(t);
   }, []);
 
   const handleConnect = useCallback(async (providerId: string) => {

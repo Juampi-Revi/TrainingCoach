@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import Image from "next/image";
 
 interface AvatarProps {
   name?: string;
@@ -19,12 +20,13 @@ export function Avatar({ name = "?", src, size = 32, tone, textColor, style }: A
 
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={name}
+        width={size}
+        height={size}
+        unoptimized
         style={{
-          width: size,
-          height: size,
           borderRadius: "50%",
           objectFit: "cover",
           flexShrink: 0,

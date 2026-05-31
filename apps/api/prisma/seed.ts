@@ -17,7 +17,7 @@ function utcDateTime(daysAgo: number, hour = 18, minute = 0) {
 async function main() {
   console.log('Seeding database...')
 
-  const passwordHash = await bcrypt.hash('123456', 10)
+  const passwordHash = await bcrypt.hash('12345678', 10)
   const juanjoPasswordHash = await bcrypt.hash('password123', 10)
 
   // 1. Create Coach
