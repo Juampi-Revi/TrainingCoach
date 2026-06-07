@@ -89,10 +89,13 @@ export default function SemanaPage() {
     data.workouts.find((w) => !w.session) ??
     null;
   const remaining = today ? data.workouts.filter((w) => w !== today) : data.workouts;
-  const inProgress = remaining.filter((w) => w.session?.status === "in_progress");
-  const pending = remaining.filter((w) => !w.session);
   const completed = data.workouts.filter((w) => w.session?.status === "completed");
   const completedCount = completed.length;
+  const inProgressCount = data.workouts.filter((w) => w.session?.status === "in_progress").length;
+  const doneCount = completedCount;
+
+  const inProgress = remaining.filter((w) => w.session?.status === "in_progress");
+  const pending = remaining.filter((w) => !w.session);
   const totalCount = data.workouts.length;
   const partialCount = completed.filter((w) => {
     const s = w.session;
@@ -101,6 +104,7 @@ export default function SemanaPage() {
     if (s.targetSetsCount <= 0) return false;
     return s.setsCount < s.targetSetsCount;
   }).length;
+  const fullCompletedCount = Math.max(0, completedCount - partialCount);
 
   const workoutHref = (w: ClientWeekResponse["workouts"][number]) =>
     `/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`;
@@ -177,17 +181,17 @@ export default function SemanaPage() {
                 fontWeight: 600,
               }}
             >
-              Sesiones
+              Hechas
             </div>
             <div className="ta-mono" style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>
-              {completedCount}
+              {doneCount}
               <span style={{ color: "var(--text-mute)" }}>/{totalCount}</span>
             </div>
-            {partialCount > 0 && (
-              <div className="ta-mono" style={{ fontSize: 11, color: "var(--warn)", marginTop: 2, fontWeight: 800 }}>
-                Parciales: {partialCount}
-              </div>
-            )}
+            <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4 }}>
+              {fullCompletedCount} completas
+              {partialCount > 0 ? ` · ${partialCount} parciales` : ""}
+              {inProgressCount > 0 ? ` · ${inProgressCount} en curso` : ""}
+            </div>
           </div>
           <div style={{ width: 1, background: "var(--line)" }} />
           <div style={{ flex: 1 }}>
