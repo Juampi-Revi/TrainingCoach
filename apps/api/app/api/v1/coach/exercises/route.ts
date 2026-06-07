@@ -28,6 +28,15 @@ function toBool(input: string | null): boolean | null {
   return null;
 }
 
+function toMediaFilter(input: string | null): "any" | "complete" | "missing" | "missingImage" | "missingVideo" {
+  if (!input) return "any";
+  if (input === "complete") return "complete";
+  if (input === "missing") return "missing";
+  if (input === "missingImage") return "missingImage";
+  if (input === "missingVideo") return "missingVideo";
+  return "any";
+}
+
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "coach");
@@ -40,6 +49,7 @@ export async function GET(req: NextRequest) {
     const difficulties = toStringList(searchParams.get("difficulty"));
     const objectives = toStringList(searchParams.get("objective"));
     const favoritesOnly = toBool(searchParams.get("favorites")) ?? false;
+    const mediaFilter = toMediaFilter(searchParams.get("media"));
     const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "50"));
 
     const items = await listCoachExercises({
@@ -51,6 +61,7 @@ export async function GET(req: NextRequest) {
       objectives,
       favoritesOnly,
       limit,
+      mediaFilter,
     });
     return ok(items);
   });

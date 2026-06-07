@@ -22,6 +22,7 @@ export default function EjerciciosPage() {
   const [difficulty, setDifficulty] = useState<string>("");
   const [objective, setObjective] = useState<string>("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [media, setMedia] = useState<import("./_hooks/use-exercise-library").ExerciseLibraryQuery["media"]>("any");
   const [modal, setModal] = useState<{ open: true; exercise?: import("./_hooks/use-exercise-library").ExerciseLibraryItem } | null>(null);
 
   const addContext = useMemo(() => {
@@ -39,9 +40,10 @@ export default function EjerciciosPage() {
       difficulties: difficulty ? [difficulty] : [],
       objectives: objective ? [objective] : [],
       favoritesOnly,
+      media,
       limit: 120,
     }),
-    [q, muscle, equipment, difficulty, objective, favoritesOnly],
+    [q, muscle, equipment, difficulty, objective, favoritesOnly, media],
   );
 
   const { items, facets, setFavorite, reload } = useExerciseLibrary(query);
@@ -255,7 +257,45 @@ export default function EjerciciosPage() {
               <Icon name="star" size={12} color={favoritesOnly ? "var(--lime)" : "var(--text-mute)"} />
               Favoritos
             </button>
-            {(muscle || equipment || difficulty || objective || favoritesOnly || q.trim()) && (
+            <button
+              onClick={() => setMedia((p) => (p === "complete" ? "any" : "complete"))}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                border: `1px solid ${media === "complete" ? "var(--success)" : "var(--line-2)"}`,
+                background: media === "complete" ? "rgba(110,231,168,.12)" : "transparent",
+                color: media === "complete" ? "var(--success)" : "var(--text-mute)",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Icon name="check" size={12} color={media === "complete" ? "var(--success)" : "var(--text-mute)"} />
+              Media completa
+            </button>
+            <button
+              onClick={() => setMedia((p) => (p === "missing" ? "any" : "missing"))}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                border: `1px solid ${media === "missing" ? "var(--warn)" : "var(--line-2)"}`,
+                background: media === "missing" ? "rgba(255,181,71,.14)" : "transparent",
+                color: media === "missing" ? "var(--warn)" : "var(--text-mute)",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Icon name="alert" size={12} color={media === "missing" ? "var(--warn)" : "var(--text-mute)"} />
+              Falta media
+            </button>
+            {(muscle || equipment || difficulty || objective || favoritesOnly || media !== "any" || q.trim()) && (
               <button
                 onClick={() => {
                   setQ("");
@@ -264,6 +304,7 @@ export default function EjerciciosPage() {
                   setDifficulty("");
                   setObjective("");
                   setFavoritesOnly(false);
+                  setMedia("any");
                 }}
                 style={{
                   padding: "6px 10px",

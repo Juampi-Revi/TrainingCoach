@@ -114,6 +114,16 @@ export function ExerciseLibraryGrid({
               {ex.difficulty && <Badge tone="neutral" size="sm">{EXERCISE_DIFFICULTY_LABEL[ex.difficulty] ?? ex.difficulty}</Badge>}
               {ex.objective && <Badge tone="neutral" size="sm">{EXERCISE_OBJECTIVE_LABEL[ex.objective] ?? ex.objective}</Badge>}
               {!ex.isSystem && <Badge tone="limeSoft" size="sm">Propio</Badge>}
+              {ex.hasImage !== undefined && (
+                <Badge tone={ex.hasImage ? "success" : "warn"} size="sm" icon="image">
+                  IMG
+                </Badge>
+              )}
+              {ex.hasVideo !== undefined && (
+                <Badge tone={ex.hasVideo ? "success" : "warn"} size="sm" icon="video">
+                  VID
+                </Badge>
+              )}
             </div>
             {addContext && (
               <div style={{ marginTop: 10, display: "flex" }}>
@@ -128,4 +138,3 @@ export function ExerciseLibraryGrid({
     </div>
   );
 }
-

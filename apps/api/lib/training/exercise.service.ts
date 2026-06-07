@@ -9,6 +9,7 @@ type ListArgs = {
   objectives: string[] | null;
   favoritesOnly: boolean;
   limit: number;
+  mediaFilter?: "any" | "complete" | "missing" | "missingImage" | "missingVideo";
 };
 
 function messageOf(e: unknown): string {
@@ -23,7 +24,19 @@ function looksLikeSchemaOutOfDate(msg: string): boolean {
 }
 
 export async function listCoachExercises(args: ListArgs) {
-  const { coachUserId, q, muscles, equipments, difficulties, objectives, favoritesOnly, limit } = args;
+  const {
+    coachUserId,
+    q,
+    muscles,
+    equipments,
+    difficulties,
+    objectives,
+    favoritesOnly,
+    limit,
+    mediaFilter = "any",
+  } = args;
+
+  const take = mediaFilter === "any" ? limit : Math.min(300, Math.max(limit * 4, limit));
 
   try {
     const exercises = await prisma.exercise.findMany({
@@ -37,7 +50,7 @@ export async function listCoachExercises(args: ListArgs) {
         ...(favoritesOnly ? { favoritedBy: { some: { coachUserId } } } : {}),
       },
       orderBy: [{ name: "asc" }],
-      take: limit,
+      take,
       select: {
         id: true,
         name: true,
@@ -48,12 +61,14 @@ export async function listCoachExercises(args: ListArgs) {
         isSystem: true,
         youtubeUrl: true,
         favoritedBy: { where: { coachUserId }, select: { id: true }, take: 1 },
-        media: { select: { url: true, mediaType: true, publicId: true }, take: 1, orderBy: { isPrimary: "desc" } },
+        media: { select: { url: true, mediaType: true, publicId: true }, take: 4, orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }] },
       },
     });
 
     const mapped = exercises.map((e) => {
       let thumbnailUrl: string | null = null;
+      const hasImage = e.media.some((m) => m.mediaType === "image") || false;
+      const hasVideo = e.media.some((m) => m.mediaType === "video") || !!(e.youtubeUrl && e.youtubeUrl.trim());
       const firstMedia = e.media[0];
       if (firstMedia?.mediaType === "image") thumbnailUrl = firstMedia.url;
       if (firstMedia?.mediaType === "video" && firstMedia.publicId) {
@@ -70,6 +85,8 @@ export async function listCoachExercises(args: ListArgs) {
         youtubeUrl: e.youtubeUrl,
         thumbnailUrl,
         isFavorite: e.favoritedBy.length > 0,
+        hasImage,
+        hasVideo,
       };
     });
 
@@ -79,7 +96,18 @@ export async function listCoachExercises(args: ListArgs) {
       return a.name.localeCompare(b.name, "es");
     });
 
-    return mapped;
+    if (mediaFilter === "any") return mapped;
+
+    const filtered = mapped.filter((e) => {
+      const complete = e.hasImage && e.hasVideo;
+      if (mediaFilter === "complete") return complete;
+      if (mediaFilter === "missing") return !complete;
+      if (mediaFilter === "missingImage") return !e.hasImage;
+      if (mediaFilter === "missingVideo") return !e.hasVideo;
+      return true;
+    });
+
+    return filtered.slice(0, limit);
   } catch (e) {
     const msg = messageOf(e);
     if (!looksLikeSchemaOutOfDate(msg)) throw e;
@@ -93,7 +121,7 @@ export async function listCoachExercises(args: ListArgs) {
         ...(equipments?.length ? { equipment: { in: equipments } } : {}),
       },
       orderBy: [{ isSystem: "desc" }, { name: "asc" }],
-      take: limit,
+      take,
       select: {
         id: true,
         name: true,
@@ -101,12 +129,14 @@ export async function listCoachExercises(args: ListArgs) {
         equipment: true,
         isSystem: true,
         youtubeUrl: true,
-        media: { select: { url: true, mediaType: true, publicId: true }, take: 1, orderBy: { isPrimary: "desc" } },
+        media: { select: { url: true, mediaType: true, publicId: true }, take: 4, orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }] },
       },
     });
 
-    return exercises.map((e) => {
+    const mapped = exercises.map((e) => {
       let thumbnailUrl: string | null = null;
+      const hasImage = e.media.some((m) => m.mediaType === "image") || false;
+      const hasVideo = e.media.some((m) => m.mediaType === "video") || !!(e.youtubeUrl && e.youtubeUrl.trim());
       const firstMedia = e.media[0];
       if (firstMedia?.mediaType === "image") thumbnailUrl = firstMedia.url;
       if (firstMedia?.mediaType === "video" && firstMedia.publicId) {
@@ -123,8 +153,21 @@ export async function listCoachExercises(args: ListArgs) {
         youtubeUrl: e.youtubeUrl,
         thumbnailUrl,
         isFavorite: false,
+        hasImage,
+        hasVideo,
       };
     });
+
+    if (mediaFilter === "any") return mapped;
+    const filtered = mapped.filter((e) => {
+      const complete = e.hasImage && e.hasVideo;
+      if (mediaFilter === "complete") return complete;
+      if (mediaFilter === "missing") return !complete;
+      if (mediaFilter === "missingImage") return !e.hasImage;
+      if (mediaFilter === "missingVideo") return !e.hasVideo;
+      return true;
+    });
+    return filtered.slice(0, limit);
   }
 }
 
@@ -198,4 +241,3 @@ export async function getCoachExerciseFacets(coachUserId: string) {
     };
   }
 }
-

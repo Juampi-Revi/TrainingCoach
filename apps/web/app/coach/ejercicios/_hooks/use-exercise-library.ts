@@ -15,6 +15,7 @@ function qs(query: ExerciseLibraryQuery): string {
   if (query.difficulties.length) p.set("difficulty", query.difficulties.join(","));
   if (query.objectives.length) p.set("objective", query.objectives.join(","));
   if (query.favoritesOnly) p.set("favorites", "true");
+  if (query.media !== "any") p.set("media", query.media);
   p.set("limit", String(Math.min(100, query.limit ?? 80)));
   const s = p.toString();
   return s ? `?${s}` : "";

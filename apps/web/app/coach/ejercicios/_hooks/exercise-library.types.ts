@@ -11,6 +11,8 @@ export type ExerciseLibraryItem = {
   thumbnailUrl: string | null;
   youtubeUrl?: string | null;
   isFavorite?: boolean;
+  hasImage?: boolean;
+  hasVideo?: boolean;
 };
 
 export type ExerciseFacets = {
@@ -27,6 +29,6 @@ export type ExerciseLibraryQuery = {
   difficulties: string[];
   objectives: string[];
   favoritesOnly: boolean;
+  media: "any" | "complete" | "missing" | "missingImage" | "missingVideo";
   limit?: number;
 };
-
