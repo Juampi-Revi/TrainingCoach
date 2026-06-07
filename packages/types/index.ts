@@ -335,7 +335,13 @@ export interface WeekWorkout {
   tags: string[];
   exerciseCount: number;
   progressionNote: string | null;
-  session: { id: string; status: SessionStatus; performedAt: string } | null;
+  session: {
+    id: string;
+    status: SessionStatus;
+    performedAt: string;
+    setsCount?: number;
+    targetSetsCount?: number;
+  } | null;
 }
 
 export interface ClientWeekResponse {

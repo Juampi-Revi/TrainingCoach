@@ -5,11 +5,35 @@
 
 ---
 
+## Estado Actual (2026-05)
+
+### Resuelto / Mejorado recientemente
+
+- [x] **Deploy estable**: migraciones versionadas (incluye fix de `.gitignore` para no ignorar `migration.sql`).
+- [x] **Auth**: refresh token en DB (`User.refreshToken`, `User.refreshTokenExpiry`) + endpoints de refresh/logout.
+- [x] **Entrenamiento**:
+  - Logger de series: evitar guardado “masivo” por precarga (ahora placeholders).
+  - Warmup: no contaminar “faltan series” al completar.
+  - Progreso semanal: asignación de sesiones por `planWeekWorkoutId`.
+- [x] **Coach**: duplicar workout template (clonar y editar).
+
+### Pendiente inmediato (Loop A — fortalecer core)
+
+Este roadmap sigue siendo el backlog largo. Para ejecución ordenada, ver: `docs/loop-a.md`.
+
+---
+
 ## 🚀 Funcionalidades del Negocio Principal
 
 ### Para el Modelo Actual (Coach → Alumno)
 
 #### High Priority
+
+- [ ] **Loop A (core sólido antes de expandir)**
+  - Consistencia Semana vs Historial (definir reglas de “parcial” y contadores).
+  - Entrenamiento en vivo: guardado por serie (UX explícita) + estados claros.
+  - Comunicación: adjuntar fotos + referencias dentro del chat.
+  - Notificaciones: push/in-app útiles (sin spam).
 
 - [ ] **Editor de planes mejorado**
   - Drag & drop de workouts entre semanas
@@ -229,6 +253,32 @@
   - Cache de workouts
   - Queue de acciones para sync
   - Funcionar sin internet
+
+---
+
+## Futuro (Contenido + IA + Email)
+
+### 1) Biblioteca “premium” de ejercicios (imagen + video obligatorios)
+
+- [ ] Definir estándar de contenido (estilo visual, duración, ángulos, naming).
+- [ ] Flujo de carga y QA (estado “completo/incompleto” por ejercicio).
+- [ ] Sustituciones: mapa de equivalencias por patrón/músculo/equipo.
+
+### 2) IA para media (recomendación inicial)
+
+- **Imágenes**: Midjourney (calidad/consistencia) o SDXL (control/pipeline).
+- **Video**: Runway / Luma / Pika / Kling (según disponibilidad). Estrategia sugerida: image → video con estilo cerrado.
+
+### 3) Emails transaccionales (cobro, plan por vencer, etc.)
+
+- [ ] Definir eventos (pago fallido, plan por vencer, nuevo plan, inactividad).
+- [ ] Proveedor recomendado: Resend o Postmark.
+- [ ] Templates mínimos (1 base + 2-3 eventos).
+
+### 4) Agentes IA (asistente del coach / self-coach)
+
+- [ ] Asistente de sustituciones (rápido, alto valor): “no puedo X, sugerime Y”.
+- [ ] Asistente “coach” para atleta sin coach (más grande): preferencias → rutina → seguimiento.
 
 - [ ] **PWA improvements**
   - Install prompt

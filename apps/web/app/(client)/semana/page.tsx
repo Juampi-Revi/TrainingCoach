@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { Avatar, Badge, Button, Icon, StateBlock } from "@/components/ui";
+import { Avatar, Button, Icon, StateBlock } from "@/components/ui";
 import type { ClientWeekResponse } from "@regen/types";
+import { WeekWorkoutCard } from "./_components/week-workout-card";
 
 const DAY_LABELS = ["D", "L", "M", "X", "J", "V", "S"];
 
@@ -83,10 +84,26 @@ export default function SemanaPage() {
     );
   }
 
-  const today = data.workouts.find((w) => !w.session || w.session.status === "in_progress");
-  const remaining = data.workouts.filter((w) => w !== today);
-  const pending = remaining.filter((w) => w.session?.status !== "completed");
-  const completed = remaining.filter((w) => w.session?.status === "completed");
+  const today =
+    data.workouts.find((w) => w.session?.status === "in_progress") ??
+    data.workouts.find((w) => !w.session) ??
+    null;
+  const remaining = today ? data.workouts.filter((w) => w !== today) : data.workouts;
+  const inProgress = remaining.filter((w) => w.session?.status === "in_progress");
+  const pending = remaining.filter((w) => !w.session);
+  const completed = data.workouts.filter((w) => w.session?.status === "completed");
+  const completedCount = completed.length;
+  const totalCount = data.workouts.length;
+  const partialCount = completed.filter((w) => {
+    const s = w.session;
+    if (!s) return false;
+    if (s.targetSetsCount == null || s.setsCount == null) return false;
+    if (s.targetSetsCount <= 0) return false;
+    return s.setsCount < s.targetSetsCount;
+  }).length;
+
+  const workoutHref = (w: ClientWeekResponse["workouts"][number]) =>
+    `/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`;
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 84 }}>
@@ -163,9 +180,14 @@ export default function SemanaPage() {
               Sesiones
             </div>
             <div className="ta-mono" style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>
-              {data.workouts.filter((w) => w.session?.status === "completed").length}
-              <span style={{ color: "var(--text-mute)" }}>/{data.workouts.length}</span>
+              {completedCount}
+              <span style={{ color: "var(--text-mute)" }}>/{totalCount}</span>
             </div>
+            {partialCount > 0 && (
+              <div className="ta-mono" style={{ fontSize: 11, color: "var(--warn)", marginTop: 2, fontWeight: 800 }}>
+                Parciales: {partialCount}
+              </div>
+            )}
           </div>
           <div style={{ width: 1, background: "var(--line)" }} />
           <div style={{ flex: 1 }}>
@@ -243,7 +265,7 @@ export default function SemanaPage() {
                 </Link>
               ) : (
                 <Link
-                  href={`/semana/${today.workoutTemplateId}?pwwId=${encodeURIComponent(today.pwwId)}`}
+                  href={workoutHref(today)}
                   style={{ flex: 1, textDecoration: "none" }}
                 >
                   <Button
@@ -256,7 +278,7 @@ export default function SemanaPage() {
                   </Button>
                 </Link>
               )}
-              <Link href={`/semana/${today.workoutTemplateId}?pwwId=${encodeURIComponent(today.pwwId)}`} style={{ textDecoration: "none" }}>
+              <Link href={workoutHref(today)} style={{ textDecoration: "none" }}>
                 <Button
                   size="lg"
                   variant="ghost"
@@ -294,59 +316,42 @@ export default function SemanaPage() {
           </div>
         )}
 
+        {inProgress.length > 0 && (
+          <>
+            <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
+              En curso
+            </div>
+            {inProgress.map((w) => (
+              <WeekWorkoutCard
+                key={w.pwwId}
+                href={w.session ? `/sesion/${w.session.id}` : workoutHref(w)}
+                title={w.title}
+                description={w.description}
+                tags={w.tags}
+                exerciseCount={w.exerciseCount}
+                progressionNote={w.progressionNote}
+                variant="in_progress"
+              />
+            ))}
+          </>
+        )}
+
         {pending.length > 0 && (
           <>
             <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
               Pendientes
             </div>
-            {pending.map((w, i) => (
-              <Link
-                key={i}
-                href={`/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`}
-                style={{ textDecoration: "none", display: "block" }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: 14,
-                    borderRadius: 12,
-                    background: "var(--bg-1)",
-                    border: "1px solid var(--line)",
-                    marginBottom: 8,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 9,
-                      background: "var(--bg-2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      border: "1px solid var(--line)",
-                    }}
-                  >
-                    <Icon name="dumbbell" size={18} color="var(--text-mute)" />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>{w.title}</div>
-                    <div
-                      className="ta-ellipsis"
-                      style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}
-                    >
-                      {w.description ?? w.tags.join(" · ")} · {w.exerciseCount} ej
-                    </div>
-                    {w.progressionNote && (
-                      <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--accent-text)", marginTop: 4, fontWeight: 700 }}>
-                        {w.progressionNote}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Link>
+            {pending.map((w) => (
+              <WeekWorkoutCard
+                key={w.pwwId}
+                href={workoutHref(w)}
+                title={w.title}
+                description={w.description}
+                tags={w.tags}
+                exerciseCount={w.exerciseCount}
+                progressionNote={w.progressionNote}
+                variant="pending"
+              />
             ))}
           </>
         )}
@@ -356,59 +361,31 @@ export default function SemanaPage() {
             <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
               Completadas
             </div>
-            {completed.map((w, i) => (
-              <Link
-                key={i}
-                href={`/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`}
-                style={{ textDecoration: "none", display: "block" }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: 14,
-                    borderRadius: 12,
-                    background: "var(--bg-1)",
-                    border: "1px solid var(--line)",
-                    marginBottom: 8,
-                    opacity: 0.9,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 9,
-                      background: "var(--bg-3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      border: "1px solid var(--line)",
-                    }}
-                  >
-                    <Icon name="check" size={18} color="var(--success)" />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>{w.title}</div>
-                    <div
-                      className="ta-ellipsis"
-                      style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}
-                    >
-                      {w.description ?? w.tags.join(" · ")} · {w.exerciseCount} ej
-                    </div>
-                    {w.progressionNote && (
-                      <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--accent-text)", marginTop: 4, fontWeight: 700 }}>
-                        {w.progressionNote}
-                      </div>
-                    )}
-                  </div>
-                  <Badge tone="success" size="sm">
-                    Lista
-                  </Badge>
-                </div>
-              </Link>
-            ))}
+            {completed.map((w) => {
+              const s = w.session;
+              const setsCount = s?.setsCount ?? null;
+              const targetSetsCount = s?.targetSetsCount ?? null;
+              const isPartial =
+                setsCount != null && targetSetsCount != null && targetSetsCount > 0 && setsCount < targetSetsCount;
+
+              return (
+                <WeekWorkoutCard
+                  key={w.pwwId}
+                  href={workoutHref(w)}
+                  title={w.title}
+                  description={w.description}
+                  tags={w.tags}
+                  exerciseCount={w.exerciseCount}
+                  progressionNote={w.progressionNote}
+                  variant="completed"
+                  badge={
+                    isPartial && setsCount != null && targetSetsCount != null
+                      ? { text: `Parcial ${setsCount}/${targetSetsCount}`, tone: "warn" }
+                      : { text: "Lista", tone: "success" }
+                  }
+                />
+              );
+            })}
           </>
         )}
       </div>
