@@ -61,12 +61,47 @@ export class ApiClient {
     return json.data as T;
   }
 
+  async requestFormData<T>(method: string, path: string, body: FormData): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}${path}`, { method, headers, body });
+    } catch {
+      throw new ApiError(`No se pudo conectar con la API (${API_BASE})`, 0);
+    }
+
+    let json: { ok?: boolean; data?: T; error?: string; details?: unknown } | null = null;
+    try {
+      json = await res.json();
+    } catch {
+      throw new ApiError(`HTTP ${res.status} — respuesta no válida desde ${path}`, res.status);
+    }
+
+    if (!res.ok || !json?.ok) {
+      const error = new ApiError(json?.error ?? "Request failed", res.status);
+      if (json?.details) {
+        (error as Error & { details?: unknown }).details = json.details;
+      }
+      throw error;
+    }
+
+    return json.data as T;
+  }
+
   get<T>(path: string) {
     return this.request<T>("GET", path);
   }
 
   post<T>(path: string, body?: unknown) {
     return this.request<T>("POST", path, body);
+  }
+
+  postForm<T>(path: string, body: FormData) {
+    return this.requestFormData<T>("POST", path, body);
   }
 
   put<T>(path: string, body?: unknown) {

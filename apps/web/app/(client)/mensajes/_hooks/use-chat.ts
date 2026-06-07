@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { ChatMessageItem, ChatData, SessionOption, RefPayload } from "../_types";
+import { ChatMessageItem, ChatData, SessionOption, RefPayload, UploadedChatMedia } from "../_types";
 
 export function useChat(api: { get: <T>(url: string) => Promise<T>; post: <T>(url: string, body?: Record<string, unknown>) => Promise<T> }) {
   const [coachName, setCoachName] = useState("Coach");
@@ -44,20 +44,46 @@ export function useChat(api: { get: <T>(url: string) => Promise<T>; post: <T>(ur
     };
   }, [load]);
 
-  const send = useCallback(async (text: string, user: { id: string; name: string | null }, reference?: RefPayload) => {
-    if (!text.trim()) return;
+  const send = useCallback(async (args: { text: string; user: { id: string; name: string | null }; reference?: RefPayload; media?: UploadedChatMedia | null }) => {
+    const text = args.text.trim();
+    const hasMedia = !!args.media;
+    if (!text && !hasMedia) return;
     const tempId = `temp-${Date.now()}`;
     const optimistic: ChatMessageItem = {
       id: tempId,
-      text: text.trim(),
+      text,
       createdAt: new Date().toISOString(),
-      author: { id: user.id, name: user.name, role: "client" },
-      reference: reference ?? null,
+      author: { id: args.user.id, name: args.user.name, role: "client" },
+      reference: args.reference ?? null,
+      media: args.media
+        ? {
+            type: args.media.kind,
+            url: args.media.url,
+            width: args.media.width,
+            height: args.media.height,
+            bytes: args.media.bytes,
+            durationSeconds: args.media.durationSeconds,
+          }
+        : null,
     };
     setMessages((prev) => [...prev, optimistic]);
     setSending(true);
     try {
-      const saved = await api.post<ChatMessageItem>("/client/chat", { text: text.trim(), reference });
+      const saved = await api.post<ChatMessageItem>("/client/chat", {
+        text,
+        reference: args.reference,
+        media: args.media
+          ? {
+              type: args.media.kind,
+              url: args.media.url,
+              publicId: args.media.publicId,
+              width: args.media.width,
+              height: args.media.height,
+              bytes: args.media.bytes,
+              durationSeconds: args.media.durationSeconds,
+            }
+          : undefined,
+      });
       setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));

@@ -15,6 +15,7 @@ type ThreadItem = {
     createdAt: string;
     author: { id: string; name: string | null; role: string };
     reference: null | { kind: string; id: string; label: string | null };
+    mediaType?: "image" | "video" | null;
   };
 };
 
@@ -138,7 +139,15 @@ export default function MensajesPage() {
                         fontWeight: isFromClient ? 500 : 400,
                       }}
                     >
-                      {lastMsg ? `${isFromClient ? "" : "Vos: "}${lastMsg.text}` : "Sin mensajes todavía"}
+                      {lastMsg
+                        ? `${isFromClient ? "" : "Vos: "}${lastMsg.text?.trim()
+                          ? lastMsg.text
+                          : lastMsg.mediaType === "video"
+                            ? "Video"
+                            : lastMsg.mediaType === "image"
+                              ? "Foto"
+                              : "—"}`
+                        : "Sin mensajes todavía"}
                     </div>
                   </div>
                   {t.unread && (

@@ -4,57 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import { Avatar, Button, Icon, StateBlock } from "@/components/ui";
+import { Button, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
-
-type RefPayload = {
-  kind: "session" | "workoutTemplate";
-  id: string;
-  label?: string;
-};
-
-type ChatMessageItem = {
-  id: string;
-  text: string;
-  createdAt: string;
-  author: { id: string; name: string | null; role: string };
-  reference: RefPayload | null;
-};
-
-type ChatResponse = {
-  thread: { id: string };
-  client: { id: string; name: string };
-  messages: ChatMessageItem[];
-};
-
-type ClientDetailResponse = {
-  client: { id: string; email: string; name: string | null };
-  recentSessions: Array<{
-    id: string;
-    performedAt: string;
-    workoutTemplate: { id: string; title: string } | null;
-  }>;
-};
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-function readString(obj: Record<string, unknown>, key: string): string | null {
-  const v = obj[key];
-  return typeof v === "string" ? v : null;
-}
-
-function readStringArray(obj: Record<string, unknown>, key: string): string[] {
-  const v = obj[key];
-  if (!Array.isArray(v)) return [];
-  return v.filter((x): x is string => typeof x === "string");
-}
-
-function readArray(obj: Record<string, unknown>, key: string): unknown[] {
-  const v = obj[key];
-  return Array.isArray(v) ? v : [];
-}
+import { CoachChatMessage } from "./_components/coach-chat-message";
+import { CoachChatComposer } from "./_components/coach-chat-composer";
+import { RefPickerModal } from "./_components/ref-picker-modal";
+import { RefDetailDrawer } from "./_components/ref-detail-drawer";
+import type { ChatMessageItem, ChatResponse, ClientDetailResponse, RefPayload, UploadedChatMedia } from "./_components/chat-types";
 
 export default function CoachChatPage() {
   const { api, user } = useAuth();
@@ -69,6 +25,8 @@ export default function CoachChatPage() {
   const [newMsg, setNewMsg] = useState("");
   const [sending, setSending] = useState(false);
   const [ref, setRef] = useState<RefPayload | null>(null);
+  const [attachment, setAttachment] = useState<UploadedChatMedia | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [refPickerOpen, setRefPickerOpen] = useState(false);
   const [recentSessions, setRecentSessions] = useState<ClientDetailResponse["recentSessions"]>([]);
   const [refDetail, setRefDetail] = useState<RefPayload | null>(null);
@@ -171,8 +129,22 @@ export default function CoachChatPage() {
       .catch(() => {});
   }, [api, clientUserId, recentSessions.length, refPickerOpen]);
 
-  async function send() {
-    if (!newMsg.trim()) return;
+  const pickFile = useCallback(async (file: File) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const uploaded = await api.postForm<UploadedChatMedia>(`/coach/chat/${clientUserId}/media`, fd);
+      setAttachment(uploaded);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo subir el archivo");
+    } finally {
+      setUploading(false);
+    }
+  }, [api, clientUserId, toast]);
+
+  const send = useCallback(async () => {
+    if (!newMsg.trim() && !attachment) return;
     const text = newMsg.trim();
     const reference = ref ? { kind: ref.kind, id: ref.id, label: ref.label } as RefPayload : null;
     const tempId = `temp-${Date.now()}`;
@@ -183,10 +155,21 @@ export default function CoachChatPage() {
       createdAt: new Date().toISOString(),
       author: { id: user!.id, name: user!.name, role: "coach" },
       reference,
+      media: attachment
+        ? {
+            type: attachment.kind,
+            url: attachment.url,
+            width: attachment.width,
+            height: attachment.height,
+            bytes: attachment.bytes,
+            durationSeconds: attachment.durationSeconds,
+          }
+        : null,
     };
 
     setNewMsg("");
     setRef(null);
+    setAttachment(null);
     setSending(true);
     stickToBottomRef.current = true;
     setMessages((prev) => [...prev, optimistic]);
@@ -195,6 +178,17 @@ export default function CoachChatPage() {
       const saved = await api.post<ChatMessageItem>(`/coach/chat/${clientUserId}`, {
         text,
         reference: reference ? { kind: reference.kind, id: reference.id, label: reference.label } : undefined,
+        media: attachment
+          ? {
+              type: attachment.kind,
+              url: attachment.url,
+              publicId: attachment.publicId,
+              width: attachment.width,
+              height: attachment.height,
+              bytes: attachment.bytes,
+              durationSeconds: attachment.durationSeconds,
+            }
+          : undefined,
       });
       setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
     } catch (e) {
@@ -203,7 +197,7 @@ export default function CoachChatPage() {
     } finally {
       setSending(false);
     }
-  }
+  }, [api, attachment, clientUserId, newMsg, ref, toast, user]);
 
   const coachName = user?.name ?? "Coach";
 
@@ -245,342 +239,54 @@ export default function CoachChatPage() {
               </div>
             )}
 
-            {messages.map((m) => {
-              const isMe = m.author.id === user?.id;
-              const authorName = isMe ? "Vos" : (m.author.name ?? m.author.role);
-              const refLabel =
-                m.reference?.kind === "session"
-                  ? `Alumnos / ${clientName} / ${m.reference.label ?? "Sesión"}`
-                  : m.reference?.kind === "workoutTemplate"
-                    ? `Entrenamientos / ${m.reference.label ?? "Entrenamiento"}`
-                    : null;
-              return (
-                <div
-                  key={m.id}
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "flex-end",
-                    flexDirection: isMe ? "row-reverse" : "row",
-                  }}
-                >
-                  <Avatar name={authorName} size={28} tone={isMe ? "var(--lime)" : "#7AB8FF"} />
-                  <div style={{ maxWidth: 420 }}>
-                    <div style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 3, display: "flex", gap: 6, justifyContent: isMe ? "flex-end" : "flex-start" }}>
-                      <span style={{ fontWeight: 600 }}>{authorName}</span>
-                      <span>·</span>
-                      <span className="ta-mono">
-                        {new Date(m.createdAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-                    {m.reference && (
-                      <button
-                        onClick={() => openRefDetail(m.reference as RefPayload)}
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "8px 10px",
-                          background: "var(--bg-2)",
-                          border: "1px solid var(--line)",
-                          borderRadius: 12,
-                          marginBottom: 6,
-                          cursor: "pointer",
-                          color: "var(--text)",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <Icon name="book" size={14} color="var(--text-mute)" />
-                          <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>
-                            {refLabel ?? "Referencia"}
-                          </div>
-                        </div>
-                      </button>
-                    )}
-                    <div
-                      style={{
-                        padding: "10px 12px",
-                        background: isMe ? "var(--lime)" : "var(--bg-1)",
-                        color: isMe ? "#0B0B0C" : "var(--text)",
-                        border: isMe ? "none" : "1px solid var(--line)",
-                        borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                        fontSize: 14,
-                        lineHeight: 1.45,
-                        fontWeight: 500,
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {m.text}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {messages.map((m) => (
+              <CoachChatMessage
+                key={m.id}
+                message={m}
+                currentUserId={user?.id}
+                clientName={clientName}
+                onRefClick={openRefDetail}
+              />
+            ))}
 
             <div ref={bottomRef} />
           </div>
 
-          <div style={{ flexShrink: 0, padding: 18, borderTop: "1px solid var(--line)", background: "var(--bg)" }}>
-            {ref && (
-              <div style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ flex: 1, minWidth: 0, padding: "8px 10px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--bg-1)" }}>
-                  <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>
-                    {ref.kind === "session" ? `Alumnos / ${clientName} / ${ref.label ?? "Sesión"}` : `Entrenamientos / ${ref.label ?? "Entrenamiento"}`}
-                  </div>
-                </div>
-                <Button variant="secondary" onClick={() => setRef(null)} style={{ height: 36 }}>
-                  Quitar
-                </Button>
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-              <Button variant="secondary" onClick={() => setRefPickerOpen(true)} style={{ height: 44, padding: "0 12px" }}>
-                <Icon name="book" size={16} />
-              </Button>
-              <textarea
-                value={newMsg}
-                onChange={(e) => setNewMsg(e.target.value)}
-                placeholder="Escribí un mensaje…"
-                rows={1}
-                style={{
-                  flex: 1,
-                  resize: "none",
-                  background: "var(--bg-1)",
-                  border: "1px solid var(--line)",
-                  borderRadius: 14,
-                  padding: "12px 12px",
-                  color: "var(--text)",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 14,
-                  lineHeight: 1.35,
-                  outline: "none",
-                  minHeight: 44,
-                  maxHeight: 120,
-                }}
-              />
-              <Button onClick={send} disabled={!newMsg.trim() || sending} style={{ height: 44, padding: "0 16px", fontWeight: 700 }}>
-                Enviar
-              </Button>
-            </div>
-          </div>
+          <CoachChatComposer
+            value={newMsg}
+            onChange={setNewMsg}
+            onSend={send}
+            sending={sending}
+            uploading={uploading}
+            attachment={attachment}
+            onPickFile={pickFile}
+            onClearAttachment={() => setAttachment(null)}
+            reference={ref}
+            onClearRef={() => setRef(null)}
+            onOpenRefPicker={() => setRefPickerOpen(true)}
+            clientName={clientName}
+          />
         </div>
       )}
 
-      {refPickerOpen && (
-        <div
-          onClick={() => setRefPickerOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.65)",
-            display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "center",
-            zIndex: 2000,
-            padding: "0 14px 14px",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "100%",
-              maxWidth: 560,
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              borderRadius: 16,
-              padding: 14,
-              maxHeight: "70vh",
-              overflowY: "auto",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Referenciar (sesiones recientes)</div>
-              <button onClick={() => setRefPickerOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-mute)" }}>
-                <Icon name="x" size={18} />
-              </button>
-            </div>
+      <RefPickerModal
+        open={refPickerOpen}
+        sessions={recentSessions}
+        onClose={() => setRefPickerOpen(false)}
+        onSelect={(next) => {
+          setRef(next);
+          setRefPickerOpen(false);
+        }}
+      />
 
-            {recentSessions.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--text-mute)" }}>No hay sesiones recientes.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {recentSessions.slice(0, 10).map((s) => {
-                  const title = s.workoutTemplate?.title ?? "Sesión libre";
-                  const date = new Date(s.performedAt).toLocaleDateString("es", { day: "2-digit", month: "short" });
-                  return (
-                    <div key={s.id} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 10, background: "var(--bg)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-                        <div className="ta-ellipsis" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{title}</div>
-                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", flexShrink: 0 }}>{date}</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setRef({ kind: "session", id: s.id, label: `${title} · ${date}` });
-                            setRefPickerOpen(false);
-                          }}
-                          style={{ height: 34 }}
-                        >
-                          Sesión
-                        </Button>
-                      {s.workoutTemplate?.id && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setRef({ kind: "workoutTemplate", id: s.workoutTemplate!.id, label: title });
-                            setRefPickerOpen(false);
-                          }}
-                          style={{ height: 34 }}
-                        >
-                          Entrenamiento
-                        </Button>
-                      )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {refDetail && (
-        <div
-          onClick={() => setRefDetail(null)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.65)",
-            display: "flex",
-            alignItems: isDesktop ? "stretch" : "flex-end",
-            justifyContent: isDesktop ? "flex-end" : "center",
-            zIndex: 2000,
-            padding: isDesktop ? 0 : "0 14px 14px",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: isDesktop ? 480 : "100%",
-              maxWidth: isDesktop ? 480 : 560,
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              borderRadius: isDesktop ? "16px 0 0 16px" : 16,
-              padding: 14,
-              maxHeight: isDesktop ? "100vh" : "70vh",
-              overflowY: "auto",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>
-                {refDetail.kind === "session" ? "Sesión" : "Entrenamiento"}
-              </div>
-              <button onClick={() => setRefDetail(null)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-mute)" }}>
-                <Icon name="x" size={18} />
-              </button>
-            </div>
-
-            {refDetailData === undefined ? (
-              <StateBlock kind="loading" title="Cargando…" />
-            ) : refDetailData ? (
-              <div>
-                {(() => {
-                  const data = isRecord(refDetailData) ? refDetailData : null;
-                  const wt = data && isRecord(data.workoutTemplate) ? data.workoutTemplate : null;
-                  const title =
-                    (data && readString(data, "title")) ||
-                    (wt && readString(wt, "title")) ||
-                    refDetail.label ||
-                    "Detalle";
-                  const performedAt = data ? readString(data, "performedAt") : null;
-                  const tags = data ? readStringArray(data, "tags") : [];
-                  const description = data ? readString(data, "description") : null;
-                  const exercises = data ? readArray(data, "exercises") : [];
-
-                  return (
-                    <>
-                <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.01em", color: "var(--text)" }}>
-                  {title}
-                </div>
-                {refDetail.kind === "session" && performedAt && (
-                  <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4 }}>
-                    {new Date(performedAt).toLocaleString("es", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </div>
-                )}
-                {refDetail.kind === "workoutTemplate" && tags.length > 0 && (
-                  <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {tags.slice(0, 4).map((t) => (
-                      <span key={t} className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)" }}>
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {!!description && (
-                  <div style={{ marginTop: 8, fontSize: 13, color: "var(--text-mute)", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-                    {description}
-                  </div>
-                )}
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {exercises.slice(0, 20).map((ex, idx) => {
-                    const exObj = isRecord(ex) ? ex : null;
-                    const id = exObj && typeof exObj.id === "string" ? exObj.id : `ex_${idx}`;
-                    const exercise =
-                      exObj && isRecord(exObj.exercise) ? exObj.exercise : null;
-                    const performedExercise =
-                      exObj && isRecord(exObj.performedExercise) ? exObj.performedExercise : null;
-                    const workoutExercise =
-                      exObj && isRecord(exObj.workoutExercise) ? exObj.workoutExercise : null;
-                    const workoutExerciseExercise =
-                      workoutExercise && isRecord(workoutExercise.exercise) ? workoutExercise.exercise : null;
-                    const name =
-                      (exercise && readString(exercise, "name")) ||
-                      (performedExercise && readString(performedExercise, "name")) ||
-                      (workoutExerciseExercise && readString(workoutExerciseExercise, "name")) ||
-                      (exObj && readString(exObj, "name")) ||
-                      "Ejercicio";
-
-                    const sets = exObj && Array.isArray(exObj.sets) ? exObj.sets : [];
-                    const target = exObj && isRecord(exObj.target) ? exObj.target : null;
-
-                    const targetSets = exObj && typeof exObj.targetSets === "number" ? exObj.targetSets : null;
-                    const targetReps = exObj && typeof exObj.targetReps === "number" ? exObj.targetReps : null;
-                    const intensityType = exObj && typeof exObj.intensityType === "string" ? exObj.intensityType : null;
-                    const intensityTarget = exObj && exObj.intensityTarget != null ? String(exObj.intensityTarget) : null;
-
-                    return (
-                      <div key={id} style={{ padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 12 }}>
-                      <div className="ta-ellipsis" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
-                        {name}
-                      </div>
-                      {refDetail.kind === "session" ? (
-                        <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-                          {sets.length ? `${sets.length} serie${sets.length !== 1 ? "s" : ""}` : "—"}
-                          {target && typeof target.reps === "number" ? ` · ${target.reps} reps` : ""}
-                        </div>
-                      ) : (
-                        <div className="ta-ellipsis" style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-                          {targetSets != null ? `${targetSets} series` : "—"}
-                          {targetReps != null ? ` · ${targetReps} reps` : ""}
-                          {intensityType && intensityTarget ? ` · ${String(intensityType).toUpperCase()} ${intensityTarget}` : ""}
-                        </div>
-                      )}
-                    </div>
-                    );
-                  })}
-                </div>
-                    </>
-                  );
-                })()}
-              </div>
-            ) : (
-              <div style={{ fontSize: 13, color: "var(--text-mute)" }}>No se pudo cargar el detalle.</div>
-            )}
-          </div>
-        </div>
-      )}
+      <RefDetailDrawer
+        reference={refDetail}
+        data={refDetailData}
+        loading={refDetailData === undefined}
+        isDesktop={isDesktop}
+        clientName={clientName}
+        onClose={() => setRefDetail(null)}
+      />
     </DesktopShell>
   );
 }

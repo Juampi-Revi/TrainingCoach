@@ -8,7 +8,7 @@ import { ChatMessage, ChatEmptyState } from "./_components/chat-message";
 import { ChatInput } from "./_components/chat-input";
 import { RefPicker, RefDetail } from "./_components/reference-picker";
 import { useChat, useRecentSessions } from "./_hooks/use-chat";
-import { RefPayload } from "./_types";
+import { RefPayload, UploadedChatMedia } from "./_types";
 import "./_styles.css";
 
 export default function MensajesAlumnoPage() {
@@ -17,6 +17,8 @@ export default function MensajesAlumnoPage() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [ref, setRef] = useState<RefPayload | null>(null);
+  const [attachment, setAttachment] = useState<UploadedChatMedia | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [refPickerOpen, setRefPickerOpen] = useState(false);
   const [refDetail, setRefDetail] = useState<RefPayload | null>(null);
   const [refDetailData, setRefDetailData] = useState<unknown>(undefined);
@@ -42,16 +44,36 @@ export default function MensajesAlumnoPage() {
   }, []);
 
   const handleSend = useCallback(async () => {
-    if (!newMsg.trim() || !user) return;
+    if ((!newMsg.trim() && !attachment) || !user) return;
     stickToBottomRef.current = true;
     try {
-      await send(newMsg, { id: user.id, name: user.name }, ref ? { kind: ref.kind, id: ref.id, label: ref.label } : undefined);
+      await send({
+        text: newMsg,
+        user: { id: user.id, name: user.name },
+        reference: ref ? { kind: ref.kind, id: ref.id, label: ref.label } : undefined,
+        media: attachment,
+      });
       setNewMsg("");
       setRef(null);
+      setAttachment(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo enviar el mensaje");
     }
-  }, [newMsg, ref, send, user, toast]);
+  }, [newMsg, ref, send, user, toast, attachment]);
+
+  const handlePickFile = useCallback(async (file: File) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const uploaded = await api.postForm<UploadedChatMedia>("/client/chat/media", fd);
+      setAttachment(uploaded);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo subir el archivo");
+    } finally {
+      setUploading(false);
+    }
+  }, [api, toast]);
 
   useEffect(() => {
     if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,6 +118,10 @@ export default function MensajesAlumnoPage() {
             onChange={setNewMsg}
             onSend={handleSend}
             sending={sending}
+            uploading={uploading}
+            attachment={attachment}
+            onPickFile={handlePickFile}
+            onClearAttachment={() => setAttachment(null)}
             reference={ref}
             onClearRef={() => setRef(null)}
             onOpenRefPicker={() => setRefPickerOpen(true)}

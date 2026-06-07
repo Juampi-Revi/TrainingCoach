@@ -110,6 +110,35 @@
   border-radius: 14px 14px 14px 4px;
 }
 
+.msg-media {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.msg-media.sent {
+  background: var(--lime);
+  border-radius: 14px 14px 4px 14px;
+}
+
+.msg-media.received {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+}
+
+.msg-media-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.msg-media-video {
+  width: 100%;
+  display: block;
+}
+
 .chat-input-area {
   flex-shrink: 0;
   padding: 12px 14px 32px;

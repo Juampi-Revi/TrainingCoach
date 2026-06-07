@@ -1,10 +1,8 @@
-export type RefKind = "session" | "workoutTemplate";
-
-export interface RefPayload {
-  kind: RefKind;
+export type RefPayload = {
+  kind: "session" | "workoutTemplate";
   id: string;
   label?: string;
-}
+};
 
 export type ChatMedia = {
   type: "image" | "video";
@@ -25,22 +23,26 @@ export type UploadedChatMedia = {
   durationSeconds: number | null;
 };
 
-export interface ChatMessageItem {
+export type ChatMessageItem = {
   id: string;
   text: string;
   createdAt: string;
   author: { id: string; name: string | null; role: string };
-  reference?: RefPayload | null;
+  reference: RefPayload | null;
   media?: ChatMedia | null;
-}
+};
 
-export interface ChatData {
-  coach: { id: string; name: string };
+export type ChatResponse = {
+  thread: { id: string };
+  client: { id: string; name: string };
   messages: ChatMessageItem[];
-}
+};
 
-export interface SessionOption {
-  id: string;
-  performedAt: string;
-  workoutTemplate: { id: string; title: string } | null;
-}
+export type ClientDetailResponse = {
+  client: { id: string; email: string; name: string | null };
+  recentSessions: Array<{
+    id: string;
+    performedAt: string;
+    workoutTemplate: { id: string; title: string } | null;
+  }>;
+};

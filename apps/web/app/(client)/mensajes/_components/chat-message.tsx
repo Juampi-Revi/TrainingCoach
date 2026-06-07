@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Avatar, Icon } from "@/components/ui";
 import { ChatMessageItem, RefPayload } from "../_types";
 
@@ -12,6 +13,7 @@ interface ChatMessageProps {
 export function ChatMessage({ message, currentUserId, onRefClick }: ChatMessageProps) {
   const isMe = message.author.id === currentUserId;
   const authorName = isMe ? "Vos" : (message.author.name ?? message.author.role);
+  const hasText = !!message.text?.trim();
 
   return (
     <div className={`msg-row ${isMe ? "me" : "them"}`}>
@@ -33,7 +35,24 @@ export function ChatMessage({ message, currentUserId, onRefClick }: ChatMessageP
             </div>
           </button>
         )}
-        <div className={`msg-text ${isMe ? "sent" : "received"}`}>{message.text}</div>
+        {message.media?.type === "image" && (
+          <a className={`msg-media ${isMe ? "sent" : "received"}`} href={message.media.url} target="_blank" rel="noreferrer">
+            <Image
+              src={message.media.url}
+              alt="Foto"
+              width={Math.min(420, Math.max(220, message.media.width ?? 320))}
+              height={Math.min(420, Math.max(160, message.media.height ?? 240))}
+              className="msg-media-img"
+              unoptimized
+            />
+          </a>
+        )}
+        {message.media?.type === "video" && (
+          <div className={`msg-media ${isMe ? "sent" : "received"}`}>
+            <video className="msg-media-video" src={message.media.url} controls playsInline />
+          </div>
+        )}
+        {hasText && <div className={`msg-text ${isMe ? "sent" : "received"}`}>{message.text}</div>}
       </div>
     </div>
   );
