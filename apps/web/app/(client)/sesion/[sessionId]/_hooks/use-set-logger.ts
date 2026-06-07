@@ -54,6 +54,7 @@ export function useSetLogger({
     if (!loggerOpen || !session) return;
     const target = session.exercises[currentExIdx];
     if (!target || target.block.type === "warmup") return;
+    if (sheetRows.length > 0) return;
     const id = setTimeout(() => {
       const existing = target.sets ?? [];
       const baseCount = Math.max(existing.length, target.target?.sets ?? 0, 1);
@@ -100,7 +101,7 @@ export function useSetLogger({
       }));
     }, 0);
     return () => clearTimeout(id);
-  }, [loggerOpen, session, currentExIdx, effortMode, lastRef]);
+  }, [loggerOpen, session, currentExIdx, effortMode, lastRef, sheetRows.length]);
 
   // Per-set timer countdown
   useEffect(() => {
@@ -171,7 +172,7 @@ export function useSetLogger({
       }
     }
     
-    // Rows will be initialized by the useEffect that depends on lastRef
+    setSheetRows([]);
     setLoggerOpen(true);
   }, [sessionId, lastRef]);
 
@@ -231,6 +232,58 @@ export function useSetLogger({
     }
   }, [session, currentExIdx, sheetRows, effortMode, equipmentType, queueKey, sessionId, api, setOfflineCount, load]);
 
+  const saveRow = useCallback(async (setNumber: number, opts?: { startRest?: boolean }) => {
+    const ex = session?.exercises[currentExIdx];
+    if (!ex) return;
+    const row = sheetRows.find((r) => r.setNumber === setNumber);
+    if (!row) return;
+
+    setSheetSaving(true);
+    const isTimed = !!(ex.target?.durationSeconds);
+    try {
+      const body: Record<string, string> = {};
+      if (row.kg) body.weight = row.kg;
+      if (isTimed) {
+        if (row.duration) body.durationSeconds = row.duration;
+      } else {
+        if (row.reps) body.reps = row.reps;
+      }
+      if (row.effort) {
+        if (effortMode === "RPE") body.rpe = row.effort;
+        else body.rir = row.effort;
+      }
+      if (equipmentType) body.notes = equipmentType;
+
+      const hasAny = isTimed ? !!(row.duration || row.kg || row.effort) : !!(row.reps || row.kg || row.effort);
+      if (!hasAny) return;
+
+      try {
+        await api.put(`/client/sessions/${sessionId}/exercises/${ex.id}/sets/${row.setNumber}`, body);
+        setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, existingId: r.existingId ?? "saved" } : r));
+      } catch {
+        try {
+          const queue: OfflineItem[] = JSON.parse(localStorage.getItem(queueKey) ?? "[]");
+          queue.push({ wseId: ex.id, setNumber: row.setNumber, body });
+          localStorage.setItem(queueKey, JSON.stringify(queue));
+          setOfflineCount(queue.length);
+          setLastSaved("guardado offline");
+        } catch {}
+      }
+
+      setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
+      load();
+      if (opts?.startRest) {
+        const rest = ex.target?.restSeconds ?? 90;
+        setRestTotal(rest);
+        setRestSeconds(rest);
+        setRestFromLogger(true);
+        setLoggerOpen(false);
+      }
+    } finally {
+      setSheetSaving(false);
+    }
+  }, [session, currentExIdx, sheetRows, effortMode, equipmentType, queueKey, sessionId, api, setOfflineCount, load]);
+
   return {
     effortMode, setEffortMode,
     loggerOpen, setLoggerOpen,
@@ -245,6 +298,7 @@ export function useSetLogger({
     lastSaved,
     openLogger,
     saveSheet,
+    saveRow,
     deleteSet,
   };
 }

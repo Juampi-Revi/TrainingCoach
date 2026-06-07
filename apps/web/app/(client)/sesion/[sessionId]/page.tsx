@@ -53,8 +53,7 @@ export default function SessionInProgressPage() {
     lastRef,
     lastSaved,
     openLogger,
-    saveSheet,
-    deleteSet,
+    saveSheet, saveRow, deleteSet,
   } = useSetLogger({ sessionId, currentExIdx, session, queueKey, setOfflineCount, load });
 
   // Block execution management
@@ -358,7 +357,7 @@ export default function SessionInProgressPage() {
           activeTimerRow={activeTimerRow} setActiveTimerRow={setActiveTimerRow}
           timerSecondsLeft={timerSecondsLeft} setTimerSecondsLeft={setTimerSecondsLeft}
           lastRef={lastRef} sheetSaving={sheetSaving}
-          saveSheet={saveSheet} deleteSet={deleteSet}
+          saveSheet={saveSheet} saveRow={saveRow} deleteSet={deleteSet}
           onClose={() => setLoggerOpen(false)}
         />
       )}
