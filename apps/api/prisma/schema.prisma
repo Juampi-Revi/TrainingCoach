@@ -503,11 +503,18 @@ model ChatMessage {
   id          String   @id @default(uuid())
   threadId    String
   authorUserId String
-  text        String
+  text        String   @default("")
   refKind     String?
   refId       String?
   refLabel    String?
   refMeta     Json?
+  mediaType   String?  // 'image' | 'video'
+  mediaUrl    String?
+  mediaPublicId String?
+  mediaWidth  Int?
+  mediaHeight Int?
+  mediaBytes  Int?
+  mediaDurationSeconds Float?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

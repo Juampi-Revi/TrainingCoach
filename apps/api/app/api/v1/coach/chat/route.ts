@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
             createdAt: last.createdAt,
             author: { id: last.author.id, name: last.author.displayName, role: last.author.role },
             reference: last.refKind && last.refId ? { kind: last.refKind, id: last.refId, label: last.refLabel } : null,
+            mediaType: last.mediaType,
           }
           : null,
       };
