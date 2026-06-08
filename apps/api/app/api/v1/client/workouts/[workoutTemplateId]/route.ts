@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, withHandler } from "@/lib/api-response";
+import { mapWorkoutBlockStep } from "@/lib/training/endurance";
 
 export async function GET(
   req: NextRequest,
@@ -36,6 +37,7 @@ export async function GET(
           orderBy: { sortOrder: "asc" },
           include: {
             _count: { select: { exercises: true } },
+            steps: { orderBy: { sortOrder: "asc" } },
           },
         },
         workoutExercises: {
@@ -59,6 +61,8 @@ export async function GET(
       title: template.title,
       description: template.description,
       tags: template.tags,
+      type: template.type,
+      sport: template.sport,
       blocks: template.workoutBlocks.map((b) => ({
         id: b.id,
         type: b.type,
@@ -75,6 +79,7 @@ export async function GET(
         targetMinutes: b.targetMinutes,
         targetZone: b.targetZone,
         exerciseCount: b._count.exercises,
+        steps: b.steps.map(mapWorkoutBlockStep),
       })),
       exercises: template.workoutExercises.map((we) => ({
         id: we.id,

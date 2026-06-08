@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, forbidden, err, withHandler } from "@/lib/api-response";
+import { mapWorkoutBlockStep, normalizeBlockSteps } from "@/lib/training/endurance";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string; blockId: string }> };
 
@@ -38,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       // Cardio-specific
       targetMinutes,
       targetZone,
+      steps,
     } = body;
 
     // Get existing block to check type
@@ -53,37 +55,52 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       }
     }
 
-    const block = await prisma.workoutBlock.update({
-      where: { id: blockId },
-      data: {
-        label: label !== undefined ? label || null : undefined,
-        description: description !== undefined ? description || null : undefined,
-        restAfterSeconds:
-          restAfterSeconds !== undefined ? Number(restAfterSeconds) || null : undefined,
-        // Interval-specific
-        intervalType:
-          intervalType !== undefined && existing.type === "intervals"
-            ? intervalType
-            : undefined,
-        workSeconds: workSeconds !== undefined ? Number(workSeconds) || null : undefined,
-        restSeconds: restSeconds !== undefined ? Number(restSeconds) || null : undefined,
-        rounds: rounds !== undefined ? Number(rounds) || null : undefined,
-        totalDurationSeconds:
-          totalDurationSeconds !== undefined
-            ? Number(totalDurationSeconds) || null
-            : undefined,
-        restBetweenExercisesSeconds:
-          restBetweenExercisesSeconds !== undefined
-            ? Number(restBetweenExercisesSeconds) || null
-            : undefined,
-        // Cardio-specific
-        targetMinutes:
-          targetMinutes !== undefined ? Number(targetMinutes) || null : undefined,
-        targetZone: targetZone !== undefined ? targetZone || null : undefined,
-      },
+    const normalizedSteps = normalizeBlockSteps(steps);
+    if (normalizedSteps.error) return err(normalizedSteps.error, 400);
+
+    const block = await prisma.$transaction(async (tx) => {
+      if (steps !== undefined) {
+        await tx.workoutBlockStep.deleteMany({ where: { workoutBlockId: blockId } });
+      }
+      return tx.workoutBlock.update({
+        where: { id: blockId },
+        data: {
+          label: label !== undefined ? label || null : undefined,
+          description: description !== undefined ? description || null : undefined,
+          restAfterSeconds:
+            restAfterSeconds !== undefined ? Number(restAfterSeconds) || null : undefined,
+          // Interval-specific
+          intervalType:
+            intervalType !== undefined && existing.type === "intervals"
+              ? intervalType
+              : undefined,
+          workSeconds: workSeconds !== undefined ? Number(workSeconds) || null : undefined,
+          restSeconds: restSeconds !== undefined ? Number(restSeconds) || null : undefined,
+          rounds: rounds !== undefined ? Number(rounds) || null : undefined,
+          totalDurationSeconds:
+            totalDurationSeconds !== undefined
+              ? Number(totalDurationSeconds) || null
+              : undefined,
+          restBetweenExercisesSeconds:
+            restBetweenExercisesSeconds !== undefined
+              ? Number(restBetweenExercisesSeconds) || null
+              : undefined,
+          // Cardio-specific
+          targetMinutes:
+            targetMinutes !== undefined ? Number(targetMinutes) || null : undefined,
+          targetZone: targetZone !== undefined ? targetZone || null : undefined,
+          steps:
+            steps !== undefined
+              ? {
+                  create: normalizedSteps.steps,
+                }
+              : undefined,
+        },
+        include: { steps: { orderBy: { sortOrder: "asc" } } },
+      });
     });
 
-    return ok(block);
+    return ok({ ...block, steps: block.steps.map(mapWorkoutBlockStep) });
   });
 }
 

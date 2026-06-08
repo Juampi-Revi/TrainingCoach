@@ -21,6 +21,24 @@ export type PlanStatus = "draft" | "published" | "archived";
 export type AssignmentStatus = "active" | "paused" | "finished";
 export type BlockType = "warmup" | "strength" | "intervals" | "cardio" | "cooldown";
 export type IntervalType = "tabata" | "hiit" | "emom" | "amrap";
+export type WorkoutSport = "run" | "ride" | "generic";
+export type WorkoutStepKind = "warmup" | "work" | "recover" | "cooldown";
+export type WorkoutStepTargetType = "hr_zone" | "hr_bpm" | "pace" | "speed" | "rpe" | "free";
+
+export interface WorkoutBlockStepSummary {
+  id: string;
+  sortOrder: number;
+  kind: WorkoutStepKind;
+  label: string | null;
+  instruction: string | null;
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+  targetType: WorkoutStepTargetType | null;
+  targetLabel: string | null;
+  targetValueLow: string | null;
+  targetValueHigh: string | null;
+  targetUnit: string | null;
+}
 
 export interface WorkoutBlockSummary {
   id: string;
@@ -44,6 +62,7 @@ export interface WorkoutBlockSummary {
 
   // Metadata
   exerciseCount: number;
+  steps: WorkoutBlockStepSummary[];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -166,6 +185,7 @@ export interface WorkoutTemplateDetail {
   description: string | null;
   tags: string[];
   type: string;
+  sport?: WorkoutSport | null;
   blocks: WorkoutBlockSummary[];
   exercises: Array<{
     id: string;
@@ -210,7 +230,29 @@ export interface SessionDetail {
   planWeekWorkoutId: string | null;
   progressionNote: string | null;
   workoutTemplate: { id: string; title: string; description: string | null; tags: string[] } | null;
+  blocks: WorkoutBlockSummary[];
   exercises: SessionExercise[];
+  activities: SessionActivitySummary[];
+}
+
+export interface SessionActivitySummary {
+  id: string;
+  provider: string;
+  externalActivityId: string;
+  sport: string | null;
+  title: string | null;
+  startedAt: string;
+  elapsedTimeSeconds: number | null;
+  movingTimeSeconds: number | null;
+  distanceMeters: number | null;
+  calories: number | null;
+  averageHeartrate: number | null;
+  maxHeartrate: number | null;
+  averageSpeed: number | null;
+  maxSpeed: number | null;
+  averageCadence: number | null;
+  elevationGainMeters: number | null;
+  mapPolyline: string | null;
 }
 
 export interface SessionSummary {

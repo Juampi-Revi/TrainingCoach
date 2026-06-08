@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, forbidden, err, withHandler } from "@/lib/api-response";
+import { mapWorkoutBlockStep, normalizeBlockSteps } from "@/lib/training/endurance";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string }> };
 
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       orderBy: { sortOrder: "asc" },
       include: {
         _count: { select: { exercises: true } },
+        steps: { orderBy: { sortOrder: "asc" } },
       },
     });
 
@@ -36,6 +38,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     const result = blocks.map((b) => ({
       ...b,
       exerciseCount: b._count.exercises,
+      steps: b.steps.map(mapWorkoutBlockStep),
       _count: undefined,
     }));
 
@@ -68,6 +71,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       // Cardio-specific
       targetMinutes,
       targetZone,
+      steps,
     } = body;
 
     // Validate block type
@@ -81,6 +85,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         return err(`intervalType must be one of: ${INTERVAL_TYPES.join(", ")}`, 400);
       }
     }
+
+    const normalizedSteps = normalizeBlockSteps(steps);
+    if (normalizedSteps.error) return err(normalizedSteps.error, 400);
 
     const last = await prisma.workoutBlock.findFirst({
       where: { workoutTemplateId },
@@ -108,10 +115,16 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         targetMinutes: targetMinutes ? Number(targetMinutes) : null,
         targetZone: targetZone || null,
         sortOrder: (last?.sortOrder ?? 0) + 1,
+        steps: normalizedSteps.steps.length
+          ? {
+              create: normalizedSteps.steps,
+            }
+          : undefined,
       },
+      include: { steps: { orderBy: { sortOrder: "asc" } } },
     });
 
-    return ok({ ...block, exerciseCount: 0 }, 201);
+    return ok({ ...block, exerciseCount: 0, steps: block.steps.map(mapWorkoutBlockStep) }, 201);
   });
 }
 

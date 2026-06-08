@@ -1,4 +1,4 @@
-import type { BlockType, IntervalType, WorkoutBlockSummary } from "@regen/types";
+import type { BlockType, IntervalType, WorkoutBlockStepSummary, WorkoutBlockSummary } from "@regen/types";
 
 // ─── Muscle labels ─────────────────────────────────────────────────────────────
 
@@ -74,6 +74,9 @@ export function blockTypeLabel(type: BlockType, intervalType?: IntervalType | nu
 }
 
 export function blockSummary(b: WorkoutBlockSummary): string {
+  if (b.steps.length > 0) {
+    return `${b.steps.length} paso${b.steps.length === 1 ? "" : "s"}${b.targetZone ? ` · ${b.targetZone}` : ""}`;
+  }
   // Interval blocks
   if (b.type === "intervals" && b.intervalType) {
     if (b.intervalType === "tabata" || b.intervalType === "hiit") {
@@ -106,6 +109,45 @@ export function blockSummary(b: WorkoutBlockSummary): string {
   }
 
   return "—";
+}
+
+export function formatStepTarget(step: WorkoutBlockStepSummary): string {
+  if (step.targetLabel) return step.targetLabel;
+  if (!step.targetType || step.targetType === "free") return "Libre";
+  const min = step.targetValueLow;
+  const max = step.targetValueHigh;
+  const unit = step.targetUnit ? ` ${step.targetUnit}` : "";
+  if (min && max) return `${min}-${max}${unit}`;
+  if (min) return `${min}${unit}`;
+  if (max) return `${max}${unit}`;
+  return step.targetType.replace("_", " ").toUpperCase();
+}
+
+export function formatStepLength(step: WorkoutBlockStepSummary): string {
+  const parts: string[] = [];
+  if (step.distanceMeters) parts.push(`${step.distanceMeters}m`);
+  if (step.durationSeconds) parts.push(`${step.durationSeconds}s`);
+  return parts.join(" · ") || "Sin duración";
+}
+
+export function summarizeEnduranceSteps(steps: WorkoutBlockStepSummary[]) {
+  return steps.reduce(
+    (acc, step) => {
+      acc.steps += 1;
+      acc.totalDistanceMeters += step.distanceMeters ?? 0;
+      acc.totalDurationSeconds += step.durationSeconds ?? 0;
+      if (step.kind === "work") acc.workSteps += 1;
+      return acc;
+    },
+    { steps: 0, workSteps: 0, totalDistanceMeters: 0, totalDurationSeconds: 0 },
+  );
+}
+
+export function formatSecondsShort(seconds: number): string {
+  if (seconds <= 0) return "0 min";
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.round(seconds / 60);
+  return `${mins} min`;
 }
 
 export function fmtDuration(ms: number): string {

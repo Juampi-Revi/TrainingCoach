@@ -15,6 +15,7 @@ import { ExerciseInspector } from "./_components/exercise-inspector";
 import { WorkoutProperties } from "./_components/workout-properties";
 import { BlockModal } from "./_components/block-modal";
 import { Icon } from "@/components/ui";
+import type { WorkoutSport } from "@regen/types";
 
 export default function TemplateEditorPage() {
   const { api, user } = useAuth();
@@ -30,6 +31,7 @@ export default function TemplateEditorPage() {
   const [duplicating, setDuplicating] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [sport, setSport] = useState<WorkoutSport>("generic");
   const [showPicker, setShowPicker] = useState(false);
   const [pickerBlockId, setPickerBlockId] = useState<string | null>(null);
   const [selectedWeId, setSelectedWeId] = useState<string | null>(null);
@@ -44,6 +46,7 @@ export default function TemplateEditorPage() {
         setBlocks(d.blocks ?? []);
         setTitle(d.title);
         setDescription(d.description ?? "");
+        setSport(d.sport ?? "generic");
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -57,6 +60,7 @@ export default function TemplateEditorPage() {
       await api.patch(`/coach/workouts/${workoutTemplateId}`, {
         title,
         description,
+        sport,
       });
       setSaved(true);
       toast.success("Entrenamiento guardado");
@@ -364,6 +368,8 @@ export default function TemplateEditorPage() {
                 setTitle={setTitle}
                 description={description}
                 setDescription={setDescription}
+              sport={sport}
+              setSport={setSport}
                 usedGroups={usedGroups}
                 groupSizes={groupSizes}
               />

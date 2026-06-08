@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import type { BlockType, IntervalType } from "@regen/types";
+import type { BlockType, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
 import type { WB } from "./_types";
 import { BlockModalView } from "./block-modal-view";
 
@@ -40,6 +40,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
 
   // Cardio-specific fields
   const [targetZone, setTargetZone] = useState(block?.targetZone ?? "");
+  const [steps, setSteps] = useState<WorkoutBlockStepSummary[]>(block?.steps ?? []);
   
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -58,6 +59,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       setTargetMinutes(String(block?.targetMinutes ?? ""));
       setRestBetweenExercises(String(block?.restBetweenExercisesSeconds ?? ""));
       setTargetZone(block?.targetZone ?? "");
+      setSteps(block?.steps ?? []);
     }, 0);
     return () => clearTimeout(t);
   }, [block]);
@@ -128,6 +130,18 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
           type: blockType,
           targetMinutes: !isNaN(targetMins) && targetMins > 0 ? targetMins : null,
           targetZone: targetZone || null,
+          steps: steps.map((step) => ({
+            kind: step.kind,
+            label: step.label,
+            instruction: step.instruction,
+            durationSeconds: step.durationSeconds,
+            distanceMeters: step.distanceMeters,
+            targetType: step.targetType,
+            targetLabel: step.targetLabel,
+            targetValueLow: step.targetValueLow,
+            targetValueHigh: step.targetValueHigh,
+            targetUnit: step.targetUnit,
+          })),
         };
       } else {
         // warmup, strength, cooldown - configurable duration and rest between exercises
@@ -136,6 +150,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
           type: blockType,
           targetMinutes: !isNaN(targetMins) && targetMins > 0 ? targetMins : null,
           restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
+          steps: [],
         };
       }
 
@@ -190,6 +205,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       targetMinutes={targetMinutes}
       restBetweenExercises={restBetweenExercises}
       targetZone={targetZone}
+      steps={steps}
       setBlockType={setBlockType}
       setIntervalType={setIntervalType}
       setLabel={setLabel}
@@ -202,6 +218,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       setTargetMinutes={setTargetMinutes}
       setRestBetweenExercises={setRestBetweenExercises}
       setTargetZone={setTargetZone}
+      setSteps={setSteps}
       onClose={onClose}
       onSave={save}
       onRequestDelete={() => setConfirmDelete(true)}

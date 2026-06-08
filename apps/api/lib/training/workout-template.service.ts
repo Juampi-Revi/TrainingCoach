@@ -4,12 +4,13 @@ import { notify } from "@/lib/notify";
 const BLOCK_TYPES = ["warmup", "strength", "intervals", "cardio", "cooldown"] as const;
 const INTERVAL_TYPES = ["tabata", "hiit", "emom", "amrap"] as const;
 
-export async function createWorkoutTemplate(coachUserId: string, data: { title: string; type?: string; description?: string; tags?: string[] }) {
+export async function createWorkoutTemplate(coachUserId: string, data: { title: string; type?: string; sport?: string; description?: string; tags?: string[] }) {
   return prisma.workoutTemplate.create({
     data: {
       coachUserId,
       title: data.title,
       type: data.type ?? "strength",
+      sport: data.sport ?? null,
       description: data.description,
       tags: data.tags ?? [],
     },
@@ -25,7 +26,7 @@ export function getWorkoutTemplateDetail(workoutTemplateId: string, coachUserId:
   });
 }
 
-export async function updateWorkoutTemplate(workoutTemplateId: string, data: { title?: string; type?: string; description?: string; tags?: string[] }) {
+export async function updateWorkoutTemplate(workoutTemplateId: string, data: { title?: string; type?: string; sport?: string; description?: string; tags?: string[] }) {
   const template = await prisma.workoutTemplate.update({
     where: { id: workoutTemplateId },
     data,
@@ -189,7 +190,10 @@ export async function duplicateWorkoutTemplate(args: { coachUserId: string; work
     const src = await tx.workoutTemplate.findFirst({
       where: { id: workoutTemplateId, coachUserId },
       include: {
-        workoutBlocks: { orderBy: { sortOrder: "asc" } },
+        workoutBlocks: {
+          orderBy: { sortOrder: "asc" },
+          include: { steps: { orderBy: { sortOrder: "asc" } } },
+        },
         workoutExercises: {
           orderBy: { sortOrder: "asc" },
           include: { alternatives: { orderBy: [{ priority: "asc" }, { createdAt: "asc" }] } },
@@ -205,6 +209,7 @@ export async function duplicateWorkoutTemplate(args: { coachUserId: string; work
         description: src.description,
         tags: src.tags,
         type: src.type,
+        sport: src.sport,
       },
       select: { id: true },
     });
@@ -227,6 +232,23 @@ export async function duplicateWorkoutTemplate(args: { coachUserId: string; work
           restBetweenExercisesSeconds: b.restBetweenExercisesSeconds,
           targetMinutes: b.targetMinutes,
           targetZone: b.targetZone,
+          steps: b.steps.length
+            ? {
+                create: b.steps.map((step) => ({
+                  sortOrder: step.sortOrder,
+                  kind: step.kind,
+                  label: step.label,
+                  instruction: step.instruction,
+                  durationSeconds: step.durationSeconds,
+                  distanceMeters: step.distanceMeters,
+                  targetType: step.targetType,
+                  targetLabel: step.targetLabel,
+                  targetValueLow: step.targetValueLow,
+                  targetValueHigh: step.targetValueHigh,
+                  targetUnit: step.targetUnit,
+                })),
+              }
+            : undefined,
         },
         select: { id: true },
       });

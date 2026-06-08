@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, withHandler } from "@/lib/api-response";
 import { notify } from "@/lib/notify";
+import { mapWorkoutBlockStep } from "@/lib/training/endurance";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string }> };
 
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
           orderBy: { sortOrder: "asc" },
           include: {
             _count: { select: { exercises: true } },
+            steps: { orderBy: { sortOrder: "asc" } },
           },
         },
         workoutExercises: {
@@ -40,6 +42,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       description: template.description,
       tags: template.tags,
       type: template.type,
+      sport: template.sport,
       blocks: template.workoutBlocks.map((b) => ({
         id: b.id,
         type: b.type,
@@ -56,6 +59,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         targetMinutes: b.targetMinutes,
         targetZone: b.targetZone,
         exerciseCount: b._count.exercises,
+        steps: b.steps.map(mapWorkoutBlockStep),
       })),
       exercises: template.workoutExercises.map((we) => ({
         id: we.id,
@@ -108,7 +112,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (!existing) return forbidden();
 
     const body = await req.json().catch(() => ({}));
-    const { title, description, tags, type } = body;
+    const { title, description, tags, type, sport } = body;
 
     const updated = await prisma.workoutTemplate.update({
       where: { id: workoutTemplateId },
@@ -117,8 +121,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         ...(description !== undefined && { description }),
         ...(tags !== undefined && { tags }),
         ...(type !== undefined && { type }),
+        ...(sport !== undefined && { sport }),
       },
-      select: { id: true, title: true, description: true, tags: true, type: true, updatedAt: true },
+      select: { id: true, title: true, description: true, tags: true, type: true, sport: true, updatedAt: true },
     });
 
     const recipients = await prisma.planAssignment.findMany({

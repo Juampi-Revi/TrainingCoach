@@ -21,6 +21,8 @@ import { BlockRestScreen } from "./_components/block-rest-screen";
 import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
 import { useBlockExecution } from "./_hooks/use-block-execution";
+import { EnduranceStepsCard } from "@/components/features/training/endurance-steps-card";
+import { StravaSessionImport } from "./_components/strava-session-import";
 
 export default function SessionInProgressPage() {
   const { api } = useAuth();
@@ -173,6 +175,34 @@ export default function SessionInProgressPage() {
     return <div style={{ minHeight: "100dvh", background: "var(--bg)" }}><StateBlock kind="loading" title="Cargando sesión…" /></div>;
   }
 
+  const sessionEnduranceBlocks = session.blocks.filter((block) => block.steps.length > 0);
+  if (session.exercises.length === 0 && sessionEnduranceBlocks.length > 0) {
+    return (
+      <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 120 }}>
+        <SessionHeader
+          exNum={1}
+          exTotal={sessionEnduranceBlocks.length}
+          title={session.workoutTemplate?.title ?? "Sesión running"}
+          subtitle="Seguí las pasadas y vinculá la actividad de Strava"
+          time={fmtDuration(workoutStartedAtMs != null ? Math.max(0, nowMs - workoutStartedAtMs) : 0)}
+          onExit={() => router.push("/semana")}
+        />
+        {sessionEnduranceBlocks.map((block) => (
+          <div key={block.id} style={{ marginTop: 10 }}>
+            <EnduranceStepsCard title={block.label ? `Pasadas · ${block.label}` : "Pasadas"} steps={block.steps} />
+          </div>
+        ))}
+        <StravaSessionImport sessionId={sessionId} activities={session.activities} plannedBlocks={sessionEnduranceBlocks} onLinked={load} />
+        <div style={{ padding: "16px", display: "flex", gap: 10 }}>
+          <Button variant="outline" block onClick={() => router.push("/semana")}>Volver</Button>
+          <Button block disabled={completing} onClick={completeSession}>
+            {completing ? "Cerrando…" : "Completar sesión"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const ex = session.exercises[currentExIdx];
   const warmupExercises = session.exercises.filter((e) => e.block?.type === "warmup");
   const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
@@ -221,6 +251,20 @@ export default function SessionInProgressPage() {
           </div>
         </div>
       )}
+
+      {sessionEnduranceBlocks.length > 0 && (
+        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+          {sessionEnduranceBlocks.map((block) => (
+            <EnduranceStepsCard
+              key={block.id}
+              title={block.label ? `Pasadas · ${block.label}` : "Pasadas"}
+              steps={block.steps}
+            />
+          ))}
+        </div>
+      )}
+
+      <StravaSessionImport sessionId={sessionId} activities={session.activities} plannedBlocks={sessionEnduranceBlocks} onLinked={load} />
 
       {offlineCount > 0 && (
         <div style={{ background: "var(--warn)", color: "#0B0B0C", padding: "8px 16px", margin: "8px 16px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>

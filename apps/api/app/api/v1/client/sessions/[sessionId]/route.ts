@@ -7,6 +7,7 @@ import { sessionPatchSchema } from "@/lib/schemas";
 import { updateWorkoutStreak } from "@/lib/gamification/streaks.service";
 import { awardXpFromSource, XP_REWARDS } from "@/lib/gamification/xp.service";
 import { checkMultipleMetrics } from "@/lib/badge-checker";
+import { mapWorkoutBlockStep } from "@/lib/training/endurance";
 
 // Helper function to get user's total workout count
 async function getUserWorkoutCount(userId: string): Promise<number> {
@@ -33,7 +34,19 @@ export async function GET(
       where: { id: sessionId, clientUserId: auth.user.sub },
       include: {
         workoutTemplate: {
-          select: { id: true, title: true, description: true, tags: true },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            tags: true,
+            workoutBlocks: {
+              orderBy: { sortOrder: "asc" },
+              include: {
+                _count: { select: { exercises: true } },
+                steps: { orderBy: { sortOrder: "asc" } },
+              },
+            },
+          },
         },
         planWeekWorkout: {
           select: { id: true, progressionNote: true },
@@ -45,7 +58,7 @@ export async function GET(
               select: {
                 supersetGroup: true,
                 workoutBlockId: true,
-                workoutBlock: { select: { id: true, type: true, label: true, description: true, restAfterSeconds: true, intervalType: true, workSeconds: true, restSeconds: true, rounds: true, totalDurationSeconds: true, restBetweenExercisesSeconds: true, targetMinutes: true, targetZone: true, sortOrder: true } },
+                workoutBlock: { select: { id: true, type: true, label: true, description: true, restAfterSeconds: true, intervalType: true, workSeconds: true, restSeconds: true, rounds: true, totalDurationSeconds: true, restBetweenExercisesSeconds: true, targetMinutes: true, targetZone: true, sortOrder: true, steps: { orderBy: { sortOrder: "asc" } } } },
                 targetSets: true,
                 targetReps: true,
                 durationSeconds: true,
@@ -84,6 +97,9 @@ export async function GET(
             sets: { orderBy: { setNumber: "asc" } },
           },
         },
+        activities: {
+          orderBy: { startedAt: "desc" },
+        },
       },
     });
 
@@ -98,7 +114,32 @@ export async function GET(
       sessionNotes: session.sessionNotes,
       planWeekWorkoutId: session.planWeekWorkout?.id ?? null,
       progressionNote: session.planWeekWorkout?.progressionNote ?? null,
-      workoutTemplate: session.workoutTemplate,
+      workoutTemplate: session.workoutTemplate
+        ? {
+            id: session.workoutTemplate.id,
+            title: session.workoutTemplate.title,
+            description: session.workoutTemplate.description,
+            tags: session.workoutTemplate.tags,
+          }
+        : null,
+      blocks: (session.workoutTemplate?.workoutBlocks ?? []).map((block) => ({
+        id: block.id,
+        type: block.type,
+        label: block.label,
+        description: block.description,
+        sortOrder: block.sortOrder,
+        restAfterSeconds: block.restAfterSeconds,
+        intervalType: block.intervalType,
+        workSeconds: block.workSeconds,
+        restSeconds: block.restSeconds,
+        rounds: block.rounds,
+        totalDurationSeconds: block.totalDurationSeconds,
+        restBetweenExercisesSeconds: block.restBetweenExercisesSeconds,
+        targetMinutes: block.targetMinutes,
+        targetZone: block.targetZone,
+        exerciseCount: block._count.exercises,
+        steps: block.steps.map(mapWorkoutBlockStep),
+      })),
       exercises: session.exercises.map((ex) => ({
         id: ex.id,
         sortOrder: ex.sortOrder,
@@ -119,6 +160,7 @@ export async function GET(
               restBetweenExercisesSeconds: ex.workoutExercise.workoutBlock.restBetweenExercisesSeconds,
               targetMinutes: ex.workoutExercise.workoutBlock.targetMinutes,
               targetZone: ex.workoutExercise.workoutBlock.targetZone,
+              steps: ex.workoutExercise.workoutBlock.steps.map(mapWorkoutBlockStep),
             }
           : null,
         exercise: {
@@ -184,6 +226,25 @@ export async function GET(
           rir: s.rir ? String(s.rir) : null,
           notes: s.notes,
         })),
+      })),
+      activities: session.activities.map((activity) => ({
+        id: activity.id,
+        provider: activity.provider,
+        externalActivityId: activity.externalActivityId,
+        sport: activity.sport,
+        title: activity.title,
+        startedAt: activity.startedAt,
+        elapsedTimeSeconds: activity.elapsedTimeSeconds,
+        movingTimeSeconds: activity.movingTimeSeconds,
+        distanceMeters: activity.distanceMeters,
+        calories: activity.calories,
+        averageHeartrate: activity.averageHeartrate,
+        maxHeartrate: activity.maxHeartrate,
+        averageSpeed: activity.averageSpeed,
+        maxSpeed: activity.maxSpeed,
+        averageCadence: activity.averageCadence,
+        elevationGainMeters: activity.elevationGainMeters,
+        mapPolyline: activity.mapPolyline,
       })),
     });
   });

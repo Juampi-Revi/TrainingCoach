@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { Button, Icon, StateBlock } from "@/components/ui";
 import type { ClientWeekResponse, WorkoutTemplateDetail } from "@regen/types";
 import { ApiError } from "@/lib/api";
+import { EnduranceStepsCard } from "@/components/features/training/endurance-steps-card";
 
 const GROUP_COLORS: Record<string, string> = {
   A: "var(--lime)",
@@ -149,6 +150,7 @@ export default function WorkoutDetailPage() {
     return block?.type === "warmup";
   });
   const hasWarmup = warmupExercises.length > 0;
+  const enduranceBlocks = data.blocks.filter((block) => block.steps.length > 0);
 
   // Build superset groups
   const groups: Array<{ group: string | null; items: WorkoutEx[] }> = [];
@@ -257,6 +259,14 @@ export default function WorkoutDetailPage() {
             )}
           </div>
         )}
+
+        {enduranceBlocks.map((block) => (
+          <EnduranceStepsCard
+            key={block.id}
+            title={block.label ? `Pasadas · ${block.label}` : "Pasadas"}
+            steps={block.steps}
+          />
+        ))}
 
         {/* Exercise groups */}
         {groups.map((g, gi) => {

@@ -244,6 +244,7 @@ model WorkoutTemplate {
   planWeekId  String?
   coachUserId String?
   type        String   @default("strength")
+  sport       String?
   title       String
   description String?
   tags        String[] @default([])
@@ -290,8 +291,31 @@ model WorkoutBlock {
 
   workoutTemplate WorkoutTemplate  @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
   exercises       WorkoutExercise[]
+  steps           WorkoutBlockStep[]
 
   @@index([workoutTemplateId, sortOrder])
+}
+
+model WorkoutBlockStep {
+  id               String   @id @default(uuid())
+  workoutBlockId   String
+  sortOrder        Int      @default(0)
+  kind             String   // 'warmup' | 'work' | 'recover' | 'cooldown'
+  label            String?
+  instruction      String?
+  durationSeconds  Int?
+  distanceMeters   Int?
+  targetType       String?  // 'hr_zone' | 'hr_bpm' | 'pace' | 'speed' | 'rpe' | 'free'
+  targetLabel      String?
+  targetValueLow   Decimal?
+  targetValueHigh  Decimal?
+  targetUnit       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workoutBlock WorkoutBlock @relation(fields: [workoutBlockId], references: [id], onDelete: Cascade)
+
+  @@index([workoutBlockId, sortOrder])
 }
 
 model PlanWorkout {
@@ -421,12 +445,43 @@ model WorkoutSession {
   gymClass        GymClass?                @relation(fields: [gymClassId], references: [id], onDelete: SetNull)
   exercises       WorkoutSessionExercise[]
   comments        SessionComment[]
+  activities      WorkoutSessionActivity[]
 
   @@index([clientUserId, performedAt(sort: Desc)])
   @@index([workoutTemplateId])
   @@index([planWeekWorkoutId])
   @@index([gymClassId])
   @@unique([clientUserId, gymClassId])
+}
+
+model WorkoutSessionActivity {
+  id                  String   @id @default(uuid())
+  workoutSessionId    String
+  provider            String   // 'strava'
+  externalActivityId  String
+  sport               String?  // 'run' | 'ride' | 'walk'
+  title               String?
+  startedAt           DateTime @db.Timestamptz
+  elapsedTimeSeconds  Int?
+  movingTimeSeconds   Int?
+  distanceMeters      Int?
+  calories            Float?
+  averageHeartrate    Int?
+  maxHeartrate        Int?
+  averageSpeed        Float?
+  maxSpeed            Float?
+  averageCadence      Float?
+  elevationGainMeters Float?
+  mapPolyline         String?
+  rawData             Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalActivityId])
+  @@unique([workoutSessionId, provider])
+  @@index([workoutSessionId, startedAt(sort: Desc)])
 }
 
 model WorkoutSessionExercise {

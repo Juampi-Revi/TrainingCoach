@@ -2,9 +2,10 @@
 
 import { Input } from "@/components/ui";
 import { blockTypeLabel } from "@/lib/constants";
-import type { BlockType, IntervalType } from "@regen/types";
+import type { BlockType, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
 import { BLOCK_TYPES, INTERVAL_PRESETS } from "./block-modal.constants";
 import { BlockModalSummary } from "./block-modal-summary";
+import { BlockStepEditor } from "./block-step-editor";
 
 interface BlockModalFieldsProps {
   blockType: BlockType;
@@ -18,6 +19,7 @@ interface BlockModalFieldsProps {
   targetMinutes: string;
   restBetweenExercises: string;
   targetZone: string;
+  steps: WorkoutBlockStepSummary[];
   restAfterSeconds: string;
   setBlockType: (t: BlockType) => void;
   setIntervalType: (t: IntervalType | null) => void;
@@ -30,6 +32,7 @@ interface BlockModalFieldsProps {
   setTargetMinutes: (v: string) => void;
   setRestBetweenExercises: (v: string) => void;
   setTargetZone: (v: string) => void;
+  setSteps: (next: WorkoutBlockStepSummary[]) => void;
   setRestAfterSeconds: (v: string) => void;
 }
 
@@ -45,6 +48,7 @@ export function BlockModalFields({
   targetMinutes,
   restBetweenExercises,
   targetZone,
+  steps,
   restAfterSeconds,
   setBlockType,
   setIntervalType,
@@ -57,6 +61,7 @@ export function BlockModalFields({
   setTargetMinutes,
   setRestBetweenExercises,
   setTargetZone,
+  setSteps,
   setRestAfterSeconds,
 }: BlockModalFieldsProps) {
   const isInterval = blockType === "intervals";
@@ -237,6 +242,7 @@ export function BlockModalFields({
         <>
           <Input label="Minutos objetivo" placeholder="20" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
           <Input label="Zona objetivo (opcional)" placeholder="Ej: Zona 2, 70-80% FCm" value={targetZone} onChange={(e) => setTargetZone(e.target.value)} />
+          <BlockStepEditor steps={steps} setSteps={setSteps} />
         </>
       )}
 

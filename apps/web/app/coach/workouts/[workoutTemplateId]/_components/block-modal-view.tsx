@@ -2,7 +2,7 @@
 
 import { Button, ConfirmModal, Icon } from "@/components/ui";
 import { blockTypeLabel } from "@/lib/constants";
-import type { BlockType, IntervalType } from "@regen/types";
+import type { BlockType, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
 import type { WB } from "./_types";
 import { BlockModalFields } from "./block-modal-fields";
 
@@ -22,6 +22,7 @@ interface BlockModalViewProps {
   targetMinutes: string;
   restBetweenExercises: string;
   targetZone: string;
+  steps: WorkoutBlockStepSummary[];
   setBlockType: (t: BlockType) => void;
   setIntervalType: (t: IntervalType | null) => void;
   setLabel: (v: string) => void;
@@ -34,6 +35,7 @@ interface BlockModalViewProps {
   setTargetMinutes: (v: string) => void;
   setRestBetweenExercises: (v: string) => void;
   setTargetZone: (v: string) => void;
+  setSteps: (next: WorkoutBlockStepSummary[]) => void;
   onClose: () => void;
   onSave: () => void;
   onRequestDelete: () => void;
@@ -57,6 +59,7 @@ export function BlockModalView({
   targetMinutes,
   restBetweenExercises,
   targetZone,
+  steps,
   setBlockType,
   setIntervalType,
   setLabel,
@@ -69,6 +72,7 @@ export function BlockModalView({
   setTargetMinutes,
   setRestBetweenExercises,
   setTargetZone,
+  setSteps,
   onClose,
   onSave,
   onRequestDelete,
@@ -152,6 +156,7 @@ export function BlockModalView({
           targetMinutes={targetMinutes}
           restBetweenExercises={restBetweenExercises}
           targetZone={targetZone}
+          steps={steps}
           restAfterSeconds={restAfterSeconds}
           setBlockType={setBlockType}
           setIntervalType={setIntervalType}
@@ -164,6 +169,7 @@ export function BlockModalView({
           setTargetMinutes={setTargetMinutes}
           setRestBetweenExercises={setRestBetweenExercises}
           setTargetZone={setTargetZone}
+          setSteps={setSteps}
           setRestAfterSeconds={setRestAfterSeconds}
         />
 
