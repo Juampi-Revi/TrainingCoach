@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
 import { Icon, Button, ConfirmModal } from "@/components/ui";
@@ -26,6 +26,7 @@ interface MediaManagerProps {
   media: MediaItem[];
   onMediaChange: () => void;
   limits?: { maxImages: number; maxVideos: number };
+  readOnly?: boolean;
 }
 
 export function MediaManager({
@@ -34,14 +35,22 @@ export function MediaManager({
   media,
   onMediaChange,
   limits = { maxImages: 3, maxVideos: 1 },
+  readOnly = false,
 }: MediaManagerProps) {
   const { api } = useAuth();
   const toast = useToast();
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [addingVideo, setAddingVideo] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingPrimaryId, setSettingPrimaryId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<
+    | { kind: "image"; url: string }
+    | { kind: "video"; url: string }
+    | null
+  >(null);
 
   // Safety check for media array
   const safeMedia = Array.isArray(media) ? media : [];
@@ -84,7 +93,7 @@ export function MediaManager({
         const formData = new FormData();
         formData.append("file", file);
 
-        await api.post(`/coach/exercises/${exerciseId}/media`, formData);
+        await api.postForm(`/coach/exercises/${exerciseId}/media`, formData);
         
         toast.success("Imagen subida");
         onMediaChange();
@@ -102,9 +111,49 @@ export function MediaManager({
     onDrop,
     accept: { "image/*": [".jpeg", ".jpg", ".png", ".webp"] },
     maxSize: 10 * 1024 * 1024,
-    disabled: uploading || !canAddImage,
+    disabled: readOnly || uploading || !canAddImage,
     multiple: false,
   });
+
+  async function uploadVideo(file: File) {
+    if (!file.type.startsWith("video/")) {
+      toast.error("Solo se permiten videos");
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("El video debe ser menor a 50MB");
+      return;
+    }
+    if (!canAddVideo) {
+      toast.error(`Límite de ${limits.maxVideos} video alcanzado`);
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await api.postForm(`/coach/exercises/${exerciseId}/media`, formData);
+      toast.success("Video subido");
+      onMediaChange();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error al subir video";
+      toast.error(msg);
+    } finally {
+      setUploadingVideo(false);
+    }
+  }
+
+  function youTubeIdFromUrl(url: string): string | null {
+    const u = url.trim();
+    const m1 = u.match(/[?&]v=([^&\s]{11})/);
+    if (m1?.[1]) return m1[1];
+    const m2 = u.match(/youtu\.be\/([^?&\s]{11})/);
+    if (m2?.[1]) return m2[1];
+    const m3 = u.match(/\/shorts\/([^?&\s]{11})/);
+    if (m3?.[1]) return m3[1];
+    return null;
+  }
 
   async function addYouTubeVideo() {
     if (!youtubeUrl.trim()) {
@@ -199,20 +248,40 @@ export function MediaManager({
                   background: "var(--bg-2)",
                 }}
               >
-                {img.thumbnailUrl ? (
-                  <Image
-                    src={img.thumbnailUrl}
-                    alt={`${exerciseName} ${idx + 1}`}
-                    fill
-                    sizes="100px"
-                    style={{ objectFit: "cover" }}
-                    unoptimized
-                  />
-                ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon name="image" size={24} color="var(--text-mute)" />
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = img.previewUrl || img.url;
+                    if (!url) return;
+                    setPreview({ kind: "image", url });
+                  }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    padding: 0,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                  aria-label={`Ver imagen ${idx + 1}`}
+                >
+                  {img.thumbnailUrl ? (
+                    <Image
+                      src={img.thumbnailUrl}
+                      alt={`${exerciseName} ${idx + 1}`}
+                      fill
+                      sizes="100px"
+                      style={{ objectFit: "cover" }}
+                      unoptimized
+                    />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Icon name="image" size={24} color="var(--text-mute)" />
+                    </div>
+                  )}
+                </button>
                 
                 {img.isPrimary && (
                   <div
@@ -247,7 +316,7 @@ export function MediaManager({
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
                 >
-                  {!img.isPrimary && (
+                  {!readOnly && !img.isPrimary && (
                     <button
                       onClick={() => setSettingPrimaryId(img.id)}
                       style={{
@@ -263,20 +332,22 @@ export function MediaManager({
                       Hacer principal
                     </button>
                   )}
-                  <button
-                    onClick={() => setDeletingId(img.id)}
-                    style={{
-                      padding: "4px 8px",
-                      background: "var(--danger)",
-                      border: "none",
-                      borderRadius: 4,
-                      fontSize: 11,
-                      cursor: "pointer",
-                      color: "#fff",
-                    }}
-                  >
-                    Eliminar
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => setDeletingId(img.id)}
+                      style={{
+                        padding: "4px 8px",
+                        background: "var(--danger)",
+                        border: "none",
+                        borderRadius: 4,
+                        fontSize: 11,
+                        cursor: "pointer",
+                        color: "#fff",
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -284,7 +355,7 @@ export function MediaManager({
         )}
 
         {/* Upload Zone */}
-        {canAddImage && (
+        {!readOnly && canAddImage && (
           <div
             {...getRootProps()}
             style={{
@@ -368,7 +439,24 @@ export function MediaManager({
                 boxShadow: "0 2px 8px rgba(255,0,0,0.2)",
               }}
             >
-              {video.thumbnailUrl ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPreview({ kind: "video", url: video.url });
+                }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  padding: 0,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+                aria-label="Ver video"
+              >
+                {video.thumbnailUrl ? (
                 <>
                   <Image
                     src={video.thumbnailUrl}
@@ -405,7 +493,7 @@ export function MediaManager({
                     </div>
                   </div>
                 </>
-              ) : (
+                ) : (
                 <div style={{
                   width: 32,
                   height: 32,
@@ -417,7 +505,8 @@ export function MediaManager({
                 }}>
                   <Icon name="play" size={16} color="#FF0000" />
                 </div>
-              )}
+                )}
+              </button>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
@@ -461,37 +550,68 @@ export function MediaManager({
                 {video.url.replace("https://www.youtube.com/watch?v=", "")}
               </div>
             </div>
-            <button
-              onClick={() => setDeletingId(video.id)}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "var(--bg-2)",
-                border: "1px solid var(--line-2)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--danger)";
-                e.currentTarget.style.borderColor = "var(--danger)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "var(--bg-2)";
-                e.currentTarget.style.borderColor = "var(--line-2)";
-              }}
-            >
-              <Icon name="trash" size={14} color="var(--danger)" />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setDeletingId(video.id)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: "var(--bg-2)",
+                  border: "1px solid var(--line-2)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--danger)";
+                  e.currentTarget.style.borderColor = "var(--danger)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "var(--bg-2)";
+                  e.currentTarget.style.borderColor = "var(--line-2)";
+                }}
+              >
+                <Icon name="trash" size={14} color="var(--danger)" />
+              </button>
+            )}
           </div>
         ))}
 
         {/* Add YouTube Video - ALWAYS SHOW IF CAN ADD */}
-        {canAddVideo && (
+        {!readOnly && canAddVideo && (
           <div style={{ marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 600 }}>
+                Subir video (MP4):
+              </div>
+              <div>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    void uploadVideo(f);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  size="md"
+                  variant="secondary"
+                  disabled={uploadingVideo}
+                  onClick={() => videoInputRef.current?.click()}
+                  style={{ minWidth: 140 }}
+                >
+                  {uploadingVideo ? "Subiendo..." : "Elegir archivo"}
+                </Button>
+              </div>
+            </div>
+
             <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 8, fontWeight: 600 }}>
               Agregar video de YouTube:
             </div>
@@ -555,6 +675,92 @@ export function MediaManager({
           onConfirm={() => setAsPrimary(settingPrimaryId)}
           onCancel={() => setSettingPrimaryId(null)}
         />
+      )}
+
+      {preview && (
+        <div
+          onClick={() => setPreview(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.72)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1200,
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(980px, 96vw)",
+              background: "var(--bg-1)",
+              border: "1px solid var(--line)",
+              borderRadius: 16,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                borderBottom: "1px solid var(--line)",
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                {preview.kind === "image" ? "Imagen" : "Video"}
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  border: "1px solid var(--line-2)",
+                  background: "var(--bg-2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+                aria-label="Cerrar"
+              >
+                <Icon name="x" size={16} color="var(--text)" />
+              </button>
+            </div>
+
+            {preview.kind === "image" ? (
+              <div style={{ position: "relative", width: "100%", aspectRatio: "4/3", background: "var(--bg-2)" }}>
+                <Image
+                  unoptimized
+                  src={preview.url}
+                  alt={exerciseName}
+                  fill
+                  sizes="(max-width: 980px) 96vw, 980px"
+                  style={{ objectFit: "contain" }}
+                />
+              </div>
+            ) : (
+              <div style={{ width: "100%", aspectRatio: "16/9", background: "#000" }}>
+                {preview.url.includes("youtube.com") || preview.url.includes("youtu.be") ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${youTubeIdFromUrl(preview.url) ?? ""}`}
+                    title="YouTube video player"
+                    style={{ width: "100%", height: "100%", border: 0 }}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video controls playsInline style={{ width: "100%", height: "100%" }} src={preview.url} />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

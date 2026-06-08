@@ -26,6 +26,7 @@ export function PlanGridWeekRow({
   onCellEditProgressionNote,
   onCellClear,
   onViewWorkout,
+  onOpenLibrary,
   onMoveCell,
   canPasteWeek,
   onCopyWeek,
@@ -52,6 +53,7 @@ export function PlanGridWeekRow({
   onCellEditProgressionNote: (weekIndex: number, dayIndex: number) => void;
   onCellClear: (weekIndex: number, dayIndex: number) => void;
   onViewWorkout: (templateId: string) => void;
+  onOpenLibrary: (templateId: string) => void;
   onMoveCell: (fromWeekIndex: number, fromDayIndex: number, toWeekIndex: number, toDayIndex: number) => void;
   canPasteWeek: boolean;
   onCopyWeek: (weekNumber: number) => void;
@@ -221,6 +223,7 @@ export function PlanGridWeekRow({
           onEditProgressionNote={() => onCellEditProgressionNote(wi, di)}
           onClear={() => onCellClear(wi, di)}
           onViewWorkout={() => onViewWorkout(cell?.templateId ?? "")}
+          onOpenLibrary={() => onOpenLibrary(cell?.templateId ?? "")}
           onMoveCell={onMoveCell}
         />
       ))}

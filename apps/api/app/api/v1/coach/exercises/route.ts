@@ -37,6 +37,12 @@ function toMediaFilter(input: string | null): "any" | "complete" | "missing" | "
   return "any";
 }
 
+function toInt(input: string | null): number | null {
+  if (!input) return null;
+  const n = parseInt(input);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "coach");
@@ -49,8 +55,10 @@ export async function GET(req: NextRequest) {
     const difficulties = toStringList(searchParams.get("difficulty"));
     const objectives = toStringList(searchParams.get("objective"));
     const favoritesOnly = toBool(searchParams.get("favorites")) ?? false;
+    const basicsOnly = toBool(searchParams.get("basic")) ?? false;
     const mediaFilter = toMediaFilter(searchParams.get("media"));
     const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "50"));
+    const offset = Math.max(0, Math.min(5000, toInt(searchParams.get("offset")) ?? 0));
 
     const items = await listCoachExercises({
       coachUserId: auth.user.sub,
@@ -60,7 +68,9 @@ export async function GET(req: NextRequest) {
       difficulties,
       objectives,
       favoritesOnly,
+      basicsOnly,
       limit,
+      offset,
       mediaFilter,
     });
     return ok(items);

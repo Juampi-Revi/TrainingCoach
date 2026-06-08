@@ -248,6 +248,18 @@ export default function TemplateEditorPage() {
                         <Button variant="outline" size="sm" onClick={() => { setEditingBlockId(b.id); setBlockModalOpen(true); }}>
                           Configurar
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon="book"
+                          onClick={() =>
+                            router.push(
+                              `/coach/ejercicios?templateId=${encodeURIComponent(workoutTemplateId)}&blockId=${encodeURIComponent(b.id)}&context=workout&returnTo=${encodeURIComponent(`/coach/workouts/${workoutTemplateId}`)}`,
+                            )
+                          }
+                        >
+                          Biblioteca
+                        </Button>
                         <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(b.id); setShowPicker(true); }}>
                           Ejercicio
                         </Button>

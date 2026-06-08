@@ -110,6 +110,9 @@ export default function PlanDetailPage() {
             onCellEditProgressionNote={editor.handleEditProgressionNote}
             onCellClear={editor.handleCellClear}
             onViewWorkout={(templateId) => router.push(`/coach/workouts/${templateId}`)}
+            onOpenLibrary={(templateId) =>
+              router.push(`/coach/ejercicios?templateId=${encodeURIComponent(templateId)}&context=plan&returnTo=${encodeURIComponent(`/coach/planes/${planId}`)}`)
+            }
             onMoveCell={editor.handleMoveCell}
             canPasteWeek={!!state.weekClipboard}
             onCopyWeek={editor.copyWeek}

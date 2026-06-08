@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
 import { Button, Input, Icon } from "@/components/ui";
 
 export default function LoginPage() {
@@ -24,8 +25,13 @@ export default function LoginPage() {
       if (user.role === "coach") router.replace("/coach");
       else if (user.role === "gym") router.replace("/gym");
       else router.replace("/semana");
-    } catch {
-      setError("Email o contraseña incorrectos");
+    } catch (e) {
+      if (e instanceof ApiError) {
+        if (e.status === 401) setError("Email o contraseña incorrectos");
+        else setError(e.message || "Error al ingresar");
+      } else {
+        setError(e instanceof Error ? e.message : "Error al ingresar");
+      }
     } finally {
       setLoading(false);
     }

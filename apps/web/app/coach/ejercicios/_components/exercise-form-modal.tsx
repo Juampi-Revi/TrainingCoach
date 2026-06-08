@@ -10,11 +10,15 @@ import { ExerciseFormMediaTab } from "./exercise-form-media-tab";
 
 export function ExerciseFormModal({
   exercise,
+  initialTab,
+  equipmentSuggestions,
   onClose,
   onSaved,
   onDeleted,
 }: {
   exercise?: ExerciseLibraryItem;
+  initialTab?: "info" | "media";
+  equipmentSuggestions?: string[];
   onClose: () => void;
   onSaved: (ex: ExerciseLibraryItem) => void;
   onDeleted?: (id: string) => void;
@@ -22,6 +26,7 @@ export function ExerciseFormModal({
   const { api } = useAuth();
   const toast = useToast();
   const isEdit = !!exercise;
+  const readOnlyInfo = !!exercise?.isSystem;
 
   const [value, setValue] = useState<ExerciseFormValue>({
     name: exercise?.name ?? "",
@@ -34,10 +39,16 @@ export function ExerciseFormModal({
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [tab, setTab] = useState<"info" | "media">("info");
+  const [tab, setTab] = useState<"info" | "media">(() => {
+    if (initialTab) return initialTab;
+    if (!exercise) return "info";
+    if (exercise.hasImage || exercise.hasVideo) return "media";
+    return "info";
+  });
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   async function handleSave() {
+    if (readOnlyInfo) return;
     const name = value.name.trim();
     if (!name) {
       toast.error("El nombre es obligatorio");
@@ -69,6 +80,7 @@ export function ExerciseFormModal({
   }
 
   function handleDelete() {
+    if (readOnlyInfo) return;
     setConfirmDialog({
       message: `¿Eliminar "${exercise!.name}"? Esta acción no se puede deshacer.`,
       onConfirm: async () => {
@@ -115,7 +127,7 @@ export function ExerciseFormModal({
           }}
         >
           <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 20 }}>
-            {isEdit ? "Editar ejercicio" : "Nuevo ejercicio"}
+            {isEdit ? (readOnlyInfo ? "Detalle de ejercicio" : "Editar ejercicio") : "Nuevo ejercicio"}
           </div>
 
           {isEdit && (
@@ -143,7 +155,13 @@ export function ExerciseFormModal({
           )}
 
           {tab === "info" && (
-            <ExerciseFormInfoTab value={value} setValue={setValue} onSave={handleSave} />
+            <ExerciseFormInfoTab
+              value={value}
+              setValue={setValue}
+              onSave={handleSave}
+              readOnly={readOnlyInfo}
+              equipmentSuggestions={equipmentSuggestions}
+            />
           )}
 
           {tab === "media" && isEdit && exercise && (
@@ -153,7 +171,7 @@ export function ExerciseFormModal({
           )}
 
           <div style={{ display: "flex", gap: 8 }}>
-            {isEdit && tab === "info" && (
+            {!readOnlyInfo && isEdit && tab === "info" && (
               <Button variant="danger" disabled={deleting || saving} onClick={handleDelete} style={{ marginRight: "auto" }}>
                 {deleting ? "Eliminando…" : "Eliminar"}
               </Button>
@@ -161,7 +179,7 @@ export function ExerciseFormModal({
             <Button variant="secondary" onClick={onClose} disabled={saving || deleting}>
               {tab === "media" ? "Cerrar" : "Cancelar"}
             </Button>
-            {tab === "info" && (
+            {!readOnlyInfo && tab === "info" && (
               <Button onClick={handleSave} disabled={saving || deleting || !value.name.trim()}>
                 {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear"}
               </Button>

@@ -16,6 +16,7 @@ export function PlanGridCell({
   onEditProgressionNote,
   onClear,
   onViewWorkout,
+  onOpenLibrary,
   onMoveCell,
 }: {
   wi: number;
@@ -30,6 +31,7 @@ export function PlanGridCell({
   onEditProgressionNote: () => void;
   onClear: () => void;
   onViewWorkout: () => void;
+  onOpenLibrary: () => void;
   onMoveCell: (fromWeekIndex: number, fromDayIndex: number, toWeekIndex: number, toDayIndex: number) => void;
 }) {
   if (!cell) {
@@ -136,6 +138,28 @@ export function PlanGridCell({
               className="ta-row"
             >
               <Icon name="edit" size={13} /> Ver / editar
+            </button>
+            <button
+              onClick={() => {
+                onMenuClose();
+                onOpenLibrary();
+              }}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                fontSize: 13,
+                color: "var(--text)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+              className="ta-row"
+            >
+              <Icon name="book" size={13} /> Biblioteca de ejercicios
             </button>
             <button
               onClick={() => {

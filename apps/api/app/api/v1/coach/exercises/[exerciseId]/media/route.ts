@@ -2,17 +2,17 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, notFound, withHandler } from "@/lib/api-response";
-import { cloudinary } from "@/lib/cloudinary";
+import { cloudinaryImagePreview, cloudinaryImageThumb, cloudinaryVideoThumb, isYouTubeUrl, uploadFromFile, youTubeThumb } from "@/lib/training/exercise-media";
 
-// Límites de media por ejercicio
+export const runtime = "nodejs";
+
 const MAX_IMAGES = 3;
 const MAX_VIDEOS = 1;
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
 type Ctx = { params: Promise<{ exerciseId: string }> };
 
-// GET /api/v1/coach/exercises/:exerciseId/media
 export async function GET(req: NextRequest, { params }: Ctx) {
   return withHandler(async () => {
     const auth = requireRole(req, "coach");
@@ -30,23 +30,21 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }, { createdAt: "asc" }],
     });
 
-    // Helper para generar thumbnail de YouTube
-    const getYouTubeThumbnail = (videoId: string) => 
-      `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-
-    // Transformar URLs de Cloudinary con parámetros de optimización
-    const transformedMedia = media.map((m) => {
-      let thumbnailUrl = null;
-      let previewUrl = null;
+    const transformed = media.map((m) => {
+      let thumbnailUrl: string | null = null;
+      let previewUrl: string | null = null;
 
       if (m.mediaType === "image" && m.publicId) {
-        // Imagen de Cloudinary - generar URLs transformadas
-        thumbnailUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/c_fill,w_200,h_250,q_auto,f_webp/${m.publicId}`;
-        previewUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/c_fill,w_600,h_750,q_auto,f_webp/${m.publicId}`;
-      } else if (m.mediaType === "video" && m.publicId) {
-        // Video de YouTube - usar thumbnail de YouTube
-        thumbnailUrl = getYouTubeThumbnail(m.publicId);
-        previewUrl = thumbnailUrl;
+        thumbnailUrl = cloudinaryImageThumb(m.publicId);
+        previewUrl = cloudinaryImagePreview(m.publicId);
+      } else if (m.mediaType === "video") {
+        if (m.publicId && isYouTubeUrl(m.url)) {
+          thumbnailUrl = youTubeThumb(m.publicId);
+          previewUrl = thumbnailUrl;
+        } else if (m.publicId && m.url.includes("res.cloudinary.com")) {
+          thumbnailUrl = cloudinaryVideoThumb(m.publicId);
+          previewUrl = m.url;
+        }
       }
 
       return {
@@ -54,29 +52,22 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         mediaType: m.mediaType,
         url: m.url,
         publicId: m.publicId,
-        width: m.width,
-        height: m.height,
-        fileSize: m.fileSize,
-        duration: m.duration,
         isPrimary: m.isPrimary,
         displayOrder: m.displayOrder,
         thumbnailUrl,
         previewUrl,
-        createdAt: m.createdAt,
       };
     });
 
     return ok({
       exercise: { id: ex.id, name: ex.name },
-      images: transformedMedia.filter((m) => m.mediaType === "image"),
-      videos: transformedMedia.filter((m) => m.mediaType === "video"),
+      images: transformed.filter((m) => m.mediaType === "image"),
+      videos: transformed.filter((m) => m.mediaType === "video"),
       limits: { maxImages: MAX_IMAGES, maxVideos: MAX_VIDEOS },
     });
   });
 }
 
-// POST /api/v1/coach/exercises/:exerciseId/media/upload
-// Para subir imágenes directamente a Cloudinary
 export async function POST(req: NextRequest, { params }: Ctx) {
   return withHandler(async () => {
     const auth = requireRole(req, "coach");
@@ -89,68 +80,56 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     });
     if (!ex) return notFound("Ejercicio no encontrado");
 
-    // Verificar límite de imágenes
-    const imageCount = await prisma.exerciseMedia.count({
-      where: { exerciseId, mediaType: "image" },
-    });
-    if (imageCount >= MAX_IMAGES) {
-      return err(`Máximo ${MAX_IMAGES} imágenes por ejercicio`, 400);
-    }
-
     const form = await req.formData().catch(() => null);
     if (!form) return err("Form inválido", 400);
 
     const file = form.get("file");
     if (!(file instanceof File)) return err("file requerido", 400);
-    if (!file.type.startsWith("image/")) return err("Solo imágenes permitidas", 400);
-    if (file.size > MAX_IMAGE_SIZE) return err(`Imagen demasiado grande (máx ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`, 400);
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    if (!isImage && !isVideo) return err("Formato inválido", 400);
+    if (isImage && file.size > MAX_IMAGE_SIZE) return err(`Imagen demasiado grande (máx ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`, 400);
+    if (isVideo && file.size > MAX_VIDEO_SIZE) return err(`Video demasiado grande (máx ${MAX_VIDEO_SIZE / 1024 / 1024}MB)`, 400);
 
-    // Convertir a base64 para Cloudinary
-    const ab = await file.arrayBuffer();
-    const b64 = Buffer.from(ab).toString("base64");
-    const dataUri = `data:${file.type};base64,${b64}`;
+    const [imageCount, videoCount, maxOrder] = await Promise.all([
+      prisma.exerciseMedia.count({ where: { exerciseId, mediaType: "image" } }),
+      prisma.exerciseMedia.count({ where: { exerciseId, mediaType: "video" } }),
+      prisma.exerciseMedia.aggregate({ where: { exerciseId }, _max: { displayOrder: true } }),
+    ]);
+    if (isImage && imageCount >= MAX_IMAGES) return err(`Máximo ${MAX_IMAGES} imágenes por ejercicio`, 400);
+    if (isVideo && videoCount >= MAX_VIDEOS) return err(`Máximo ${MAX_VIDEOS} video por ejercicio`, 400);
 
-    // Subir a Cloudinary
-    const uploaded = await cloudinary.uploader.upload(dataUri, {
-      folder: `regen/exercises/${exerciseId}`,
-      resource_type: "image",
-      transformation: [
-        { width: 1080, height: 1350, crop: "limit" }, // Max 4:5, sin upscale
-      ],
-    });
+    const folder = `regen/exercises/${exerciseId}`;
+    const uploaded = await uploadFromFile(file, { folder, resourceType: isVideo ? "video" : "image" });
 
-    // Determinar si es la primera imagen (marcar como primaria)
-    const isFirstImage = imageCount === 0;
-    const maxOrder = await prisma.exerciseMedia.aggregate({
-      where: { exerciseId },
-      _max: { displayOrder: true },
-    });
-
-    // Guardar en DB
-    const media = await prisma.exerciseMedia.create({
+    const saved = await prisma.exerciseMedia.create({
       data: {
         exerciseId,
-        mediaType: "image",
-        url: uploaded.secure_url,
-        publicId: uploaded.public_id,
+        mediaType: isVideo ? "video" : "image",
+        url: uploaded.secureUrl,
+        publicId: uploaded.publicId,
         width: uploaded.width,
         height: uploaded.height,
         fileSize: uploaded.bytes,
-        isPrimary: isFirstImage,
+        duration: uploaded.duration,
+        isPrimary: !isVideo && imageCount === 0,
         displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
       },
     });
 
-    return ok({
-      id: media.id,
-      mediaType: media.mediaType,
-      url: media.url,
-      publicId: media.publicId,
-      width: media.width,
-      height: media.height,
-      fileSize: media.fileSize,
-      isPrimary: media.isPrimary,
-      thumbnailUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/c_fill,w_200,h_250,q_auto,f_webp/${media.publicId}`,
-    }, 201);
+    return ok(
+      {
+        id: saved.id,
+        mediaType: saved.mediaType,
+        url: saved.url,
+        publicId: saved.publicId,
+        isPrimary: saved.isPrimary,
+        displayOrder: saved.displayOrder,
+        thumbnailUrl:
+          saved.mediaType === "image" && saved.publicId ? cloudinaryImageThumb(saved.publicId) : saved.publicId && isYouTubeUrl(saved.url) ? youTubeThumb(saved.publicId) : saved.publicId && saved.url.includes("res.cloudinary.com") ? cloudinaryVideoThumb(saved.publicId) : null,
+        previewUrl: saved.mediaType === "image" && saved.publicId ? cloudinaryImagePreview(saved.publicId) : saved.mediaType === "video" ? saved.url : null,
+      },
+      201,
+    );
   });
 }

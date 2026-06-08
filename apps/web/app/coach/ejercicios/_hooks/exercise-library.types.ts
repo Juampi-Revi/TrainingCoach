@@ -8,6 +8,7 @@ export type ExerciseLibraryItem = {
   difficulty: string | null;
   objective: string | null;
   isSystem: boolean;
+  isBasic: boolean;
   thumbnailUrl: string | null;
   youtubeUrl?: string | null;
   isFavorite?: boolean;
@@ -29,6 +30,7 @@ export type ExerciseLibraryQuery = {
   difficulties: string[];
   objectives: string[];
   favoritesOnly: boolean;
+  basicsOnly: boolean;
   media: "any" | "complete" | "missing" | "missingImage" | "missingVideo";
   limit?: number;
 };

@@ -11,12 +11,14 @@ export function ExerciseLibraryGrid({
   onEdit,
   onToggleFavorite,
   onAddToWorkout,
+  onPickBlock,
 }: {
   items: ExerciseLibraryItem[] | null;
-  addContext: { templateId: string; blockId: string } | null;
-  onEdit: (ex: ExerciseLibraryItem) => void;
+  addContext: { templateId: string; blockId?: string | null; label: string } | null;
+  onEdit: (ex: ExerciseLibraryItem, tab?: "info" | "media") => void;
   onToggleFavorite: (exerciseId: string, next: boolean) => void;
   onAddToWorkout: (exerciseId: string) => void;
+  onPickBlock: (exerciseId: string) => void;
 }) {
   if (items === null) {
     return <StateBlock kind="loading" title="Cargando ejercicios…" />;
@@ -34,17 +36,17 @@ export function ExerciseLibraryGrid({
           onClick={(e) => {
             const t = e.target as HTMLElement;
             if (t.closest("[data-stop-card-click='true']")) return;
-            if (!ex.isSystem) onEdit(ex);
+            onEdit(ex, "info");
           }}
           style={{
             background: "var(--bg-1)",
             border: "1px solid var(--line)",
             borderRadius: 12,
             overflow: "hidden",
-            cursor: ex.isSystem ? "default" : "pointer",
+            cursor: "pointer",
             position: "relative",
           }}
-          className={ex.isSystem ? undefined : "ta-row"}
+          className="ta-row"
         >
           <button
             data-stop-card-click="true"
@@ -88,22 +90,36 @@ export function ExerciseLibraryGrid({
           </div>
 
           {!ex.isSystem && (
-            <div
+            <button
+              data-stop-card-click="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(ex, !ex.hasImage || !ex.hasVideo ? "media" : "info");
+              }}
               style={{
                 position: "absolute",
                 top: 8,
                 right: 8,
-                width: 24,
-                height: 24,
-                borderRadius: 6,
-                background: "rgba(0,0,0,.5)",
+                width: 28,
+                height: 28,
+                borderRadius: 9,
+                border: "1px solid var(--line-2)",
+                background: !ex.hasImage || !ex.hasVideo ? "rgba(255,181,71,.22)" : "rgba(0,0,0,.35)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 2,
               }}
+              aria-label={!ex.hasImage || !ex.hasVideo ? "Completar media" : "Editar ejercicio"}
+              title={!ex.hasImage || !ex.hasVideo ? "Completar media" : "Editar ejercicio"}
             >
-              <Icon name="edit" size={12} color="var(--text)" />
-            </div>
+              <Icon
+                name={!ex.hasImage ? "image" : !ex.hasVideo ? "video" : "edit"}
+                size={13}
+                color={!ex.hasImage || !ex.hasVideo ? "var(--warn)" : "var(--text)"}
+              />
+            </button>
           )}
 
           <div style={{ padding: "10px 12px 12px" }}>
@@ -114,6 +130,7 @@ export function ExerciseLibraryGrid({
               {ex.difficulty && <Badge tone="neutral" size="sm">{EXERCISE_DIFFICULTY_LABEL[ex.difficulty] ?? ex.difficulty}</Badge>}
               {ex.objective && <Badge tone="neutral" size="sm">{EXERCISE_OBJECTIVE_LABEL[ex.objective] ?? ex.objective}</Badge>}
               {!ex.isSystem && <Badge tone="limeSoft" size="sm">Propio</Badge>}
+              {ex.isBasic && <Badge tone="limeSoft" size="sm" icon="bolt">Básico</Badge>}
               {ex.hasImage !== undefined && (
                 <Badge tone={ex.hasImage ? "success" : "warn"} size="sm" icon="image">
                   IMG
@@ -127,8 +144,13 @@ export function ExerciseLibraryGrid({
             </div>
             {addContext && (
               <div style={{ marginTop: 10, display: "flex" }}>
-                <Button size="sm" variant="secondary" data-stop-card-click="true" onClick={() => onAddToWorkout(ex.id)}>
-                  Usar en este entreno
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-stop-card-click="true"
+                  onClick={() => (addContext.blockId ? onAddToWorkout(ex.id) : onPickBlock(ex.id))}
+                >
+                  {addContext.label}
                 </Button>
               </div>
             )}

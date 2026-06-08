@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Icon } from "@/components/ui";
@@ -17,6 +18,7 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
 }) {
   const { api } = useAuth();
   const toast = useToast();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [muscle, setMuscle] = useState("");
   const [equipment, setEquipment] = useState("");
@@ -105,7 +107,36 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
         style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 16, display: "flex", flexDirection: "column", overflow: "hidden" }}
       >
         <div style={{ padding: "20px 20px 12px", borderBottom: "1px solid var(--line)" }}>
-          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Agregar ejercicio</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>Agregar ejercicio</div>
+            <div style={{ flex: 1 }} />
+            <button
+              onClick={() => {
+                onClose();
+                router.push(
+                  `/coach/ejercicios?templateId=${encodeURIComponent(templateId)}&blockId=${encodeURIComponent(blockId)}&context=workout&returnTo=${encodeURIComponent(`/coach/workouts/${templateId}`)}`,
+                );
+              }}
+              style={{
+                height: 30,
+                padding: "0 10px",
+                borderRadius: 10,
+                border: "1px solid var(--line-2)",
+                background: "var(--bg-2)",
+                color: "var(--text)",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+              className="ta-row"
+            >
+              <Icon name="book" size={14} color="var(--text)" />
+              Biblioteca
+            </button>
+          </div>
           {!creating ? (
             <ExercisePickerFilters
               search={search}

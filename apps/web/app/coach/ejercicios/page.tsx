@@ -1,19 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Button, Icon } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
-import { EXERCISE_DIFFICULTY_LABEL, EXERCISE_OBJECTIVE_LABEL, MUSCLE_LABEL } from "@/lib/constants";
 import { useExerciseLibrary } from "./_hooks/use-exercise-library";
 import { ExerciseFormModal } from "./_components/exercise-form-modal";
 import { ExerciseLibraryGrid } from "./_components/exercise-library-grid";
+import { AddToWorkoutBlockModal } from "./_components/add-to-workout-block-modal";
+import { ExerciseLibraryFilters, type ExerciseLibraryMediaFilter } from "./_components/exercise-library-filters";
+import type { WorkoutTemplateDetail } from "@regen/types";
 
 export default function EjerciciosPage() {
   const { api, user } = useAuth();
   const toast = useToast();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [q, setQ] = useState("");
@@ -22,15 +25,41 @@ export default function EjerciciosPage() {
   const [difficulty, setDifficulty] = useState<string>("");
   const [objective, setObjective] = useState<string>("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [media, setMedia] = useState<import("./_hooks/use-exercise-library").ExerciseLibraryQuery["media"]>("any");
-  const [modal, setModal] = useState<{ open: true; exercise?: import("./_hooks/use-exercise-library").ExerciseLibraryItem } | null>(null);
+  const [basicsOnly, setBasicsOnly] = useState(false);
+  const [media, setMedia] = useState<ExerciseLibraryMediaFilter>("any");
+  const [modal, setModal] = useState<{ open: true; exercise?: import("./_hooks/use-exercise-library").ExerciseLibraryItem; tab?: "info" | "media" } | null>(null);
 
   const addContext = useMemo(() => {
     const templateId = searchParams.get("templateId");
     const blockId = searchParams.get("blockId");
-    if (!templateId || !blockId) return null;
-    return { templateId, blockId };
+    const context = searchParams.get("context");
+    if (!templateId) return null;
+    return {
+      templateId,
+      blockId,
+      label: context === "plan" ? "Usar en este plan" : "Usar en este entreno",
+    };
   }, [searchParams]);
+
+  const returnTo = useMemo(() => {
+    const raw = searchParams.get("returnTo");
+    if (!raw) return null;
+    if (!raw.startsWith("/")) return null;
+    return raw;
+  }, [searchParams]);
+
+  const [templateInfo, setTemplateInfo] = useState<{ title: string; blocks: WorkoutTemplateDetail["blocks"] } | null>(null);
+  const [blockPicker, setBlockPicker] = useState<{ exerciseId: string } | null>(null);
+
+  useEffect(() => {
+    if (!addContext?.templateId) {
+      setTemplateInfo(null);
+      return;
+    }
+    api.get<WorkoutTemplateDetail>(`/coach/workouts/${addContext.templateId}`)
+      .then((t) => setTemplateInfo({ title: t.title, blocks: t.blocks ?? [] }))
+      .catch(() => setTemplateInfo(null));
+  }, [api, addContext?.templateId]);
 
   const query = useMemo(
     () => ({
@@ -40,20 +69,21 @@ export default function EjerciciosPage() {
       difficulties: difficulty ? [difficulty] : [],
       objectives: objective ? [objective] : [],
       favoritesOnly,
+      basicsOnly,
       media,
-      limit: 120,
+      limit: 60,
     }),
-    [q, muscle, equipment, difficulty, objective, favoritesOnly, media],
+    [q, muscle, equipment, difficulty, objective, favoritesOnly, basicsOnly, media],
   );
 
-  const { items, facets, setFavorite, reload } = useExerciseLibrary(query);
+  const { items, facets, setFavorite, reload, loadMore, hasMore, loadingMore } = useExerciseLibrary(query);
 
   const list = items ?? [];
 
-  async function addToWorkout(exerciseId: string) {
-    if (!addContext) return;
+  async function addToWorkout(exerciseId: string, workoutBlockId: string) {
+    if (!addContext?.templateId) return;
     try {
-      await api.post(`/coach/workouts/${addContext.templateId}/exercises`, { exerciseId, workoutBlockId: addContext.blockId });
+      await api.post(`/coach/workouts/${addContext.templateId}/exercises`, { exerciseId, workoutBlockId });
       toast.success("Ejercicio agregado");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al agregar");
@@ -69,6 +99,11 @@ export default function EjerciciosPage() {
         coachName={user?.name ?? "Coach"}
         actions={
           <>
+            {returnTo && (
+              <Button variant="outline" size="sm" icon="chevL" onClick={() => router.push(returnTo)}>
+                Volver
+              </Button>
+            )}
             <div
               className="coach-header-action-secondary"
               style={{
@@ -98,243 +133,83 @@ export default function EjerciciosPage() {
         }
       >
         <div className="coach-pad">
-          {/* Mobile search */}
-          <div
-            className="coach-mobile-search"
-            style={{
-              display: "none", alignItems: "center", gap: 8,
-              height: 40, background: "var(--bg-2)",
-              border: "1px solid var(--line-2)", borderRadius: 10,
-              padding: "0 12px", marginBottom: 16,
+          <ExerciseLibraryFilters
+            q={q}
+            setQ={setQ}
+            muscle={muscle}
+            setMuscle={setMuscle}
+            equipment={equipment}
+            setEquipment={setEquipment}
+            difficulty={difficulty}
+            setDifficulty={setDifficulty}
+            objective={objective}
+            setObjective={setObjective}
+            favoritesOnly={favoritesOnly}
+            setFavoritesOnly={setFavoritesOnly}
+            basicsOnly={basicsOnly}
+            setBasicsOnly={setBasicsOnly}
+            media={media}
+            setMedia={setMedia}
+            facets={facets ? { muscles: facets.muscles ?? [], equipments: facets.equipments ?? [] } : null}
+            onClear={() => {
+              setQ("");
+              setMuscle("");
+              setEquipment("");
+              setDifficulty("");
+              setObjective("");
+              setFavoritesOnly(false);
+              setBasicsOnly(false);
+              setMedia("any");
             }}
-          >
-            <Icon name="search" size={14} color="var(--text-mute)" />
-            <input
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-              }}
-              placeholder="Buscar ejercicio…"
-              style={{
-                flex: 1, background: "transparent", border: "none", outline: "none",
-                fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)",
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr 1fr",
-              gap: 10,
-              marginBottom: 14,
-              alignItems: "end",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 11, color: "var(--text-mute)", marginBottom: 6, fontWeight: 600 }}>Músculo</div>
-              <select
-                value={muscle}
-                onChange={(e) => setMuscle(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 38,
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: 10,
-                  padding: "0 10px",
-                  color: muscle ? "var(--text)" : "var(--text-mute)",
-                  outline: "none",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 13,
-                }}
-              >
-                <option value="">Todos</option>
-                {(facets?.muscles ?? Object.keys(MUSCLE_LABEL)).map((m) => (
-                  <option key={m} value={m}>
-                    {MUSCLE_LABEL[m] ?? m}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--text-mute)", marginBottom: 6, fontWeight: 600 }}>Equipo</div>
-              <select
-                value={equipment}
-                onChange={(e) => setEquipment(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 38,
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: 10,
-                  padding: "0 10px",
-                  color: equipment ? "var(--text)" : "var(--text-mute)",
-                  outline: "none",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 13,
-                }}
-              >
-                <option value="">Todos</option>
-                {(facets?.equipments ?? []).map((eq) => (
-                  <option key={eq} value={eq}>
-                    {eq}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--text-mute)", marginBottom: 6, fontWeight: 600 }}>Dificultad</div>
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 38,
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: 10,
-                  padding: "0 10px",
-                  color: difficulty ? "var(--text)" : "var(--text-mute)",
-                  outline: "none",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 13,
-                }}
-              >
-                <option value="">Todas</option>
-                {Object.entries(EXERCISE_DIFFICULTY_LABEL).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--text-mute)", marginBottom: 6, fontWeight: 600 }}>Objetivo</div>
-              <select
-                value={objective}
-                onChange={(e) => setObjective(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 38,
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: 10,
-                  padding: "0 10px",
-                  color: objective ? "var(--text)" : "var(--text-mute)",
-                  outline: "none",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 13,
-                }}
-              >
-                <option value="">Todos</option>
-                {Object.entries(EXERCISE_OBJECTIVE_LABEL).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
-            <button
-              onClick={() => setFavoritesOnly((p) => !p)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 999,
-                border: `1px solid ${favoritesOnly ? "var(--lime)" : "var(--line-2)"}`,
-                background: favoritesOnly ? "rgba(215,255,58,.12)" : "transparent",
-                color: favoritesOnly ? "var(--lime)" : "var(--text-mute)",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Icon name="star" size={12} color={favoritesOnly ? "var(--lime)" : "var(--text-mute)"} />
-              Favoritos
-            </button>
-            <button
-              onClick={() => setMedia((p) => (p === "complete" ? "any" : "complete"))}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 999,
-                border: `1px solid ${media === "complete" ? "var(--success)" : "var(--line-2)"}`,
-                background: media === "complete" ? "rgba(110,231,168,.12)" : "transparent",
-                color: media === "complete" ? "var(--success)" : "var(--text-mute)",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Icon name="check" size={12} color={media === "complete" ? "var(--success)" : "var(--text-mute)"} />
-              Media completa
-            </button>
-            <button
-              onClick={() => setMedia((p) => (p === "missing" ? "any" : "missing"))}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 999,
-                border: `1px solid ${media === "missing" ? "var(--warn)" : "var(--line-2)"}`,
-                background: media === "missing" ? "rgba(255,181,71,.14)" : "transparent",
-                color: media === "missing" ? "var(--warn)" : "var(--text-mute)",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Icon name="alert" size={12} color={media === "missing" ? "var(--warn)" : "var(--text-mute)"} />
-              Falta media
-            </button>
-            {(muscle || equipment || difficulty || objective || favoritesOnly || media !== "any" || q.trim()) && (
-              <button
-                onClick={() => {
-                  setQ("");
-                  setMuscle("");
-                  setEquipment("");
-                  setDifficulty("");
-                  setObjective("");
-                  setFavoritesOnly(false);
-                  setMedia("any");
-                }}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 999,
-                  border: "1px solid var(--line-2)",
-                  background: "transparent",
-                  color: "var(--text-mute)",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Limpiar
-              </button>
-            )}
-          </div>
+          />
 
           <ExerciseLibraryGrid
             items={items}
             addContext={addContext}
-            onEdit={(ex) => setModal({ open: true, exercise: ex })}
+            onEdit={(ex, tab) => setModal({ open: true, exercise: ex, tab })}
             onToggleFavorite={(exerciseId, next) => void setFavorite(exerciseId, next)}
-            onAddToWorkout={(exerciseId) => void addToWorkout(exerciseId)}
+            onAddToWorkout={(exerciseId) => {
+              const blockId = addContext?.blockId;
+              if (!addContext?.templateId || !blockId) return;
+              void addToWorkout(exerciseId, blockId);
+            }}
+            onPickBlock={(exerciseId) => {
+              if (!addContext?.templateId) return;
+              if (!templateInfo) {
+                toast.error("Cargando bloques…");
+                return;
+              }
+              setBlockPicker({ exerciseId });
+            }}
           />
+          {items && hasMore && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+              <Button variant="outline" disabled={loadingMore} onClick={() => void loadMore()}>
+                {loadingMore ? "Cargando…" : "Cargar más"}
+              </Button>
+            </div>
+          )}
         </div>
       </DesktopShell>
+
+      <AddToWorkoutBlockModal
+        open={!!blockPicker}
+        title={templateInfo?.title ?? ""}
+        blocks={templateInfo?.blocks ?? []}
+        onClose={() => setBlockPicker(null)}
+        onSelect={(blockId) => {
+          const exId = blockPicker?.exerciseId;
+          setBlockPicker(null);
+          if (!exId) return;
+          void addToWorkout(exId, blockId);
+        }}
+      />
 
       {modal && (
         <ExerciseFormModal
           exercise={modal.exercise}
+          initialTab={modal.tab}
+          equipmentSuggestions={facets?.equipments ?? []}
           onClose={() => setModal(null)}
           onSaved={() => void reload()}
           onDeleted={() => void reload()}

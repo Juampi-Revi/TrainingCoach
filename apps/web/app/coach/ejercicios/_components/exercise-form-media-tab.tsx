@@ -10,9 +10,11 @@ type MediaItem = { id: string; url: string; mediaType: string };
 export function ExerciseFormMediaTab({
   exerciseId,
   exerciseName,
+  readOnly = false,
 }: {
   exerciseId: string;
   exerciseName: string;
+  readOnly?: boolean;
 }) {
   const { api } = useAuth();
   const toast = useToast();
@@ -62,6 +64,7 @@ export function ExerciseFormMediaTab({
     <MediaManager
       exerciseId={exerciseId}
       exerciseName={exerciseName}
+      readOnly={readOnly}
       media={media.map((m) => ({ ...m, mediaType: m.mediaType as "image" | "video" }))}
       onMediaChange={async () => {
         try {
@@ -81,4 +84,3 @@ export function ExerciseFormMediaTab({
     />
   );
 }
-

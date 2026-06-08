@@ -8,7 +8,9 @@ type ListArgs = {
   difficulties: string[] | null;
   objectives: string[] | null;
   favoritesOnly: boolean;
+  basicsOnly?: boolean;
   limit: number;
+  offset?: number;
   mediaFilter?: "any" | "complete" | "missing" | "missingImage" | "missingVideo";
 };
 
@@ -23,6 +25,8 @@ function looksLikeSchemaOutOfDate(msg: string): boolean {
   );
 }
 
+const BASIC_SOURCE = "regen_basic_v1";
+
 export async function listCoachExercises(args: ListArgs) {
   const {
     coachUserId,
@@ -32,16 +36,19 @@ export async function listCoachExercises(args: ListArgs) {
     difficulties,
     objectives,
     favoritesOnly,
+    basicsOnly = false,
     limit,
+    offset = 0,
     mediaFilter = "any",
   } = args;
 
-  const take = mediaFilter === "any" ? limit : Math.min(300, Math.max(limit * 4, limit));
+  const take = Math.min(1200, Math.max(limit, offset + (mediaFilter === "any" ? limit : Math.max(limit * 4, limit))));
 
   try {
     const exercises = await prisma.exercise.findMany({
       where: {
         OR: [{ isSystem: true }, { coachUserId }],
+        ...(basicsOnly ? { source: BASIC_SOURCE } : {}),
         ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
         ...(muscles?.length ? { primaryMuscle: { in: muscles } } : {}),
         ...(equipments?.length ? { equipment: { in: equipments } } : {}),
@@ -59,6 +66,7 @@ export async function listCoachExercises(args: ListArgs) {
         difficulty: true,
         objective: true,
         isSystem: true,
+        source: true,
         youtubeUrl: true,
         favoritedBy: { where: { coachUserId }, select: { id: true }, take: 1 },
         media: { select: { url: true, mediaType: true, publicId: true }, take: 4, orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }] },
@@ -69,10 +77,15 @@ export async function listCoachExercises(args: ListArgs) {
       let thumbnailUrl: string | null = null;
       const hasImage = e.media.some((m) => m.mediaType === "image") || false;
       const hasVideo = e.media.some((m) => m.mediaType === "video") || !!(e.youtubeUrl && e.youtubeUrl.trim());
+      const isBasic = e.source === BASIC_SOURCE;
       const firstMedia = e.media[0];
       if (firstMedia?.mediaType === "image") thumbnailUrl = firstMedia.url;
       if (firstMedia?.mediaType === "video" && firstMedia.publicId) {
-        thumbnailUrl = `https://img.youtube.com/vi/${firstMedia.publicId}/mqdefault.jpg`;
+        if (firstMedia.url.includes("youtube.com") || firstMedia.url.includes("youtu.be")) {
+          thumbnailUrl = `https://img.youtube.com/vi/${firstMedia.publicId}/mqdefault.jpg`;
+        } else if (process.env.CLOUDINARY_CLOUD_NAME) {
+          thumbnailUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/video/upload/so_0,c_fill,w_200,h_250,q_auto,f_jpg/${firstMedia.publicId}.jpg`;
+        }
       }
       return {
         id: e.id,
@@ -82,6 +95,7 @@ export async function listCoachExercises(args: ListArgs) {
         difficulty: e.difficulty ?? null,
         objective: e.objective ?? null,
         isSystem: e.isSystem,
+        isBasic,
         youtubeUrl: e.youtubeUrl,
         thumbnailUrl,
         isFavorite: e.favoritedBy.length > 0,
@@ -92,11 +106,12 @@ export async function listCoachExercises(args: ListArgs) {
 
     mapped.sort((a, b) => {
       if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+      if (a.isBasic !== b.isBasic) return a.isBasic ? -1 : 1;
       if (a.isSystem !== b.isSystem) return a.isSystem ? -1 : 1;
       return a.name.localeCompare(b.name, "es");
     });
 
-    if (mediaFilter === "any") return mapped;
+    if (mediaFilter === "any") return mapped.slice(offset, offset + limit);
 
     const filtered = mapped.filter((e) => {
       const complete = e.hasImage && e.hasVideo;
@@ -107,7 +122,7 @@ export async function listCoachExercises(args: ListArgs) {
       return true;
     });
 
-    return filtered.slice(0, limit);
+    return filtered.slice(offset, offset + limit);
   } catch (e) {
     const msg = messageOf(e);
     if (!looksLikeSchemaOutOfDate(msg)) throw e;
@@ -116,6 +131,7 @@ export async function listCoachExercises(args: ListArgs) {
     const exercises = await prisma.exercise.findMany({
       where: {
         OR: [{ isSystem: true }, { coachUserId }],
+        ...(basicsOnly ? { source: BASIC_SOURCE } : {}),
         ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
         ...(muscles?.length ? { primaryMuscle: { in: muscles } } : {}),
         ...(equipments?.length ? { equipment: { in: equipments } } : {}),
@@ -128,6 +144,7 @@ export async function listCoachExercises(args: ListArgs) {
         primaryMuscle: true,
         equipment: true,
         isSystem: true,
+        source: true,
         youtubeUrl: true,
         media: { select: { url: true, mediaType: true, publicId: true }, take: 4, orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }] },
       },
@@ -137,10 +154,15 @@ export async function listCoachExercises(args: ListArgs) {
       let thumbnailUrl: string | null = null;
       const hasImage = e.media.some((m) => m.mediaType === "image") || false;
       const hasVideo = e.media.some((m) => m.mediaType === "video") || !!(e.youtubeUrl && e.youtubeUrl.trim());
+      const isBasic = e.source === BASIC_SOURCE;
       const firstMedia = e.media[0];
       if (firstMedia?.mediaType === "image") thumbnailUrl = firstMedia.url;
       if (firstMedia?.mediaType === "video" && firstMedia.publicId) {
-        thumbnailUrl = `https://img.youtube.com/vi/${firstMedia.publicId}/mqdefault.jpg`;
+        if (firstMedia.url.includes("youtube.com") || firstMedia.url.includes("youtu.be")) {
+          thumbnailUrl = `https://img.youtube.com/vi/${firstMedia.publicId}/mqdefault.jpg`;
+        } else if (process.env.CLOUDINARY_CLOUD_NAME) {
+          thumbnailUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/video/upload/so_0,c_fill,w_200,h_250,q_auto,f_jpg/${firstMedia.publicId}.jpg`;
+        }
       }
       return {
         id: e.id,
@@ -150,6 +172,7 @@ export async function listCoachExercises(args: ListArgs) {
         difficulty: null,
         objective: null,
         isSystem: e.isSystem,
+        isBasic,
         youtubeUrl: e.youtubeUrl,
         thumbnailUrl,
         isFavorite: false,
@@ -158,7 +181,7 @@ export async function listCoachExercises(args: ListArgs) {
       };
     });
 
-    if (mediaFilter === "any") return mapped;
+    if (mediaFilter === "any") return mapped.slice(offset, offset + limit);
     const filtered = mapped.filter((e) => {
       const complete = e.hasImage && e.hasVideo;
       if (mediaFilter === "complete") return complete;
@@ -167,7 +190,7 @@ export async function listCoachExercises(args: ListArgs) {
       if (mediaFilter === "missingVideo") return !e.hasVideo;
       return true;
     });
-    return filtered.slice(0, limit);
+    return filtered.slice(offset, offset + limit);
   }
 }
 

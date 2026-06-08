@@ -15,11 +15,16 @@ export function ExerciseFormInfoTab({
   value,
   setValue,
   onSave,
+  readOnly = false,
+  equipmentSuggestions,
 }: {
   value: ExerciseFormValue;
   setValue: (next: (prev: ExerciseFormValue) => ExerciseFormValue) => void;
   onSave: () => void;
+  readOnly?: boolean;
+  equipmentSuggestions?: string[];
 }) {
+  const equipListId = "exercise-equip-suggestions";
   return (
     <>
       <div style={{ marginBottom: 14 }}>
@@ -38,11 +43,18 @@ export function ExerciseFormInfoTab({
           }}
         >
           <input
-            autoFocus
+            autoFocus={!readOnly}
             value={value.name}
-            onChange={(e) => setValue((p) => ({ ...p, name: e.target.value }))}
-            onKeyDown={(e) => e.key === "Enter" && onSave()}
+            onChange={(e) => {
+              if (readOnly) return;
+              setValue((p) => ({ ...p, name: e.target.value }));
+            }}
+            onKeyDown={(e) => {
+              if (readOnly) return;
+              if (e.key === "Enter") onSave();
+            }}
             placeholder="Ej: Press de banca"
+            disabled={readOnly}
             style={{
               flex: 1,
               background: "transparent",
@@ -50,7 +62,7 @@ export function ExerciseFormInfoTab({
               outline: "none",
               fontFamily: "var(--font-sans)",
               fontSize: 14,
-              color: "var(--text)",
+              color: readOnly ? "var(--text-mute)" : "var(--text)",
             }}
           />
         </div>
@@ -74,7 +86,11 @@ export function ExerciseFormInfoTab({
           >
             <select
               value={value.difficulty ?? ""}
-              onChange={(e) => setValue((p) => ({ ...p, difficulty: e.target.value || null }))}
+              onChange={(e) => {
+                if (readOnly) return;
+                setValue((p) => ({ ...p, difficulty: e.target.value || null }));
+              }}
+              disabled={readOnly}
               style={{
                 flex: 1,
                 background: "transparent",
@@ -112,7 +128,11 @@ export function ExerciseFormInfoTab({
           >
             <select
               value={value.objective ?? ""}
-              onChange={(e) => setValue((p) => ({ ...p, objective: e.target.value || null }))}
+              onChange={(e) => {
+                if (readOnly) return;
+                setValue((p) => ({ ...p, objective: e.target.value || null }));
+              }}
+              disabled={readOnly}
               style={{
                 flex: 1,
                 background: "transparent",
@@ -151,7 +171,11 @@ export function ExerciseFormInfoTab({
         >
           <select
             value={value.primaryMuscle ?? ""}
-            onChange={(e) => setValue((p) => ({ ...p, primaryMuscle: e.target.value || null }))}
+            onChange={(e) => {
+              if (readOnly) return;
+              setValue((p) => ({ ...p, primaryMuscle: e.target.value || null }));
+            }}
+            disabled={readOnly}
             style={{
               flex: 1,
               background: "transparent",
@@ -189,8 +213,13 @@ export function ExerciseFormInfoTab({
         >
           <input
             value={value.equipment ?? ""}
-            onChange={(e) => setValue((p) => ({ ...p, equipment: e.target.value || null }))}
+            onChange={(e) => {
+              if (readOnly) return;
+              setValue((p) => ({ ...p, equipment: e.target.value || null }));
+            }}
             placeholder="Ej: Barra, Mancuernas, Máquina…"
+            disabled={readOnly}
+            list={equipmentSuggestions?.length ? equipListId : undefined}
             style={{
               flex: 1,
               background: "transparent",
@@ -198,10 +227,17 @@ export function ExerciseFormInfoTab({
               outline: "none",
               fontFamily: "var(--font-sans)",
               fontSize: 14,
-              color: "var(--text)",
+              color: readOnly ? "var(--text-mute)" : "var(--text)",
             }}
           />
         </div>
+        {!!equipmentSuggestions?.length && (
+          <datalist id={equipListId}>
+            {equipmentSuggestions.map((eq) => (
+              <option key={eq} value={eq} />
+            ))}
+          </datalist>
+        )}
       </div>
 
       <div style={{ marginBottom: 20 }}>
@@ -221,8 +257,12 @@ export function ExerciseFormInfoTab({
         >
           <input
             value={value.youtubeUrl ?? ""}
-            onChange={(e) => setValue((p) => ({ ...p, youtubeUrl: e.target.value || null }))}
+            onChange={(e) => {
+              if (readOnly) return;
+              setValue((p) => ({ ...p, youtubeUrl: e.target.value || null }));
+            }}
             placeholder="https://youtube.com/…"
+            disabled={readOnly}
             style={{
               flex: 1,
               background: "transparent",
@@ -230,7 +270,7 @@ export function ExerciseFormInfoTab({
               outline: "none",
               fontFamily: "var(--font-sans)",
               fontSize: 14,
-              color: "var(--text)",
+              color: readOnly ? "var(--text-mute)" : "var(--text)",
             }}
           />
         </div>

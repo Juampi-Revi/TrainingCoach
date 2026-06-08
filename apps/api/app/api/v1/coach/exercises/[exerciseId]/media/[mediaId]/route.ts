@@ -25,10 +25,10 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
       return notFound("Media no encontrada");
     }
 
-    // Si es imagen de Cloudinary, borrar de Cloudinary también
-    if (media.mediaType === "image" && media.publicId) {
+    const isCloudinary = media.url.includes("res.cloudinary.com");
+    if (isCloudinary && media.publicId && (media.mediaType === "image" || media.mediaType === "video")) {
       try {
-        await cloudinary.uploader.destroy(media.publicId);
+        await cloudinary.uploader.destroy(media.publicId, { resource_type: media.mediaType === "video" ? "video" : "image" });
       } catch (e) {
         console.error("Error deleting from Cloudinary:", e);
         // Continuar aunque falle el borrado de Cloudinary
