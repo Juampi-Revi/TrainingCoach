@@ -4,9 +4,10 @@ import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
 import { getProviderIds, getProvider } from "@/lib/health/registry";
 import { syncUserProvider } from "@/lib/health/sync-engine";
+import { getApiBaseUrl, getWebBaseUrl } from "@/lib/public-urls";
 import { randomBytes } from "crypto";
 
-const WEB_BASE = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001";
+const WEB_BASE = getWebBaseUrl();
 
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     const state = randomBytes(16).toString("hex");
     const providerPath = provider === "google_health" ? "google-health" : provider;
-    const redirectUri = `${process.env.API_BASE_URL || "http://localhost:3003"}/api/v1/client/sync/${providerPath}/callback`;
+    const redirectUri = `${getApiBaseUrl()}/api/v1/client/sync/${providerPath}/callback`;
 
     await prisma.healthProviderConnection.upsert({
       where: { userId_provider: { userId: auth.user.sub, provider } },

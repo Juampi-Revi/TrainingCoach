@@ -18,6 +18,7 @@ import { RestTimerOverlay } from "./_components/rest-timer-overlay";
 import { WarmupOverlay } from "./_components/warmup-overlay";
 import { LoggerSheet } from "./_components/logger-sheet";
 import { BlockRestScreen } from "./_components/block-rest-screen";
+import { SessionBlockTimeline } from "./_components/session-block-timeline";
 import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
 import { useBlockExecution } from "./_hooks/use-block-execution";
@@ -231,6 +232,7 @@ export default function SessionInProgressPage() {
   }
 
   const hasMedia = (ex?.media?.length ?? 0) > 0;
+  const activeBlockId = currentBlockId ?? currentBlock?.block.id ?? null;
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 120 }}>
@@ -265,6 +267,16 @@ export default function SessionInProgressPage() {
       )}
 
       <StravaSessionImport sessionId={sessionId} activities={session.activities} plannedBlocks={sessionEnduranceBlocks} onLinked={load} />
+
+      <SessionBlockTimeline
+        blocks={session.blocks}
+        exercises={session.exercises}
+        currentBlockId={activeBlockId}
+        onStartIntervalBlock={(blockId) => {
+          setCurrentBlockId(blockId);
+          setBlockRunnerOpen(true);
+        }}
+      />
 
       {offlineCount > 0 && (
         <div style={{ background: "var(--warn)", color: "#0B0B0C", padding: "8px 16px", margin: "8px 16px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>

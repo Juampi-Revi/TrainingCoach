@@ -1,0 +1,1514 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wireframes - Redisenio de Bloques</title>
+    <style>
+      :root {
+        --bg: #0b0b0c;
+        --bg-1: #141417;
+        --bg-2: #1c1c20;
+        --bg-3: #26262c;
+        --line: #26262c;
+        --line-2: #33333a;
+        --text: #f5f5f4;
+        --text-mute: #8d8d94;
+        --text-dim: #6e6e76;
+        --lime: #d7ff3a;
+        --warn: #ffb547;
+        --info: #7ab8ff;
+        --danger: #ff5b5b;
+        --success: #6ee7a8;
+        --r-sm: 8px;
+        --r-md: 12px;
+        --r-lg: 16px;
+        --shadow-md: 0 18px 44px rgba(0, 0, 0, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(215, 255, 58, 0.12), transparent 28%),
+          radial-gradient(circle at top right, rgba(122, 184, 255, 0.1), transparent 32%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 32px 20px 56px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+
+      .hero-card,
+      .panel,
+      .canvas,
+      .card,
+      .device {
+        background: rgba(20, 20, 23, 0.92);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: var(--shadow-md);
+      }
+
+      .hero-card {
+        padding: 24px;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--lime);
+        margin-bottom: 12px;
+        font-weight: 700;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .hero-copy {
+        margin-top: 10px;
+        color: var(--text-mute);
+        max-width: 58ch;
+        line-height: 1.5;
+      }
+
+      .hero-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .mini-stat {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--bg-2);
+      }
+
+      .mini-stat strong {
+        display: block;
+        font-size: 12px;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      .mini-stat span {
+        font-size: 12px;
+        color: var(--text-mute);
+        line-height: 1.45;
+      }
+
+      .problem-list {
+        display: grid;
+        gap: 10px;
+        padding: 24px;
+      }
+
+      .problem {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        background: var(--bg-2);
+      }
+
+      .problem strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      .problem span {
+        color: var(--text-mute);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 26px 0 14px;
+      }
+
+      .section-title h2 {
+        font-size: 18px;
+        letter-spacing: -0.03em;
+      }
+
+      .section-title span {
+        font-size: 12px;
+        color: var(--text-mute);
+      }
+
+      .pattern-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .card .tag {
+        display: inline-block;
+        margin-bottom: 10px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        background: rgba(215, 255, 58, 0.12);
+        color: var(--lime);
+      }
+
+      .card h3 {
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+
+      .card p {
+        color: var(--text-mute);
+        font-size: 12px;
+        line-height: 1.45;
+        margin-bottom: 10px;
+      }
+
+      .card ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-dim);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .canvas {
+        padding: 18px;
+        margin-top: 18px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr) 360px;
+        gap: 14px;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .ghost {
+        border: 1px dashed var(--line-2);
+        border-radius: 14px;
+        padding: 12px;
+        color: var(--text-mute);
+        background: rgba(255, 255, 255, 0.01);
+      }
+
+      .ghost strong {
+        display: block;
+        color: var(--text);
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line-2);
+        background: var(--bg-2);
+        color: var(--text-mute);
+        font-size: 12px;
+      }
+
+      .pill.active {
+        color: var(--lime);
+        border-color: rgba(215, 255, 58, 0.5);
+        background: rgba(215, 255, 58, 0.08);
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-dim);
+        font-weight: 700;
+      }
+
+      .field .input,
+      .step-line {
+        border: 1px solid var(--line);
+        background: var(--bg-2);
+        border-radius: 12px;
+      }
+
+      .field .input {
+        padding: 12px;
+        font-size: 13px;
+        color: var(--text);
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .summary-band {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .summary-chip {
+        padding: 10px;
+        border-radius: 12px;
+        background: rgba(122, 184, 255, 0.08);
+        border: 1px solid rgba(122, 184, 255, 0.18);
+      }
+
+      .summary-chip strong {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .summary-chip span {
+        font-size: 11px;
+        color: var(--text-mute);
+      }
+
+      .step-line {
+        display: grid;
+        grid-template-columns: 90px 90px 1fr 36px;
+        gap: 8px;
+        padding: 10px;
+        align-items: center;
+      }
+
+      .step-kind {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--info);
+      }
+
+      .step-main {
+        font-size: 13px;
+      }
+
+      .step-note {
+        color: var(--text-mute);
+        font-size: 12px;
+      }
+
+      .timeline-card {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+      }
+
+      .timeline-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .timeline-title {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .timeline-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: var(--text-mute);
+        font-size: 12px;
+      }
+
+      .device-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .device {
+        padding: 16px;
+      }
+
+      .device-screen {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        background: var(--bg-2);
+        border-radius: 20px;
+        padding: 14px;
+        min-height: 560px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .device-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--text-mute);
+        font-size: 12px;
+      }
+
+      .hero-block {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(215, 255, 58, 0.22);
+        background: linear-gradient(180deg, rgba(215, 255, 58, 0.12), rgba(215, 255, 58, 0.03));
+      }
+
+      .hero-block strong {
+        display: block;
+        font-size: 20px;
+        margin: 6px 0 4px;
+      }
+
+      .list-row {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--bg-1);
+      }
+
+      .list-row small {
+        display: block;
+        color: var(--text-dim);
+        margin-top: 5px;
+        font-size: 11px;
+      }
+
+      .cta {
+        padding: 14px;
+        border-radius: 14px;
+        text-align: center;
+        font-weight: 700;
+        background: var(--lime);
+        color: #0b0b0c;
+      }
+
+      .alt-cta {
+        padding: 13px;
+        border-radius: 14px;
+        text-align: center;
+        font-weight: 700;
+        border: 1px solid var(--line-2);
+        color: var(--text);
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .form-card {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(20, 20, 23, 0.9);
+      }
+
+      .form-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .form-card-head p {
+        color: var(--text-mute);
+        font-size: 12px;
+        line-height: 1.45;
+        margin-top: 6px;
+      }
+
+      .form-badge {
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--lime);
+        background: rgba(215, 255, 58, 0.1);
+        border: 1px solid rgba(215, 255, 58, 0.18);
+        white-space: nowrap;
+      }
+
+      .field-stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .field-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .micro {
+        font-size: 11px;
+        color: var(--text-mute);
+        line-height: 1.5;
+      }
+
+      .vars {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .var-chip {
+        padding: 7px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line-2);
+        background: var(--bg-2);
+        color: var(--text-mute);
+        font-size: 11px;
+      }
+
+      .var-chip strong {
+        color: var(--text);
+      }
+
+      .preview-box {
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(122, 184, 255, 0.18);
+        background: rgba(122, 184, 255, 0.06);
+      }
+
+      .preview-box strong {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--line);
+        margin: 2px 0;
+      }
+
+      @media (max-width: 1200px) {
+        .pattern-grid,
+        .hero,
+        .layout,
+        .device-grid,
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .summary-band {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          padding: 18px 14px 40px;
+        }
+
+        h1 {
+          font-size: 28px;
+        }
+
+        .hero-grid,
+        .summary-band,
+        .split,
+        .step-line,
+        .field-grid-3,
+        .field-grid-4 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <article class="hero-card">
+          <span class="eyebrow">Nueva direccion UX</span>
+          <h1>Del modal tecnico al constructor por patron de ejecucion</h1>
+          <p class="hero-copy">
+            La propuesta deja de preguntar por campos aislados y pasa a preguntar por como se hace el bloque:
+            lista de ejercicios, timer guiado, pasadas de running, cardio continuo o recuperacion. Cada decision
+            muestra duracion, descansos y preview del alumno en tiempo real.
+          </p>
+          <div class="hero-grid">
+            <div class="mini-stat">
+              <strong>Coach entiende</strong>
+              <span>Que esta creando, cuanto dura y como se ejecuta.</span>
+            </div>
+            <div class="mini-stat">
+              <strong>Alumno entiende</strong>
+              <span>Que tiene que hacer ahora, cuanto falta y que sigue.</span>
+            </div>
+            <div class="mini-stat">
+              <strong>Sistema escala</strong>
+              <span>Running y bici reutilizan la misma logica sin duplicar UX.</span>
+            </div>
+          </div>
+        </article>
+
+        <aside class="hero-card problem-list">
+          <div class="problem">
+            <strong>Problema 1: el coach elige un tipo tecnico demasiado pronto</strong>
+            <span>La UI obliga a pensar en `intervals`, `cardio` o `targetMinutes` antes de pensar el bloque.</span>
+          </div>
+          <div class="problem">
+            <strong>Problema 2: la duracion no queda evidente</strong>
+            <span>El sistema pide datos pero no devuelve una lectura clara del esfuerzo final.</span>
+          </div>
+          <div class="problem">
+            <strong>Problema 3: el alumno cambia de patron sin una gramatica comun</strong>
+            <span>Lista, timer, pasadas y cardio libre no se presentan como familias visuales coherentes.</span>
+          </div>
+        </aside>
+      </section>
+
+      <div class="section-title">
+        <h2>Patrones de bloque propuestos</h2>
+        <span>La UI muestra intencion y modo de ejecucion, no el nombre tecnico interno</span>
+      </div>
+
+      <section class="pattern-grid">
+        <article class="card">
+          <span class="tag">Patron 01</span>
+          <h3>Lista de ejercicios</h3>
+          <p>Para calentamiento, fuerza, accesorios y cooldown guiado.</p>
+          <ul>
+            <li>Duracion estimada</li>
+            <li>Descanso entre ejercicios</li>
+            <li>Logger por serie / reps</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag">Patron 02</span>
+          <h3>Timer guiado</h3>
+          <p>Para tabata, hiit, emom y amrap con feedback inmersivo.</p>
+          <ul>
+            <li>Trabajo, descanso, rondas</li>
+            <li>Tiempo total visible</li>
+            <li>Preview de ejecucion</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag">Patron 03</span>
+          <h3>Pasadas de running</h3>
+          <p>Para series, fartlek y bloques mixtos por tiempo o distancia.</p>
+          <ul>
+            <li>Steps ordenados</li>
+            <li>Intensidad por paso</li>
+            <li>Totales de km y tiempo</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag">Patron 04</span>
+          <h3>Cardio continuo</h3>
+          <p>Para zona 2, bici base o trote lineal sin pasos internos.</p>
+          <ul>
+            <li>Duracion objetivo</li>
+            <li>Zona / FC / RPE</li>
+            <li>Consigna corta y clara</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag">Patron 05</span>
+          <h3>Recuperacion / movilidad</h3>
+          <p>Para respiracion, elongacion y cierre guiado de la sesion.</p>
+          <ul>
+            <li>Lista corta o instrucciones</li>
+            <li>Tiempo total</li>
+            <li>Cierre simple</li>
+          </ul>
+        </article>
+      </section>
+
+      <div class="section-title">
+        <h2>Wireframe del nuevo editor coach</h2>
+        <span>Selector de patron, constructor contextual y preview del alumno lado a lado</span>
+      </div>
+
+      <section class="canvas">
+        <div class="layout">
+          <aside class="panel stack">
+            <span class="eyebrow">Paso 1</span>
+            <h3>Elegi como se ejecuta este bloque</h3>
+            <div class="ghost">
+              <strong>Lista de ejercicios</strong>
+              Calentamiento, fuerza, accesorios, cooldown.
+            </div>
+            <div class="ghost" style="border-color: rgba(215, 255, 58, 0.4); background: rgba(215, 255, 58, 0.06);">
+              <strong>Pasadas / running</strong>
+              Series, fartlek, intervalos por distancia o tiempo.
+            </div>
+            <div class="ghost">
+              <strong>Timer guiado</strong>
+              Tabata, HIIT, EMOM, AMRAP.
+            </div>
+            <div class="ghost">
+              <strong>Cardio continuo</strong>
+              Zona 2, bici suave, base aerobica.
+            </div>
+            <div class="ghost">
+              <strong>Recuperacion / movilidad</strong>
+              Respiracion, elongacion, descarga.
+            </div>
+          </aside>
+
+          <article class="panel stack">
+            <span class="eyebrow">Paso 2</span>
+            <h3>Constructor contextual: pasadas de running</h3>
+
+            <div class="field">
+              <label>Nombre del bloque</label>
+              <div class="input">Series 10 x 400 + 200</div>
+            </div>
+
+            <div class="field">
+              <label>Objetivo del bloque</label>
+              <div class="input">Desarrollar tolerancia al ritmo 5K con recuperacion controlada.</div>
+            </div>
+
+            <div class="field">
+              <label>Preset rapido</label>
+              <div class="pill-row">
+                <div class="pill">Zona 2 - 45 min</div>
+                <div class="pill active">10 x 400 + 200</div>
+                <div class="pill">Fartlek 2 / 1</div>
+                <div class="pill">Subidas cortas</div>
+              </div>
+            </div>
+
+            <div class="summary-band">
+              <div class="summary-chip">
+                <strong>10 pasos</strong>
+                <span>6 de trabajo, 4 de recuperacion</span>
+              </div>
+              <div class="summary-chip">
+                <strong>6.0 km</strong>
+                <span>Distancia total estimada</span>
+              </div>
+              <div class="summary-chip">
+                <strong>26 min</strong>
+                <span>Sin contar traslado</span>
+              </div>
+              <div class="summary-chip">
+                <strong>90s final</strong>
+                <span>Descanso despues del bloque</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Pasadas</label>
+              <div class="stack">
+                <div class="step-line">
+                  <div class="step-kind">WORK</div>
+                  <div class="step-note">400 m</div>
+                  <div>
+                    <div class="step-main">Ritmo 5K</div>
+                    <div class="step-note">Paso 1 · fuerte pero controlado</div>
+                  </div>
+                  <div class="step-note">...</div>
+                </div>
+                <div class="step-line">
+                  <div class="step-kind" style="color: var(--success);">RECOVER</div>
+                  <div class="step-note">200 m</div>
+                  <div>
+                    <div class="step-main">Zona 1-2</div>
+                    <div class="step-note">Paso 2 · trote suave</div>
+                  </div>
+                  <div class="step-note">...</div>
+                </div>
+                <div class="step-line">
+                  <div class="step-kind">WORK</div>
+                  <div class="step-note">400 m</div>
+                  <div>
+                    <div class="step-main">Ritmo 5K</div>
+                    <div class="step-note">Paso 3 · mantener tecnica</div>
+                  </div>
+                  <div class="step-note">...</div>
+                </div>
+                <div class="step-line">
+                  <div class="step-kind" style="color: var(--success);">RECOVER</div>
+                  <div class="step-note">200 m</div>
+                  <div>
+                    <div class="step-main">Zona 1-2</div>
+                    <div class="step-note">Paso 4 · soltar sin frenar de golpe</div>
+                  </div>
+                  <div class="step-note">...</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="split">
+              <div class="field">
+                <label>Descanso despues del bloque</label>
+                <div class="input">90 segundos</div>
+              </div>
+              <div class="field">
+                <label>Como se registra</label>
+                <div class="input">Seguimiento por reloj + opcion de vincular Strava</div>
+              </div>
+            </div>
+          </article>
+
+          <aside class="panel stack">
+            <span class="eyebrow">Paso 3</span>
+            <h3>Preview: asi lo va a ver el alumno</h3>
+            <div class="hero-block">
+              <span class="eyebrow" style="margin-bottom: 6px;">Running</span>
+              <strong>Series 10 x 400 + 200</strong>
+              <p style="color: var(--text-mute); line-height: 1.45;">
+                Vas a hacer 10 pasos. En los tramos de trabajo buscá ritmo 5K.
+                En las recuperaciones trote suave en zona 1-2.
+              </p>
+            </div>
+            <div class="timeline-card">
+              <div class="timeline-head">
+                <div class="timeline-title">Resumen del bloque</div>
+                <div class="pill active">26 min</div>
+              </div>
+              <div class="timeline-meta">
+                <span>10 pasos</span>
+                <span>6.0 km aprox</span>
+                <span>Descanso final 90s</span>
+              </div>
+            </div>
+            <div class="list-row">
+              Paso 1 · 400 m fuerte
+              <small>Objetivo: ritmo 5K</small>
+            </div>
+            <div class="list-row">
+              Paso 2 · 200 m suave
+              <small>Objetivo: zona 1-2</small>
+            </div>
+            <div class="list-row">
+              Paso 3 · 400 m fuerte
+              <small>Objetivo: ritmo 5K</small>
+            </div>
+            <div class="alt-cta">Ver actividad vinculada del reloj</div>
+          </aside>
+        </div>
+      </section>
+
+      <div class="section-title">
+        <h2>Galeria de formularios por tipo de bloque</h2>
+        <span>Comparativa exacta de que configura el coach en cada patron y que variables usa</span>
+      </div>
+
+      <section class="form-grid">
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 01</span>
+              <h3>Lista de ejercicios · calentamiento o fuerza</h3>
+              <p>La logica principal es por ejercicio. Puede trabajar por repeticiones, tiempo o carga segun cada item.</p>
+            </div>
+            <div class="form-badge">Exercise List</div>
+          </div>
+          <div class="field-stack">
+            <div class="field">
+              <label>Nombre del bloque</label>
+              <div class="input">Fuerza principal</div>
+            </div>
+            <div class="split">
+              <div class="field">
+                <label>Objetivo</label>
+                <div class="input">Empuje + traccion</div>
+              </div>
+              <div class="field">
+                <label>Descanso entre ejercicios</label>
+                <div class="input">90 segundos</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Ejercicios del bloque</label>
+              <div class="stack">
+                <div class="step-line" style="grid-template-columns: 1.2fr 100px 100px 100px;">
+                  <div><div class="step-main">Press banca</div><div class="step-note">Trabajo por repeticiones</div></div>
+                  <div class="step-note">4 series</div>
+                  <div class="step-note">8 reps</div>
+                  <div class="step-note">RPE 8</div>
+                </div>
+                <div class="step-line" style="grid-template-columns: 1.2fr 100px 100px 100px;">
+                  <div><div class="step-main">Remo mancuerna</div><div class="step-note">Trabajo por repeticiones</div></div>
+                  <div class="step-note">4 series</div>
+                  <div class="step-note">10 reps</div>
+                  <div class="step-note">RIR 2</div>
+                </div>
+                <div class="step-line" style="grid-template-columns: 1.2fr 100px 100px 100px;">
+                  <div><div class="step-main">Plancha</div><div class="step-note">Trabajo por tiempo</div></div>
+                  <div class="step-note">3 series</div>
+                  <div class="step-note">40 seg</div>
+                  <div class="step-note">Control</div>
+                </div>
+              </div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> series</div>
+              <div class="var-chip">reps</div>
+              <div class="var-chip">duracion por ejercicio</div>
+              <div class="var-chip">RPE / RIR / carga</div>
+              <div class="var-chip">descanso</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              3 ejercicios principales, con logger por series. Algunos ejercicios se entienden por reps y otros por tiempo.
+            </div>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 02</span>
+              <h3>Intervalos (estilo app de timer) · receta simple</h3>
+              <p>
+                Una sola receta con 6 valores. Esto es lo que hacen bien la mayoría de timers: <b>preparación</b>, <b>trabajo</b>, <b>descanso</b>,
+                <b>rondas</b>, <b>series</b> (sets) y <b>descanso entre series</b>. El resto queda como opcional.
+              </p>
+            </div>
+            <div class="form-badge">Guided Timer</div>
+          </div>
+          <div class="field-stack">
+            <div class="field-grid-4">
+              <div class="field">
+                <label>Preparación</label>
+                <div class="input">10 s</div>
+              </div>
+              <div class="field">
+                <label>Trabajo</label>
+                <div class="input">40 s</div>
+              </div>
+              <div class="field">
+                <label>Descanso</label>
+                <div class="input">20 s</div>
+              </div>
+              <div class="field">
+                <label>Rondas</label>
+                <div class="input">10</div>
+              </div>
+            </div>
+            <div class="field-grid-4">
+              <div class="field">
+                <label>Series</label>
+                <div class="input">3</div>
+              </div>
+              <div class="field">
+                <label>Descanso entre series</label>
+                <div class="input">60 s</div>
+              </div>
+              <div class="field">
+                <label>Cooldown (opcional)</label>
+                <div class="input">0 s</div>
+              </div>
+              <div class="field">
+                <label>Descanso final</label>
+                <div class="input">120 s</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Asignación de ejercicios (plus)</label>
+              <div class="pill-row">
+                <div class="pill active">Repetir 1 ejercicio</div>
+                <div class="pill">Rotar por ronda</div>
+                <div class="pill">Rotar por serie</div>
+                <div class="pill">Custom (avanzado)</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Lista de ejercicios (si rota)</label>
+              <div class="pill-row">
+                <div class="pill active">Burpees</div>
+                <div class="pill">Mountain climbers</div>
+                <div class="pill">Jump squats</div>
+                <div class="pill">KB swings</div>
+              </div>
+              <div class="micro">
+                Si elegís “Rotar por ronda”, cada ronda toma el siguiente ejercicio. Si elegís “Rotar por serie”, cada serie usa un ejercicio fijo.
+              </div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> preparación</div>
+              <div class="var-chip">trabajo</div>
+              <div class="var-chip">descanso</div>
+              <div class="var-chip">rondas</div>
+              <div class="var-chip">series</div>
+              <div class="var-chip">descanso entre series</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              3 series. En cada serie: 10 rondas de 40s trabajo + 20s descanso. Preparación 10s. Descanso 60s entre series. Total estimado: 13 min.
+            </div>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 03</span>
+              <h3>Tabata</h3>
+              <p>Tabata debería ser un “modo” del mismo builder de intervalos, pero con presets claros: 20/10, 8 rondas, 1 serie.</p>
+            </div>
+            <div class="form-badge">Tabata</div>
+          </div>
+          <div class="field-stack">
+            <div class="pill-row">
+              <div class="pill active">Preset oficial 20 / 10</div>
+              <div class="pill">4 min clasico</div>
+              <div class="pill">3 tabatas (sets)</div>
+            </div>
+            <div class="field-grid-4">
+              <div class="field">
+                <label>Preparación</label>
+                <div class="input">10 s</div>
+              </div>
+              <div class="field">
+                <label>Trabajo</label>
+                <div class="input">20 s</div>
+              </div>
+              <div class="field">
+                <label>Descanso</label>
+                <div class="input">10 s</div>
+              </div>
+              <div class="field">
+                <label>Rondas</label>
+                <div class="input">8</div>
+              </div>
+            </div>
+            <div class="field-grid-4">
+              <div class="field">
+                <label>Tabatas (series)</label>
+                <div class="input">1</div>
+              </div>
+              <div class="field">
+                <label>Descanso entre tabatas</label>
+                <div class="input">60 s</div>
+              </div>
+              <div class="field">
+                <label>Cooldown</label>
+                <div class="input">0 s</div>
+              </div>
+              <div class="field">
+                <label>Descanso final</label>
+                <div class="input">120 s</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Contenido del tabata</label>
+              <div class="input">Air squat (repetir en todas las rondas)</div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> preparación</div>
+              <div class="var-chip">20/10 (preset)</div>
+              <div class="var-chip">rondas</div>
+              <div class="var-chip">tabatas (series)</div>
+              <div class="var-chip">descanso entre tabatas</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              Tabata: preparación 10s. 8 rondas de 20s trabajo + 10s descanso. Descanso final 120s.
+            </div>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 04</span>
+              <h3>EMOM</h3>
+              <p>El foco es “cada minuto reinicia”. El formulario debería ocultar variables irrelevantes: no hay trabajo/descanso, hay “minutos” y “tarea por minuto”.</p>
+            </div>
+            <div class="form-badge">EMOM</div>
+          </div>
+          <div class="field-stack">
+            <div class="field-grid-3">
+              <div class="field">
+                <label>Minutos</label>
+                <div class="input">12</div>
+              </div>
+              <div class="field">
+                <label>Formato</label>
+                <div class="input">Cada minuto</div>
+              </div>
+              <div class="field">
+                <label>Descanso final</label>
+                <div class="input">90 s</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Tarea por minuto</label>
+              <div class="stack">
+                <div class="step-line" style="grid-template-columns: 110px 1fr 90px;">
+                  <div class="step-note">Minutos impares</div>
+                  <div><div class="step-main">10 kettlebell swings</div><div class="step-note">por reps</div></div>
+                  <div class="step-note">descanso: resto del minuto</div>
+                </div>
+                <div class="step-line" style="grid-template-columns: 110px 1fr 90px;">
+                  <div class="step-note">Minutos pares</div>
+                  <div><div class="step-main">8 push press</div><div class="step-note">por reps</div></div>
+                  <div class="step-note">descanso: resto del minuto</div>
+                </div>
+              </div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> minutos</div>
+              <div class="var-chip">tarea A / tarea B</div>
+              <div class="var-chip">reps o tiempo por tarea</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              Cada minuto comienza una nueva tarea. Terminás el trabajo y descansás el tiempo que sobre.
+            </div>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 05</span>
+              <h3>AMRAP</h3>
+              <p>La variable principal es el tiempo total. El coach configura la “ronda” y el sistema explica que se repite hasta que se termina el tiempo.</p>
+            </div>
+            <div class="form-badge">AMRAP</div>
+          </div>
+          <div class="field-stack">
+            <div class="field-grid-3">
+              <div class="field">
+                <label>Duracion total</label>
+                <div class="input">14 min</div>
+              </div>
+              <div class="field">
+                <label>Preparación</label>
+                <div class="input">10 s</div>
+              </div>
+              <div class="field">
+                <label>Objetivo</label>
+                <div class="input">Mantener ritmo</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Ronda de trabajo</label>
+              <div class="stack">
+                <div class="step-line" style="grid-template-columns: 1fr 90px 90px;">
+                  <div><div class="step-main">Row erg</div><div class="step-note">Trabajo por calorias</div></div>
+                  <div class="step-note">12 cal</div>
+                  <div class="step-note">sin pausa</div>
+                </div>
+                <div class="step-line" style="grid-template-columns: 1fr 90px 90px;">
+                  <div><div class="step-main">Thrusters</div><div class="step-note">Trabajo por repeticiones</div></div>
+                  <div class="step-note">10 reps</div>
+                  <div class="step-note">sin pausa</div>
+                </div>
+                <div class="step-line" style="grid-template-columns: 1fr 90px 90px;">
+                  <div><div class="step-main">Sit ups</div><div class="step-note">Trabajo por repeticiones</div></div>
+                  <div class="step-note">12 reps</div>
+                  <div class="step-note">sin pausa</div>
+                </div>
+              </div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> tiempo total</div>
+              <div class="var-chip">tareas por ronda</div>
+              <div class="var-chip">reps / calorias / metros</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              Hacé tantas rondas como puedas en 14 minutos. No persigue rondas fijas, persigue densidad.
+            </div>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 06</span>
+              <h3>Running por pasadas</h3>
+              <p>La unidad ya no es el ejercicio sino el paso. Cada paso puede trabajar por distancia o por tiempo con una intensidad objetivo.</p>
+            </div>
+            <div class="form-badge">Running Steps</div>
+          </div>
+          <div class="field-stack">
+            <div class="field-grid-4">
+              <div class="field">
+                <label>Pasos</label>
+                <div class="input">10</div>
+              </div>
+              <div class="field">
+                <label>Distancia total</label>
+                <div class="input">6.0 km</div>
+              </div>
+              <div class="field">
+                <label>Tiempo estimado</label>
+                <div class="input">26 min</div>
+              </div>
+              <div class="field">
+                <label>Descanso final</label>
+                <div class="input">90 s</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Secuencia del bloque</label>
+              <div class="stack">
+                <div class="step-line">
+                  <div class="step-kind">WORK</div>
+                  <div class="step-note">400 m</div>
+                  <div><div class="step-main">Ritmo 5K</div><div class="step-note">pasada fuerte</div></div>
+                  <div class="step-note">1</div>
+                </div>
+                <div class="step-line">
+                  <div class="step-kind" style="color: var(--success);">RECOVER</div>
+                  <div class="step-note">200 m</div>
+                  <div><div class="step-main">Zona 1-2</div><div class="step-note">trote suave</div></div>
+                  <div class="step-note">2</div>
+                </div>
+              </div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> pasos</div>
+              <div class="var-chip">distancia o tiempo</div>
+              <div class="var-chip">ritmo / FC / RPE / velocidad</div>
+              <div class="var-chip">instruccion</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              El alumno ve una guia secuencial. Luego puede vincular la actividad del reloj para contrastar el ejecutado.
+            </div>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 07</span>
+              <h3>Cardio continuo</h3>
+              <p>Es el formulario mas simple. No tiene pasos internos: define consigna, duracion e intensidad sostenida.</p>
+            </div>
+            <div class="form-badge">Steady State</div>
+          </div>
+          <div class="field-stack">
+            <div class="field-grid-3">
+              <div class="field">
+                <label>Duracion</label>
+                <div class="input">45 min</div>
+              </div>
+              <div class="field">
+                <label>Intensidad</label>
+                <div class="input">Zona 2</div>
+              </div>
+              <div class="field">
+                <label>Modo</label>
+                <div class="input">Running / bici / remo</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Instruccion visible</label>
+              <div class="input">Mantener ritmo conversacional estable. Si sube la FC, bajar el ritmo.</div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> duracion</div>
+              <div class="var-chip">zona / FC / RPE / potencia</div>
+              <div class="var-chip">consigna</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              45 minutos en zona 2. Sin pasos, sin rondas, sin cambios de fase.
+            </div>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="form-card-head">
+            <div>
+              <span class="eyebrow">Formulario 08</span>
+              <h3>Recuperacion / movilidad</h3>
+              <p>Se parece a una lista de ejercicios, pero cambia el tono: menos precision de carga y mas claridad de sensaciones y respiracion.</p>
+            </div>
+            <div class="form-badge">Recovery</div>
+          </div>
+          <div class="field-stack">
+            <div class="field-grid-3">
+              <div class="field">
+                <label>Duracion total</label>
+                <div class="input">8 min</div>
+              </div>
+              <div class="field">
+                <label>Objetivo</label>
+                <div class="input">Bajar pulsaciones</div>
+              </div>
+              <div class="field">
+                <label>Descanso</label>
+                <div class="input">Libre</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Secuencia sugerida</label>
+              <div class="stack">
+                <div class="step-line" style="grid-template-columns: 1fr 90px 90px;">
+                  <div><div class="step-main">Respiracion supina</div><div class="step-note">guiada</div></div>
+                  <div class="step-note">2 min</div>
+                  <div class="step-note">suave</div>
+                </div>
+                <div class="step-line" style="grid-template-columns: 1fr 90px 90px;">
+                  <div><div class="step-main">Estiramiento de flexores</div><div class="step-note">por lado</div></div>
+                  <div class="step-note">60 s</div>
+                  <div class="step-note">sin dolor</div>
+                </div>
+              </div>
+            </div>
+            <div class="vars">
+              <div class="var-chip"><strong>Variables:</strong> duracion</div>
+              <div class="var-chip">lado</div>
+              <div class="var-chip">instruccion de sensacion</div>
+            </div>
+            <div class="preview-box">
+              <strong>Lectura del alumno</strong>
+              No se presenta como bloque de rendimiento, sino como cierre guiado y simple de seguir.
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="canvas stack" style="margin-top: 18px;">
+        <span class="eyebrow">Resumen de diferencias</span>
+        <div class="field-grid-4">
+          <div class="preview-box">
+            <strong>Trabaja por repeticiones</strong>
+            Fuerza, calentamiento tecnico, EMOM con reps, AMRAP con tareas cerradas.
+          </div>
+          <div class="preview-box">
+            <strong>Trabaja por tiempo</strong>
+            HIIT, Tabata, cardio continuo, movilidad, algunos ejercicios sueltos.
+          </div>
+          <div class="preview-box">
+            <strong>Trabaja por distancia</strong>
+            Running por pasadas, bici por tramos, remo o assault bike por metros.
+          </div>
+          <div class="preview-box">
+            <strong>Trabaja por intensidad</strong>
+            Running/cardio continuo con ritmo, zona de FC, RPE, velocidad o potencia.
+          </div>
+        </div>
+      </section>
+
+      <div class="section-title">
+        <h2>Timeline del entrenamiento completo</h2>
+        <span>El workout deja de ser una lista tecnica y pasa a leerse como una secuencia ejecutable</span>
+      </div>
+
+      <section class="canvas stack">
+        <div class="timeline-card">
+          <div class="timeline-head">
+            <div>
+              <div class="eyebrow" style="margin-bottom: 4px;">Bloque 1</div>
+              <div class="timeline-title">Calentamiento guiado</div>
+            </div>
+            <div class="pill">12 min</div>
+          </div>
+          <div class="timeline-meta">
+            <span>Lista de ejercicios</span>
+            <span>5 movimientos</span>
+            <span>30s entre ejercicios</span>
+            <span>Lo ve como checklist + timer</span>
+          </div>
+        </div>
+
+        <div class="timeline-card">
+          <div class="timeline-head">
+            <div>
+              <div class="eyebrow" style="margin-bottom: 4px;">Bloque 2</div>
+              <div class="timeline-title">Fuerza principal</div>
+            </div>
+            <div class="pill">28 min</div>
+          </div>
+          <div class="timeline-meta">
+            <span>Lista de ejercicios</span>
+            <span>4 ejercicios</span>
+            <span>90s descanso</span>
+            <span>Lo ve como logger por series</span>
+          </div>
+        </div>
+
+        <div class="timeline-card" style="border-color: rgba(122, 184, 255, 0.35);">
+          <div class="timeline-head">
+            <div>
+              <div class="eyebrow" style="margin-bottom: 4px; color: var(--info);">Bloque 3</div>
+              <div class="timeline-title">Running · Series 10 x 400 + 200</div>
+            </div>
+            <div class="pill" style="color: var(--info); border-color: rgba(122, 184, 255, 0.28);">26 min</div>
+          </div>
+          <div class="timeline-meta">
+            <span>Pasadas de running</span>
+            <span>10 pasos</span>
+            <span>6.0 km aprox</span>
+            <span>Lo ve como guia de bloques + import reloj</span>
+          </div>
+        </div>
+
+        <div class="timeline-card">
+          <div class="timeline-head">
+            <div>
+              <div class="eyebrow" style="margin-bottom: 4px;">Bloque 4</div>
+              <div class="timeline-title">Vuelta a la calma</div>
+            </div>
+            <div class="pill">8 min</div>
+          </div>
+          <div class="timeline-meta">
+            <span>Recuperacion / movilidad</span>
+            <span>3 ejercicios</span>
+            <span>Respiracion final</span>
+            <span>Lo ve como cierre guiado</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-title">
+        <h2>Wireframes del alumno</h2>
+        <span>Detalle previo y sesion en ejecucion con un lenguaje comun por patron</span>
+      </div>
+
+      <section class="device-grid">
+        <article class="device">
+          <span class="eyebrow">Vista previa</span>
+          <h3>Antes de iniciar la sesion</h3>
+          <div class="device-screen">
+            <div class="device-top">
+              <span>Sesion del dia</span>
+              <span>74 min estimados</span>
+            </div>
+            <div class="hero-block">
+              <span class="eyebrow" style="margin-bottom: 4px;">Hoy vas a hacer</span>
+              <strong>Fuerza + running por pasadas</strong>
+              <p style="color: var(--text-mute); line-height: 1.45;">
+                4 bloques, 9 ejercicios y 1 bloque de series. Vas a registrar fuerza en la app y running con el reloj.
+              </p>
+            </div>
+            <div class="list-row">
+              Calentamiento
+              <small>12 min · movilidad de cadera, activacion y tecnica</small>
+            </div>
+            <div class="list-row">
+              Fuerza principal
+              <small>28 min · 4 ejercicios · 90s de descanso</small>
+            </div>
+            <div class="list-row" style="border-color: rgba(122, 184, 255, 0.3);">
+              Running - 10 x 400 + 200
+              <small>26 min · 6.0 km aprox · ritmo 5K en trabajos</small>
+            </div>
+            <div class="list-row">
+              Vuelta a la calma
+              <small>8 min · descarga y respiracion</small>
+            </div>
+            <div class="cta">Iniciar sesion</div>
+          </div>
+        </article>
+
+        <article class="device">
+          <span class="eyebrow">Sesion running</span>
+          <h3>Durante la ejecucion del bloque</h3>
+          <div class="device-screen">
+            <div class="device-top">
+              <span>Bloque 3 de 4</span>
+              <span>Pasadas de running</span>
+            </div>
+            <div class="hero-block">
+              <span class="eyebrow" style="margin-bottom: 4px;">Ahora</span>
+              <strong>Paso 3 - 400 m fuerte</strong>
+              <p style="color: var(--text-mute); line-height: 1.45;">
+                Objetivo: ritmo 5K. Mantenete tecnico, controlado y pareja la respiracion.
+              </p>
+            </div>
+            <div class="summary-band">
+              <div class="summary-chip">
+                <strong>3 / 10</strong>
+                <span>Paso actual</span>
+              </div>
+              <div class="summary-chip">
+                <strong>6.0 km</strong>
+                <span>Planificado</span>
+              </div>
+              <div class="summary-chip">
+                <strong>26 min</strong>
+                <span>Estimado</span>
+              </div>
+              <div class="summary-chip">
+                <strong>Strava</strong>
+                <span>Vincular al terminar</span>
+              </div>
+            </div>
+            <div class="list-row" style="border-color: rgba(215, 255, 58, 0.35);">
+              Paso actual destacado
+              <small>400 m fuerte · ritmo 5K</small>
+            </div>
+            <div class="list-row">
+              Sigue despues
+              <small>200 m suave · zona 1-2</small>
+            </div>
+            <div class="alt-cta">Marcar paso completado</div>
+            <div class="cta">Vincular actividad del reloj al finalizar</div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -43,6 +43,7 @@ export function EmomRunner({
     block.totalDurationSeconds && block.rounds
       ? Math.floor(block.totalDurationSeconds / block.rounds)
       : 60;
+  const prepareSeconds = block.prepareSeconds ?? 0;
 
   const totalMinutes =
     block.rounds ??
@@ -56,11 +57,15 @@ export function EmomRunner({
 
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [seconds, setSeconds] = useState(minuteSeconds);
+  const [seconds, setSeconds] = useState(prepareSeconds > 0 ? prepareSeconds : minuteSeconds);
+  const [isPreparing, setIsPreparing] = useState(prepareSeconds > 0);
   const [minute, setMinute] = useState(1);
   const [done, setDone] = useState(false);
 
-  const exIdx = (minute - 1) % exercises.length;
+  const exIdx =
+    (block.intervalExerciseStrategy ?? "rotate_per_round") === "repeat_single"
+      ? 0
+      : (minute - 1) % exercises.length;
   const currentEx = exercises[exIdx];
 
   // Play sound when timer starts
@@ -138,6 +143,10 @@ export function EmomRunner({
     const interval = setInterval(() => {
       setSeconds((prev) => {
         if (prev <= 1) {
+          if (isPreparing) {
+            setIsPreparing(false);
+            return minuteSeconds;
+          }
           setTimeout(() => advanceMinuteRef.current(repsInputRef.current), 0);
           return minuteSeconds;
         }
@@ -146,7 +155,7 @@ export function EmomRunner({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [started, paused, done, minuteSeconds]);
+  }, [started, paused, done, minuteSeconds, isPreparing]);
 
   if (done) return <DoneScreen onClose={onClose} />;
 
@@ -171,7 +180,7 @@ export function EmomRunner({
             <CircleTimer seconds={seconds} total={minuteSeconds} color={timerColor} />
 
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{currentEx.exercise.name}</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{isPreparing ? "Preparación" : currentEx.exercise.name}</div>
               {muscle && (
                 <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4 }}>
                   {MUSCLE_LABEL[muscle] ?? muscle}
@@ -182,18 +191,10 @@ export function EmomRunner({
             {/* Reps input */}
             <div style={{ width: "100%", maxWidth: 280 }}>
               <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 8, textAlign: "center" }}>
-                REPS COMPLETADAS
+                {isPreparing ? "ARRANCA EN" : "REPS COMPLETADAS"}
               </div>
-              <input
-                key={currentEx.id}
-                type="number"
-                inputMode="numeric"
-                defaultValue={currentEx.target?.reps ?? ""}
-                onChange={(e) => {
-                  repsInputRef.current = e.target.value;
-                }}
-                placeholder={currentEx.target?.reps ?? "0"}
-                style={{
+              {isPreparing ? (
+                <div style={{
                   width: "100%",
                   background: "var(--bg-2)",
                   border: "1px solid var(--line-2)",
@@ -203,11 +204,37 @@ export function EmomRunner({
                   fontWeight: 700,
                   fontFamily: "var(--font-mono)",
                   color: "var(--text)",
-                  outline: "none",
                   textAlign: "center",
                   boxSizing: "border-box",
-                }}
-              />
+                }}>
+                  {seconds}s
+                </div>
+              ) : (
+                <input
+                  key={currentEx.id}
+                  type="number"
+                  inputMode="numeric"
+                  defaultValue={currentEx.target?.reps ?? ""}
+                  onChange={(e) => {
+                    repsInputRef.current = e.target.value;
+                  }}
+                  placeholder={currentEx.target?.reps ?? "0"}
+                  style={{
+                    width: "100%",
+                    background: "var(--bg-2)",
+                    border: "1px solid var(--line-2)",
+                    borderRadius: 10,
+                    padding: "14px 16px",
+                    fontSize: 28,
+                    fontWeight: 700,
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--text)",
+                    outline: "none",
+                    textAlign: "center",
+                    boxSizing: "border-box",
+                  }}
+                />
+              )}
             </div>
           </div>
 

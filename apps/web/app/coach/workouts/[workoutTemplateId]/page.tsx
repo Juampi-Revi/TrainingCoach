@@ -7,7 +7,8 @@ import { useToast } from "@/lib/toast";
 import { Button, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { WorkoutTemplateDetail } from "@regen/types";
-import { GROUP_COLORS, GROUP_LETTERS, groupLabel, blockTypeLabel, blockSummary } from "@/lib/constants";
+import { GROUP_COLORS, GROUP_LETTERS, groupLabel, blockTypeLabel } from "@/lib/constants";
+import { blockCoachSummary, blockPatternLabel, estimateWorkoutDurationSeconds, formatBlockDurationShort } from "@/lib/training-blocks";
 import type { WE } from "./_components/_types";
 import { ExercisePicker } from "./_components/exercise-picker";
 import { ExerciseRow } from "./_components/exercise-row";
@@ -142,6 +143,7 @@ export default function TemplateEditorPage() {
   });
 
   const blocksSorted = [...blocks].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const totalEstimated = formatBlockDurationShort(estimateWorkoutDurationSeconds(blocksSorted));
   const selectedWe = selectedWeId ? exercises.find((e) => e.id === selectedWeId) ?? null : null;
   const editingBlock = editingBlockId ? blocks.find((b) => b.id === editingBlockId) ?? null : null;
 
@@ -186,6 +188,9 @@ export default function TemplateEditorPage() {
               {data.description && <div style={{ fontSize: 13, color: "var(--text-mute)", marginTop: 4 }}>{data.description}</div>}
               <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 11, color: "var(--text-mute)" }}>
                 <span>{exercises.length} ejercicios</span>
+                <span>·</span>
+                <span>{blocksSorted.length} bloques</span>
+                {totalEstimated !== "—" && <><span>·</span><span>{totalEstimated} estimados</span></>}
                 {usedGroups.length > 0 && <><span>·</span><span>{usedGroups.length} grupo{usedGroups.length > 1 ? "s" : ""}</span></>}
               </div>
             </div>
@@ -232,11 +237,12 @@ export default function TemplateEditorPage() {
                           color: b.type === "warmup" ? "#FF8E72" : b.type === "cooldown" ? "#A78BFA" : b.type === "cardio" ? "#7AB8FF" : "var(--lime)",
                           letterSpacing: ".08em"
                         }}>
-                          {blockTypeLabel(b.type, b.intervalType).toUpperCase()} {b.label ? `· ${b.label}` : ""} · {blockSummary(b)}
+                          {blockTypeLabel(b.type, b.intervalType).toUpperCase()} {b.label ? `· ${b.label}` : ""}
                         </div>
                         <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
+                          {blockPatternLabel(b)} · {blockCoachSummary(b)}
+                          <span style={{ margin: "0 6px" }}>·</span>
                           {blockExercises.length} ejercicio{blockExercises.length === 1 ? "" : "s"}
-                          {b.targetMinutes ? ` · ${b.targetMinutes} min` : ""}
                           {b.restBetweenExercisesSeconds ? ` · descanso ${b.restBetweenExercisesSeconds}s` : ""}
                           {b.restAfterSeconds ? ` · descanso post ${b.restAfterSeconds}s` : ""}
                         </div>

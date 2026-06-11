@@ -48,12 +48,14 @@ export function AmrapRunner({
   primaryButtonStyle,
 }: AmrapRunnerProps) {
   const totalSecs = block.totalDurationSeconds ?? 600;
+  const prepareSeconds = block.prepareSeconds ?? 0;
 
   const { playStart, playComplete, playCountdown } = useSounds();
 
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [seconds, setSeconds] = useState(totalSecs);
+  const [seconds, setSeconds] = useState(prepareSeconds > 0 ? prepareSeconds : totalSecs);
+  const [isPreparing, setIsPreparing] = useState(prepareSeconds > 0);
   const [round, setRound] = useState(1);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [completions, setCompletions] = useState<Record<string, number>>(
@@ -133,6 +135,10 @@ export function AmrapRunner({
     const interval = setInterval(() => {
       setSeconds((prev) => {
         if (prev <= 1) {
+          if (isPreparing) {
+            setIsPreparing(false);
+            return totalSecs;
+          }
           setTimeout(() => finalizeRef.current(checkedRef.current, completionsRef.current), 0);
           return 0;
         }
@@ -141,7 +147,7 @@ export function AmrapRunner({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [started, paused, done]);
+  }, [started, paused, done, isPreparing, totalSecs]);
 
   const toggleExercise = useCallback(
     (exId: string) => {
@@ -191,7 +197,7 @@ export function AmrapRunner({
         {/* Global countdown */}
         <div style={{ textAlign: "center", paddingTop: 24, marginBottom: 24, position: "relative" }}>
           <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 6, letterSpacing: ".1em" }}>
-            TIEMPO RESTANTE
+            {isPreparing ? "PREPARACIÓN" : "TIEMPO RESTANTE"}
           </div>
           <div className="ta-mono" style={{
             fontSize: 72, fontWeight: 700, lineHeight: 1,
@@ -201,7 +207,7 @@ export function AmrapRunner({
             {fmtSecs(seconds)}
           </div>
           <div className="ta-mono" style={{ fontSize: 12, color: "var(--lime)", fontWeight: 700, marginTop: 8 }}>
-            Ronda {round}
+            {isPreparing ? "Arranca enseguida" : `Ronda ${round}`}
             {totalFullRounds > 0 && (
               <span style={{ color: "var(--text-mute)", fontWeight: 400 }}>
                 {" · "}{totalFullRounds} completa{totalFullRounds !== 1 ? "s" : ""}
@@ -212,7 +218,11 @@ export function AmrapRunner({
 
         {/* Exercise checklist */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", position: "relative" }}>
-          {exercises.map((ex) => {
+          {isPreparing ? (
+            <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: 16, background: "var(--bg-1)", color: "var(--text-mute)", lineHeight: 1.5 }}>
+              Vas a tener {prepareSeconds}s de preparación antes de empezar el AMRAP. Después repetí la ronda de ejercicios durante {Math.round(totalSecs / 60)} min.
+            </div>
+          ) : exercises.map((ex) => {
             const isChecked = checked.has(ex.id);
             const muscle = ex.exercise.primaryMuscle;
             const targetReps = ex.target?.reps;

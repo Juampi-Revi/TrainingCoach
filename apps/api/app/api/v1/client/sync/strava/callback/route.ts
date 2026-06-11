@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProvider } from "@/lib/health/registry";
 import { syncUserProvider } from "@/lib/health/sync-engine";
+import { getApiBaseUrl, getWebBaseUrl } from "@/lib/public-urls";
 
-const WEB_BASE = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001";
+const WEB_BASE = getWebBaseUrl();
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${WEB_BASE}/cuenta/wearable?error=provider_not_found`);
     }
 
-    const redirectUri = `${process.env.API_BASE_URL || "http://localhost:3003"}/api/v1/client/sync/strava/callback`;
+    const redirectUri = `${getApiBaseUrl()}/api/v1/client/sync/strava/callback`;
 
     const tokens = await provider.exchangeCode(code, redirectUri);
     

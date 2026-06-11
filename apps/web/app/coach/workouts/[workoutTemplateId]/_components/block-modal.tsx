@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import type { BlockType, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
+import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
 import type { WB } from "./_types";
 import { BlockModalView } from "./block-modal-view";
 
@@ -29,9 +29,15 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   const [restAfterSeconds, setRestAfterSeconds] = useState(String(block?.restAfterSeconds ?? ""));
   
   // Interval-specific fields
+  const [prepare, setPrepare] = useState(String(block?.prepareSeconds ?? ""));
   const [work, setWork] = useState(String(block?.workSeconds ?? ""));
   const [rest, setRest] = useState(String(block?.restSeconds ?? ""));
   const [rounds, setRounds] = useState(String(block?.rounds ?? ""));
+  const [setCount, setSetCount] = useState(String(block?.setCount ?? ""));
+  const [setRestSecondsValue, setSetRestSecondsValue] = useState(String(block?.restBetweenSetsSeconds ?? ""));
+  const [intervalExerciseStrategy, setIntervalExerciseStrategy] = useState<IntervalExerciseStrategy>(
+    (block?.intervalExerciseStrategy as IntervalExerciseStrategy | null) ?? "repeat_single",
+  );
   const [total, setTotal] = useState(String(block?.totalDurationSeconds ?? ""));
 
   // Universal config fields (warmup/strength/cooldown/cardio)
@@ -52,9 +58,13 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       setLabel(block?.label ?? "");
       setDescription(block?.description ?? "");
       setRestAfterSeconds(String(block?.restAfterSeconds ?? ""));
+      setPrepare(String(block?.prepareSeconds ?? ""));
       setWork(String(block?.workSeconds ?? ""));
       setRest(String(block?.restSeconds ?? ""));
       setRounds(String(block?.rounds ?? ""));
+      setSetCount(String(block?.setCount ?? ""));
+      setSetRestSecondsValue(String(block?.restBetweenSetsSeconds ?? ""));
+      setIntervalExerciseStrategy(((block?.intervalExerciseStrategy as IntervalExerciseStrategy | null) ?? "repeat_single"));
       setTotal(String(block?.totalDurationSeconds ?? ""));
       setTargetMinutes(String(block?.targetMinutes ?? ""));
       setRestBetweenExercises(String(block?.restBetweenExercisesSeconds ?? ""));
@@ -70,6 +80,9 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
     const w = parseInt(work);
     const r = parseInt(rest);
     const ro = parseInt(rounds);
+    const prep = parseInt(prepare);
+    const sets = parseInt(setCount);
+    const setRestSeconds = parseInt(setRestSecondsValue);
     const t = parseInt(total);
     const restAfter = parseInt(restAfterSeconds);
     const restBetweenEx = parseInt(restBetweenExercises);
@@ -94,10 +107,14 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
             ...basePayload,
             type: blockType,
             intervalType,
+            prepareSeconds: !isNaN(prep) && prep > 0 ? prep : null,
             rounds: emomRounds,
             totalDurationSeconds: emomRounds ? emomRounds * 60 : null,
             workSeconds: null,
             restSeconds: null,
+            setCount: null,
+            restBetweenSetsSeconds: null,
+            intervalExerciseStrategy: null,
             restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
           };
         } else if (intervalType === "amrap") {
@@ -105,10 +122,14 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
             ...basePayload,
             type: blockType,
             intervalType,
+            prepareSeconds: !isNaN(prep) && prep > 0 ? prep : null,
             totalDurationSeconds: !isNaN(t) && t > 0 ? t : null,
             workSeconds: null,
             restSeconds: null,
             rounds: null,
+            setCount: null,
+            restBetweenSetsSeconds: null,
+            intervalExerciseStrategy: null,
             restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
           };
         } else {
@@ -117,9 +138,13 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
             ...basePayload,
             type: blockType,
             intervalType,
+            prepareSeconds: !isNaN(prep) && prep > 0 ? prep : null,
             workSeconds: !isNaN(w) && w > 0 ? w : null,
             restSeconds: !isNaN(r) && r > 0 ? r : null,
             rounds: !isNaN(ro) && ro > 0 ? ro : null,
+            setCount: !isNaN(sets) && sets > 0 ? sets : 1,
+            restBetweenSetsSeconds: !isNaN(setRestSeconds) && setRestSeconds > 0 ? setRestSeconds : null,
+            intervalExerciseStrategy: intervalExerciseStrategy ?? "repeat_single",
             totalDurationSeconds: null,
             restBetweenExercisesSeconds: !isNaN(restBetweenEx) && restBetweenEx > 0 ? restBetweenEx : null,
           };
@@ -198,9 +223,13 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       label={label}
       description={description}
       restAfterSeconds={restAfterSeconds}
+      prepare={prepare}
       work={work}
       rest={rest}
       rounds={rounds}
+      setCount={setCount}
+      setRestSeconds={setRestSecondsValue}
+      intervalExerciseStrategy={intervalExerciseStrategy}
       total={total}
       targetMinutes={targetMinutes}
       restBetweenExercises={restBetweenExercises}
@@ -211,9 +240,13 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       setLabel={setLabel}
       setDescription={setDescription}
       setRestAfterSeconds={setRestAfterSeconds}
+      setPrepare={setPrepare}
       setWork={setWork}
       setRest={setRest}
       setRounds={setRounds}
+      setSetCount={setSetCount}
+      setSetRestSeconds={setSetRestSecondsValue}
+      setIntervalExerciseStrategy={setIntervalExerciseStrategy}
       setTotal={setTotal}
       setTargetMinutes={setTargetMinutes}
       setRestBetweenExercises={setRestBetweenExercises}

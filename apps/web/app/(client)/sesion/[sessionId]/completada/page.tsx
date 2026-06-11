@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Button, Icon, StateBlock } from "@/components/ui";
 import type { SessionDetail } from "@regen/types";
+import { formatSecondsShort, summarizeEnduranceSteps } from "@/lib/constants";
 
 const ENERGY_LABELS: Record<number, string> = { 1: "BAJA", 3: "MEDIA", 5: "ALTA" };
 
@@ -106,6 +107,18 @@ export default function SessionCompletadaPage() {
   const manualMeta = parseManualMeta(session.sessionNotes);
   const titleStr = session.workoutTemplate?.title ?? manualMeta.title ?? "Sesión";
   const kindStr = session.workoutTemplate ? null : manualMeta.type;
+  const plannedBlocks = session.blocks.filter((b) => b.steps.length > 0);
+  const planned = plannedBlocks.reduce(
+    (acc, block) => {
+      const summary = summarizeEnduranceSteps(block.steps);
+      acc.distance += summary.totalDistanceMeters;
+      acc.duration += summary.totalDurationSeconds;
+      acc.steps += summary.steps;
+      return acc;
+    },
+    { distance: 0, duration: 0, steps: 0 },
+  );
+  const linked = session.activities[0] ?? null;
 
   // Find top sets for highlights (heaviest weight per exercise)
   const highlights = workExercises
@@ -222,6 +235,51 @@ export default function SessionCompletadaPage() {
       </div>
 
       <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+
+        {planned.steps > 0 && (
+          <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div className="ta-mono" style={{ fontSize: 10, color: "#FC4C02", fontWeight: 700, letterSpacing: ".1em" }}>
+                  STRAVA
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 600, marginTop: 2 }}>
+                  {linked ? "Actividad vinculada" : "Sin actividad vinculada"}
+                </div>
+              </div>
+              <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", fontWeight: 700 }}>
+                {planned.distance > 0 ? `${(planned.distance / 1000).toFixed(2)} km` : "—"}
+              </div>
+            </div>
+            <div style={{ padding: "12px 14px", display: "grid", gap: 10 }}>
+              <div style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, background: "rgba(255,255,255,.02)" }}>
+                <div className="ta-mono" style={{ fontSize: 10, color: "var(--accent-text)", fontWeight: 700, letterSpacing: ".08em", marginBottom: 6 }}>
+                  PLANIFICADO
+                </div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12, color: "var(--text-mute)" }}>
+                  <span>{planned.steps} pasos</span>
+                  {planned.distance > 0 ? <span>{(planned.distance / 1000).toFixed(2)} km</span> : null}
+                  {planned.duration > 0 ? <span>{formatSecondsShort(planned.duration)}</span> : null}
+                </div>
+              </div>
+              {linked && (
+                <div style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, background: "rgba(252,76,2,.06)" }}>
+                  <div className="ta-mono" style={{ fontSize: 10, color: "#FC4C02", fontWeight: 700, letterSpacing: ".08em", marginBottom: 6 }}>
+                    EJECUTADO
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 700 }}>
+                    {linked.title ?? linked.sport ?? "Actividad"}
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12, color: "var(--text-mute)", marginTop: 6 }}>
+                    {linked.distanceMeters ? <span>{(linked.distanceMeters / 1000).toFixed(2)} km</span> : null}
+                    {linked.movingTimeSeconds ? <span>{formatSecondsShort(linked.movingTimeSeconds)}</span> : null}
+                    {linked.averageHeartrate ? <span>{linked.averageHeartrate} bpm</span> : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Energy rating 1-5 */}
         <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, padding: 14 }}>

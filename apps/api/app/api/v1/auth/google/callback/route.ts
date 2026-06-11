@@ -2,11 +2,12 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { err, withHandler } from "@/lib/api-response";
+import { getApiBaseUrl, getWebBaseUrl } from "@/lib/public-urls";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim() ?? "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "";
-const FRONTEND_URL = process.env.FRONTEND_URL?.trim() || "http://localhost:3001";
-const API_URL = process.env.FRONTEND_URL?.trim() || "http://localhost:3003";
+const FRONTEND_URL = getWebBaseUrl();
+const API_URL = getApiBaseUrl();
 
 const REDIRECT_URI = `${API_URL}/api/v1/auth/google/callback`;
 

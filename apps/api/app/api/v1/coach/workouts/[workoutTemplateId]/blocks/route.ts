@@ -63,9 +63,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       restAfterSeconds,
       // Interval-specific
       intervalType,
+      prepareSeconds,
       workSeconds,
       restSeconds,
       rounds,
+      setCount,
+      restBetweenSetsSeconds,
+      intervalExerciseStrategy,
       totalDurationSeconds,
       restBetweenExercisesSeconds,
       // Cardio-specific
@@ -104,9 +108,15 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         restAfterSeconds: restAfterSeconds ? Number(restAfterSeconds) : null,
         // Interval-specific
         intervalType: type === "intervals" ? intervalType : null,
+        prepareSeconds: prepareSeconds ? Number(prepareSeconds) : null,
         workSeconds: workSeconds ? Number(workSeconds) : null,
         restSeconds: restSeconds ? Number(restSeconds) : null,
         rounds: rounds ? Number(rounds) : null,
+        setCount: setCount ? Number(setCount) : null,
+        restBetweenSetsSeconds: restBetweenSetsSeconds
+          ? Number(restBetweenSetsSeconds)
+          : null,
+        intervalExerciseStrategy: intervalExerciseStrategy || null,
         totalDurationSeconds: totalDurationSeconds ? Number(totalDurationSeconds) : null,
         restBetweenExercisesSeconds: restBetweenExercisesSeconds
           ? Number(restBetweenExercisesSeconds)

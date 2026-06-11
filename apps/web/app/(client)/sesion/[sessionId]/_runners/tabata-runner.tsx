@@ -9,7 +9,7 @@ import { useSounds } from "../_hooks/use-sounds";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabataPhase = "work" | "rest" | "done";
+type TabataPhase = "prepare" | "work" | "rest" | "set_rest" | "done";
 
 interface TabataRunnerProps {
   block: WorkoutBlockSummary;
@@ -42,10 +42,21 @@ export function TabataRunner({
   primaryButtonStyle,
 }: TabataRunnerProps) {
   const totalRounds = block.rounds ?? 8;
+  const totalSets = block.setCount ?? 1;
+  const prepareSecs = block.prepareSeconds ?? 0;
   const workSecs = block.workSeconds ?? 20;
   const restSecs = block.restSeconds ?? 10;
+  const setRestSecs = block.restBetweenSetsSeconds ?? 0;
+  const strategy = block.intervalExerciseStrategy ?? "rotate_per_round";
 
   const { playStart, playComplete, playWorkPhase, playRestPhase, playCountdown } = useSounds();
+
+  function exIndex(round: number, setIndex: number) {
+    if (exercises.length <= 1) return 0;
+    if (strategy === "repeat_single") return 0;
+    if (strategy === "rotate_per_set") return (setIndex - 1) % exercises.length;
+    return (round - 1) % exercises.length;
+  }
 
   const [setsCount, setSetsCount] = useState<Record<string, number>>(
     () => Object.fromEntries(exercises.map((ex) => [ex.id, ex.sets.length]))
@@ -53,11 +64,13 @@ export function TabataRunner({
 
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [phase, setPhase] = useState<TabataPhase>("work");
-  const [seconds, setSeconds] = useState(workSecs);
+  const [phase, setPhase] = useState<TabataPhase>(prepareSecs > 0 ? "prepare" : "work");
+  const [seconds, setSeconds] = useState(prepareSecs > 0 ? prepareSecs : workSecs);
   const [round, setRound] = useState(1);
-  const [exIdx, setExIdx] = useState(0);
+  const [setIndex, setSetIndex] = useState(1);
   const [done, setDone] = useState(false);
+
+  const currentExercisePosition = exIndex(round, setIndex) + 1;
 
   const savingRef = useRef(false);
 
@@ -73,7 +86,7 @@ export function TabataRunner({
     if (!started || done) return;
     if (phase === "work") {
       playWorkPhase();
-    } else if (phase === "rest") {
+    } else if (phase === "rest" || phase === "set_rest") {
       playRestPhase();
     }
   }, [phase, started, done, playWorkPhase, playRestPhase]);
@@ -91,17 +104,23 @@ export function TabataRunner({
     }
   }, [done, playComplete]);
 
-  const currentEx = exercises[exIdx];
+  const currentEx = exercises[exIndex(round, setIndex)];
 
   const nextPhaseHint = useCallback((): string => {
+    if (phase === "prepare") return currentEx.exercise.name;
     if (phase === "work") {
       return `Descanso ${restSecs}s`;
     }
-    const nextExIdx = (exIdx + 1) % exercises.length;
-    const nextRound = nextExIdx === 0 ? round + 1 : round;
-    if (nextRound > totalRounds) return "Fin del bloque";
-    return exercises[nextExIdx].exercise.name;
-  }, [phase, exIdx, exercises, restSecs, round, totalRounds]);
+    if (phase === "set_rest") {
+      return `Serie ${Math.min(setIndex + 1, totalSets)} · ${exercises[0]?.exercise.name ?? "Siguiente serie"}`;
+    }
+    const nextRound = round + 1;
+    if (nextRound > totalRounds) {
+      if (setIndex < totalSets) return `Serie ${setIndex + 1} · ${setRestSecs}s`;
+      return "Fin del bloque";
+    }
+    return exercises[exIndex(nextRound, setIndex)]?.exercise.name ?? "Siguiente";
+  }, [phase, currentEx.exercise.name, exercises, restSecs, round, totalRounds, setIndex, totalSets, setRestSecs, strategy]);
 
   const saveSet = useCallback(
     async (ex: SessionExercise, count: number) => {
@@ -124,10 +143,10 @@ export function TabataRunner({
     [api, sessionId, workSecs, onSaved]
   );
 
-  const stateRef = useRef({ phase, exIdx, round, setsCount, exercises, saveSet });
+  const stateRef = useRef({ phase, round, setIndex, setsCount, exercises, saveSet });
   useEffect(() => {
-    stateRef.current = { phase, exIdx, round, setsCount, exercises, saveSet };
-  }, [phase, exIdx, round, setsCount, exercises, saveSet]);
+    stateRef.current = { phase, round, setIndex, setsCount, exercises, saveSet };
+  }, [phase, round, setIndex, setsCount, exercises, saveSet]);
 
   useEffect(() => {
     if (!started || paused || done) return;
@@ -135,22 +154,38 @@ export function TabataRunner({
     const interval = setInterval(() => {
       setSeconds((prev) => {
         if (prev <= 1) {
-          const { phase: p, exIdx: ei, round: r, setsCount: sc, exercises: exs, saveSet: ss } =
+          const { phase: p, round: r, setIndex: si, setsCount: sc, exercises: exs, saveSet: ss } =
             stateRef.current;
+          if (p === "prepare") {
+            setPhase("work");
+            return workSecs;
+          }
           if (p === "work") {
-            const ex = exs[ei];
+            const ex = exs[exIndex(r, si)];
             const count = sc[ex.id] ?? ex.sets.length;
             setTimeout(() => ss(ex, count), 0);
             setPhase("rest");
             return restSecs;
+          } else if (p === "set_rest") {
+            setRound(1);
+            setPhase("work");
+            return workSecs;
           } else {
-            const nextExIdx = (ei + 1) % exs.length;
-            const nextRound = nextExIdx === 0 ? r + 1 : r;
+            const nextRound = r + 1;
             if (nextRound > totalRounds) {
+              if (si < totalSets) {
+                setSetIndex(si + 1);
+                if (setRestSecs > 0) {
+                  setPhase("set_rest");
+                  return setRestSecs;
+                }
+                setRound(1);
+                setPhase("work");
+                return workSecs;
+              }
               setDone(true);
               return 0;
             }
-            setExIdx(nextExIdx);
             setRound(nextRound);
             setPhase("work");
             return workSecs;
@@ -161,12 +196,14 @@ export function TabataRunner({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [started, paused, done, restSecs, workSecs, totalRounds]);
+  }, [started, paused, done, restSecs, workSecs, totalRounds, totalSets, setRestSecs]);
 
   if (done) return <DoneScreen onClose={onClose} />;
 
   const isWork = phase === "work";
-  const phaseColor = isWork ? "#FF8E72" : "#7AB8FF";
+  const isPrepare = phase === "prepare";
+  const isSetRest = phase === "set_rest";
+  const phaseColor = isPrepare ? "var(--lime)" : isWork ? "#FF8E72" : "#7AB8FF";
   const muscle = currentEx.exercise.primaryMuscle;
 
   return (
@@ -193,20 +230,20 @@ export function TabataRunner({
             }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: phaseColor, transition: "background .3s" }} />
               <span className="ta-mono" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", color: phaseColor, transition: "color .3s" }}>
-                {isWork ? "WORK" : "REST"}
+                {isPrepare ? "PREP" : isWork ? "WORK" : isSetRest ? "SET REST" : "REST"}
               </span>
             </div>
           </div>
 
           {/* SVG ring + exercise name */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20 }}>
-            <CircleTimer seconds={seconds} total={isWork ? workSecs : restSecs} color={phaseColor} />
+            <CircleTimer seconds={seconds} total={isPrepare ? prepareSecs : isWork ? workSecs : isSetRest ? setRestSecs : restSecs} color={phaseColor} />
             <div style={{ textAlign: "center" }}>
               <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".1em", marginBottom: 6 }}>
-                {isWork ? `EJERCICIO ${exIdx + 1} / ${exercises.length}` : "DESCANSA"}
+                {isPrepare ? "PREPARATE" : isWork ? `EJERCICIO ${currentExercisePosition} / ${exercises.length}` : isSetRest ? `DESCANSO ENTRE SERIES` : "DESCANSA"}
               </div>
               <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.01em" }}>
-                {isWork ? currentEx.exercise.name : "Recuperate"}
+                {isPrepare ? "Listo para arrancar" : isWork ? currentEx.exercise.name : isSetRest ? `Serie ${setIndex + 1} en breve` : "Recuperate"}
               </div>
               {isWork && muscle && (
                 <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4 }}>
@@ -214,7 +251,7 @@ export function TabataRunner({
                 </div>
               )}
               <div className="ta-mono" style={{ fontSize: 14, fontWeight: 700, color: "var(--lime)", marginTop: 8 }}>
-                RONDA {round} / {totalRounds}
+                SERIE {setIndex} / {totalSets} · RONDA {round} / {totalRounds}
               </div>
             </div>
           </div>

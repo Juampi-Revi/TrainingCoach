@@ -276,9 +276,13 @@ model WorkoutBlock {
 
   // ── Interval-specific config (type = 'intervals') ──
   intervalType                String?  // 'tabata' | 'hiit' | 'emom' | 'amrap'
+  prepareSeconds              Int?     // countdown before the interval block starts
   workSeconds                 Int?     // seconds of work per interval
   restSeconds                 Int?     // seconds of rest between intervals
   rounds                      Int?     // number of rounds
+  setCount                    Int?     // number of sets / tabatas
+  restBetweenSetsSeconds      Int?     // rest between sets / tabatas
+  intervalExerciseStrategy    String?  // 'repeat_single' | 'rotate_per_round' | 'rotate_per_set' | 'custom'
   totalDurationSeconds        Int?     // total block time (amrap/emom)
   restBetweenExercisesSeconds Int?     // rest between exercises within interval block
 

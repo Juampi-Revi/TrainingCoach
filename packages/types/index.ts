@@ -21,6 +21,7 @@ export type PlanStatus = "draft" | "published" | "archived";
 export type AssignmentStatus = "active" | "paused" | "finished";
 export type BlockType = "warmup" | "strength" | "intervals" | "cardio" | "cooldown";
 export type IntervalType = "tabata" | "hiit" | "emom" | "amrap";
+export type IntervalExerciseStrategy = "repeat_single" | "rotate_per_round" | "rotate_per_set" | "custom";
 export type WorkoutSport = "run" | "ride" | "generic";
 export type WorkoutStepKind = "warmup" | "work" | "recover" | "cooldown";
 export type WorkoutStepTargetType = "hr_zone" | "hr_bpm" | "pace" | "speed" | "rpe" | "free";
@@ -50,9 +51,13 @@ export interface WorkoutBlockSummary {
 
   // Interval-specific (type = 'intervals')
   intervalType: IntervalType | null;
+  prepareSeconds: number | null;
   workSeconds: number | null;
   restSeconds: number | null;
   rounds: number | null;
+  setCount: number | null;
+  restBetweenSetsSeconds: number | null;
+  intervalExerciseStrategy: IntervalExerciseStrategy | null;
   totalDurationSeconds: number | null;
   restBetweenExercisesSeconds: number | null;
 

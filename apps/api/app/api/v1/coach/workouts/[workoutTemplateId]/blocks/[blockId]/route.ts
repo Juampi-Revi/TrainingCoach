@@ -31,9 +31,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       restAfterSeconds,
       // Interval-specific
       intervalType,
+      prepareSeconds,
       workSeconds,
       restSeconds,
       rounds,
+      setCount,
+      restBetweenSetsSeconds,
+      intervalExerciseStrategy,
       totalDurationSeconds,
       restBetweenExercisesSeconds,
       // Cardio-specific
@@ -74,9 +78,20 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
             intervalType !== undefined && existing.type === "intervals"
               ? intervalType
               : undefined,
+          prepareSeconds:
+            prepareSeconds !== undefined ? Number(prepareSeconds) || null : undefined,
           workSeconds: workSeconds !== undefined ? Number(workSeconds) || null : undefined,
           restSeconds: restSeconds !== undefined ? Number(restSeconds) || null : undefined,
           rounds: rounds !== undefined ? Number(rounds) || null : undefined,
+          setCount: setCount !== undefined ? Number(setCount) || null : undefined,
+          restBetweenSetsSeconds:
+            restBetweenSetsSeconds !== undefined
+              ? Number(restBetweenSetsSeconds) || null
+              : undefined,
+          intervalExerciseStrategy:
+            intervalExerciseStrategy !== undefined
+              ? intervalExerciseStrategy || null
+              : undefined,
           totalDurationSeconds:
             totalDurationSeconds !== undefined
               ? Number(totalDurationSeconds) || null

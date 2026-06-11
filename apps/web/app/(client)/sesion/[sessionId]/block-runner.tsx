@@ -110,7 +110,7 @@ export function OverlayHeader({
             letterSpacing: ".08em",
           }}
         >
-          {blockTypeLabel(block.type)}
+          {blockTypeLabel(block.type, block.intervalType)}
           {block.label ? ` · ${block.label}` : ""}
         </div>
         {round !== undefined && totalRounds !== undefined && (

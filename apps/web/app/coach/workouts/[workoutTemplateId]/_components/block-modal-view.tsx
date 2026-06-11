@@ -2,7 +2,7 @@
 
 import { Button, ConfirmModal, Icon } from "@/components/ui";
 import { blockTypeLabel } from "@/lib/constants";
-import type { BlockType, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
+import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
 import type { WB } from "./_types";
 import { BlockModalFields } from "./block-modal-fields";
 
@@ -15,9 +15,13 @@ interface BlockModalViewProps {
   label: string;
   description: string;
   restAfterSeconds: string;
+  prepare: string;
   work: string;
   rest: string;
   rounds: string;
+  setCount: string;
+  setRestSeconds: string;
+  intervalExerciseStrategy: IntervalExerciseStrategy;
   total: string;
   targetMinutes: string;
   restBetweenExercises: string;
@@ -28,9 +32,13 @@ interface BlockModalViewProps {
   setLabel: (v: string) => void;
   setDescription: (v: string) => void;
   setRestAfterSeconds: (v: string) => void;
+  setPrepare: (v: string) => void;
   setWork: (v: string) => void;
   setRest: (v: string) => void;
   setRounds: (v: string) => void;
+  setSetCount: (v: string) => void;
+  setSetRestSeconds: (v: string) => void;
+  setIntervalExerciseStrategy: (v: IntervalExerciseStrategy) => void;
   setTotal: (v: string) => void;
   setTargetMinutes: (v: string) => void;
   setRestBetweenExercises: (v: string) => void;
@@ -52,9 +60,13 @@ export function BlockModalView({
   label,
   description,
   restAfterSeconds,
+  prepare,
   work,
   rest,
   rounds,
+  setCount,
+  setRestSeconds,
+  intervalExerciseStrategy,
   total,
   targetMinutes,
   restBetweenExercises,
@@ -65,9 +77,13 @@ export function BlockModalView({
   setLabel,
   setDescription,
   setRestAfterSeconds,
+  setPrepare,
   setWork,
   setRest,
   setRounds,
+  setSetCount,
+  setSetRestSeconds,
+  setIntervalExerciseStrategy,
   setTotal,
   setTargetMinutes,
   setRestBetweenExercises,
@@ -149,9 +165,13 @@ export function BlockModalView({
           intervalType={intervalType}
           label={label}
           description={description}
+          prepare={prepare}
           work={work}
           rest={rest}
           rounds={rounds}
+          setCount={setCount}
+          setRestSeconds={setRestSeconds}
+          intervalExerciseStrategy={intervalExerciseStrategy}
           total={total}
           targetMinutes={targetMinutes}
           restBetweenExercises={restBetweenExercises}
@@ -162,9 +182,13 @@ export function BlockModalView({
           setIntervalType={setIntervalType}
           setLabel={setLabel}
           setDescription={setDescription}
+          setPrepare={setPrepare}
           setWork={setWork}
           setRest={setRest}
           setRounds={setRounds}
+          setSetCount={setSetCount}
+          setSetRestSeconds={setSetRestSeconds}
+          setIntervalExerciseStrategy={setIntervalExerciseStrategy}
           setTotal={setTotal}
           setTargetMinutes={setTargetMinutes}
           setRestBetweenExercises={setRestBetweenExercises}

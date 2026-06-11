@@ -61,9 +61,13 @@ export async function createBlock(workoutTemplateId: string, data: {
   label?: string;
   description?: string;
   intervalType?: string;
+  prepareSeconds?: number;
   workSeconds?: number;
   restSeconds?: number;
   rounds?: number;
+  setCount?: number;
+  restBetweenSetsSeconds?: number;
+  intervalExerciseStrategy?: string;
   restAfterSeconds?: number;
   targetMinutes?: number;
   targetZone?: string;
@@ -88,9 +92,13 @@ export async function createBlock(workoutTemplateId: string, data: {
       label: data.label,
       description: data.description,
       intervalType: data.intervalType,
+      prepareSeconds: data.prepareSeconds,
       workSeconds: data.workSeconds,
       restSeconds: data.restSeconds,
       rounds: data.rounds,
+      setCount: data.setCount,
+      restBetweenSetsSeconds: data.restBetweenSetsSeconds,
+      intervalExerciseStrategy: data.intervalExerciseStrategy,
       restAfterSeconds: data.restAfterSeconds,
       targetMinutes: data.targetMinutes,
       targetZone: data.targetZone,
@@ -98,7 +106,7 @@ export async function createBlock(workoutTemplateId: string, data: {
   });
 }
 
-export function updateBlock(blockId: string, data: { label?: string; description?: string; intervalType?: string; workSeconds?: number; restSeconds?: number; rounds?: number; restAfterSeconds?: number; targetMinutes?: number; targetZone?: string }) {
+export function updateBlock(blockId: string, data: { label?: string; description?: string; intervalType?: string; prepareSeconds?: number; workSeconds?: number; restSeconds?: number; rounds?: number; setCount?: number; restBetweenSetsSeconds?: number; intervalExerciseStrategy?: string; restAfterSeconds?: number; targetMinutes?: number; targetZone?: string }) {
   return prisma.workoutBlock.update({ where: { id: blockId }, data });
 }
 
