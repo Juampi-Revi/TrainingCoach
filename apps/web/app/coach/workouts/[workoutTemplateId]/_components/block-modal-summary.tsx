@@ -9,12 +9,33 @@ function toPosInt(raw: string): number | null {
 }
 
 function fmtSecs(seconds: number | null): string {
-  if (!seconds || seconds <= 0) return "—";
+  if (!seconds || seconds <= 0) return "0s";
   if (seconds < 60) return `${seconds}s`;
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   if (s === 0) return `${m}min`;
   return `${m}min ${s}s`;
+}
+
+function fmtMin(raw: string): string {
+  const n = toPosInt(raw);
+  if (!n) return "0min";
+  return `${n}min`;
+}
+
+interface BlockModalSummaryProps {
+  blockType: BlockType;
+  intervalType: IntervalType | null;
+  prepare: string;
+  work: string;
+  rest: string;
+  rounds: string;
+  setCount: string;
+  setRest: string;
+  total: string;
+  targetMinutes: string;
+  restBetweenExercises: string;
+  restAfterSeconds: string;
 }
 
 export function BlockModalSummary({
@@ -30,22 +51,8 @@ export function BlockModalSummary({
   targetMinutes,
   restBetweenExercises,
   restAfterSeconds,
-}: {
-  blockType: BlockType;
-  intervalType: IntervalType | null;
-  prepare: string;
-  work: string;
-  rest: string;
-  rounds: string;
-  setCount: string;
-  setRest: string;
-  total: string;
-  targetMinutes: string;
-  restBetweenExercises: string;
-  restAfterSeconds: string;
-}) {
+}: BlockModalSummaryProps) {
   const isInterval = blockType === "intervals" && !!intervalType;
-  const isCardio = blockType === "cardio";
   const isEmom = intervalType === "emom";
   const isAmrap = intervalType === "amrap";
   const showWorkRest = isInterval && !isEmom && !isAmrap;
@@ -67,99 +74,44 @@ export function BlockModalSummary({
         : (showWorkRest && roundsN && wSecs && rSecs
           ? (prepareSecs ?? 0) + ((wSecs + rSecs) * roundsN * setsN) + ((setRestSecs ?? 0) * Math.max(0, setsN - 1))
           : null))
-    : isCardio
-      ? (toPosInt(targetMinutes) ? toPosInt(targetMinutes)! * 60 : null)
-      : (toPosInt(targetMinutes) ? toPosInt(targetMinutes)! * 60 : null);
+    : (toPosInt(targetMinutes) ? toPosInt(targetMinutes)! * 60 : null);
 
-  const roundSecs = showWorkRest && wSecs && rSecs ? wSecs + rSecs : isEmom ? 60 : null;
-  const workTotalSecs = showWorkRest && wSecs && roundsN ? wSecs * roundsN * setsN : null;
-  const restTotalSecs = showWorkRest && rSecs && roundsN ? (rSecs * roundsN * setsN) + ((setRestSecs ?? 0) * Math.max(0, setsN - 1)) : null;
+  const parts: string[] = [];
+
+  if (totalSecs && totalSecs > 0) {
+    parts.push(fmtSecs(totalSecs));
+  }
+
+  if (isEmom && roundsN) {
+    parts.push(`${roundsN} minutos`);
+  } else if (showWorkRest && roundsN && wSecs && rSecs) {
+    parts.push(`${roundsN} rondas`);
+    if (setsN > 1) parts.push(`${setsN} series`);
+    parts.push(`${fmtSecs(wSecs)} trabajo / ${fmtSecs(rSecs)} descanso`);
+  } else if (isAmrap && toPosInt(total)) {
+    parts.push(fmtMin(total));
+  } else if (toPosInt(targetMinutes)) {
+    parts.push(fmtMin(targetMinutes));
+  }
+
+  if (restAfterSecs && restAfterSecs > 0) {
+    parts.push(`+ ${fmtSecs(restAfterSecs)} de descanso antes del siguiente bloque`);
+  }
+
+  if (restBetweenSecs && restBetweenSecs > 0) {
+    parts.push(`${fmtSecs(restBetweenSecs)} entre ejercicios`);
+  }
+
+  const summary = parts.join(" · ");
+
+  if (!summary) return null;
 
   return (
-    <div style={{ border: "1px solid var(--line-2)", borderRadius: 12, padding: 12, background: "var(--bg-2)" }}>
-      <div className="ta-mono" style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".12em", color: "var(--text-mute)" }}>
-        RESUMEN DEL BLOQUE
+    <div style={{ border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 14px", background: "var(--bg-2)" }}>
+      <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>
+        <span style={{ fontWeight: 700, color: "var(--lime)" }}>Resumen: </span>
+        {summary}
       </div>
-
-      <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div style={{ padding: "10px 10px", borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)" }}>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-dim)", letterSpacing: ".1em", fontWeight: 800 }}>
-            DURACIÓN TOTAL
-          </div>
-          <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700 }}>
-            {fmtSecs(totalSecs)}
-          </div>
-          {restAfterSecs ? (
-            <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-dim)" }}>
-              + descanso post {fmtSecs(restAfterSecs)} = {fmtSecs((totalSecs ?? 0) + restAfterSecs)}
-            </div>
-          ) : (
-            <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-dim)" }}>
-              Preparación: {fmtSecs(prepareSecs)}
-            </div>
-          )}
-        </div>
-
-        <div style={{ padding: "10px 10px", borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)" }}>
-          <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-dim)", letterSpacing: ".1em", fontWeight: 800 }}>
-            SERIE / RONDA
-          </div>
-          <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700 }}>
-            {isEmom ? "60s (1 minuto)" : showWorkRest ? fmtSecs(roundSecs) : "—"}
-          </div>
-          <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-dim)" }}>
-            {isEmom
-              ? "Trabajo: reps o seg por ejercicio · Descanso: resto del minuto"
-              : showWorkRest
-                ? `Trabajo ${fmtSecs(wSecs)} · Descanso ${fmtSecs(rSecs)}`
-                : "—"}
-          </div>
-        </div>
-      </div>
-
-      {(showWorkRest || isEmom || isAmrap) && (
-        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          <div style={{ padding: "10px 10px", borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)" }}>
-            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-dim)", letterSpacing: ".1em", fontWeight: 800 }}>
-              {isEmom ? "MINUTOS" : "RONDAS"}
-            </div>
-            <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700 }}>
-              {isEmom ? (roundsN ? `${roundsN} min` : "—") : roundsN ? String(roundsN) : "—"}
-            </div>
-          </div>
-          <div style={{ padding: "10px 10px", borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)" }}>
-            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-dim)", letterSpacing: ".1em", fontWeight: 800 }}>
-              {isEmom ? "SERIES" : "TRABAJO TOTAL"}
-            </div>
-            <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700 }}>
-              {showWorkRest ? fmtSecs(workTotalSecs) : isEmom ? "1" : "—"}
-            </div>
-          </div>
-          <div style={{ padding: "10px 10px", borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)" }}>
-            <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-dim)", letterSpacing: ".1em", fontWeight: 800 }}>
-              {showWorkRest ? "SERIES" : "DESCANSO TOTAL"}
-            </div>
-            <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700 }}>
-              {showWorkRest ? String(setsN) : isEmom ? "auto" : "—"}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showWorkRest && (
-        <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-dim)", lineHeight: 1.35 }}>
-          Preparación {fmtSecs(prepareSecs)} · {roundsN ?? 0} rondas por serie · {setsN} serie{setsN === 1 ? "" : "s"}
-          {setRestSecs ? ` · ${fmtSecs(setRestSecs)} entre series` : ""}
-        </div>
-      )}
-
-      {(restBetweenSecs || restAfterSecs) && (
-        <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-dim)", lineHeight: 1.35 }}>
-          {restBetweenSecs ? `Descanso entre ejercicios: ${fmtSecs(restBetweenSecs)}.` : null}
-          {restBetweenSecs && restAfterSecs ? " " : null}
-          {restAfterSecs ? `Descanso después del bloque: ${fmtSecs(restAfterSecs)}.` : null}
-        </div>
-      )}
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
-import { createClient } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import { WeightChart } from "./_components/weight-chart";
@@ -26,9 +25,8 @@ interface MetricEntry {
 
 export default function MedicionesPage() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { api } = useAuth();
   const toast = useToast();
-  const api = createClient(token);
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

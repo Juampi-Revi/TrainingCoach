@@ -1,6 +1,6 @@
 "use client";
 
-import { useOnboarding } from "@/lib/hooks/use-onboarding";
+import { useOnboarding, type OnboardingGoal, type ExperienceLevel, type Equipment, type FocusArea } from "@/lib/hooks/use-onboarding";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -92,13 +92,15 @@ function canProceed(step: number, data: ReturnType<typeof useOnboarding>["data"]
   }
 }
 
-function GoalStep({ value, onChange }: { value: string | null; onChange: (g: any) => void }) {
+import { Icon } from "@/components/ui";
+
+function GoalStep({ value, onChange }: { value: OnboardingGoal | null; onChange: (g: OnboardingGoal) => void }) {
   const goals = [
-    { id: "lose_weight", label: "Perder peso", icon: "🔥" },
-    { id: "build_muscle", label: "Ganar músculo", icon: "💪" },
-    { id: "maintain", label: "Mantenerme", icon: "⚖️" },
-    { id: "improve_endurance", label: "Mejorar resistencia", icon: "🏃" },
-    { id: "general_fitness", label: "Fitness general", icon: "⭐" },
+    { id: "lose_weight", label: "Perder peso", iconName: "flame" as const },
+    { id: "build_muscle", label: "Ganar músculo", iconName: "dumbbell" as const },
+    { id: "maintain", label: "Mantenerme", iconName: "scale" as const },
+    { id: "improve_endurance", label: "Mejorar resistencia", iconName: "activity" as const },
+    { id: "general_fitness", label: "Fitness general", iconName: "star" as const },
   ];
 
   return (
@@ -109,9 +111,11 @@ function GoalStep({ value, onChange }: { value: string | null; onChange: (g: any
           <button
             key={goal.id}
             className={`option-card ${value === goal.id ? "selected" : ""}`}
-            onClick={() => onChange(goal.id)}
+            onClick={() => onChange(goal.id as OnboardingGoal)}
           >
-            <span className="icon">{goal.icon}</span>
+            <span className="icon">
+              <Icon name={goal.iconName} size={24} color="var(--text)" />
+            </span>
             <span className="label">{goal.label}</span>
           </button>
         ))}
@@ -120,7 +124,7 @@ function GoalStep({ value, onChange }: { value: string | null; onChange: (g: any
   );
 }
 
-function ExperienceStep({ value, onChange }: { value: string | null; onChange: (e: any) => void }) {
+function ExperienceStep({ value, onChange }: { value: ExperienceLevel | null; onChange: (e: ExperienceLevel) => void }) {
   const levels = [
     { id: "beginner", label: "Principiante", description: "Nunca o casi nunca entrené" },
     { id: "intermediate", label: "Intermedio", description: "Entreno hace 6+ meses" },
@@ -135,7 +139,7 @@ function ExperienceStep({ value, onChange }: { value: string | null; onChange: (
           <button
             key={level.id}
             className={`option-row ${value === level.id ? "selected" : ""}`}
-            onClick={() => onChange(level.id)}
+            onClick={() => onChange(level.id as ExperienceLevel)}
           >
             <span className="label">{level.label}</span>
             <span className="description">{level.description}</span>
@@ -166,7 +170,7 @@ function DaysStep({ value, onChange }: { value: number; onChange: (d: number) =>
   );
 }
 
-function DurationStep({ value, onChange }: { value: number; onChange: (d: any) => void }) {
+function DurationStep({ value, onChange }: { value: number; onChange: (d: 30 | 45 | 60 | 90) => void }) {
   const durations = [
     { id: 30, label: "30 min", description: "Rápido y efectivo" },
     { id: 45, label: "45 min", description: "Balance ideal" },
@@ -182,7 +186,7 @@ function DurationStep({ value, onChange }: { value: number; onChange: (d: any) =
           <button
             key={dur.id}
             className={`option-card ${value === dur.id ? "selected" : ""}`}
-            onClick={() => onChange(dur.id)}
+            onClick={() => onChange(dur.id as 30 | 45 | 60 | 90)}
           >
             <span className="label">{dur.label}</span>
             <span className="description">{dur.description}</span>
@@ -193,12 +197,12 @@ function DurationStep({ value, onChange }: { value: number; onChange: (d: any) =
   );
 }
 
-function EquipmentStep({ value, onChange }: { value: string[]; onChange: (e: any) => void }) {
+function EquipmentStep({ value, onChange }: { value: Equipment[]; onChange: (e: Equipment) => void }) {
   const equipment = [
-    { id: "gym", label: "Gimnasio completo", icon: "🏋️" },
-    { id: "dumbbells", label: "Mancuernas", icon: "🏋️‍♀️" },
-    { id: "home", label: "Equipo básico en casa", icon: "🏠" },
-    { id: "bodyweight", label: "Solo peso corporal", icon: "🤸" },
+    { id: "gym", label: "Gimnasio completo", iconName: "dumbbell" as const },
+    { id: "dumbbells", label: "Mancuernas", iconName: "dumbbell" as const },
+    { id: "home", label: "Equipo básico en casa", iconName: "home" as const },
+    { id: "bodyweight", label: "Solo peso corporal", iconName: "user" as const },
   ];
 
   return (
@@ -209,10 +213,12 @@ function EquipmentStep({ value, onChange }: { value: string[]; onChange: (e: any
         {equipment.map((eq) => (
           <button
             key={eq.id}
-            className={`option-card ${value.includes(eq.id) ? "selected" : ""}`}
-            onClick={() => onChange(eq.id)}
+            className={`option-card ${value.includes(eq.id as Equipment) ? "selected" : ""}`}
+            onClick={() => onChange(eq.id as Equipment)}
           >
-            <span className="icon">{eq.icon}</span>
+            <span className="icon">
+              <Icon name={eq.iconName} size={24} color="var(--text)" />
+            </span>
             <span className="label">{eq.label}</span>
           </button>
         ))}
@@ -221,13 +227,13 @@ function EquipmentStep({ value, onChange }: { value: string[]; onChange: (e: any
   );
 }
 
-function FocusStep({ value, onChange }: { value: string[]; onChange: (a: any) => void }) {
+function FocusStep({ value, onChange }: { value: FocusArea[]; onChange: (a: FocusArea) => void }) {
   const areas = [
-    { id: "full_body", label: "Cuerpo completo", icon: "🎯" },
-    { id: "upper", label: "Tren superior", icon: "💪" },
-    { id: "lower", label: "Tren inferior", icon: "🦵" },
-    { id: "core", label: "Core", icon: "🧘" },
-    { id: "cardio", label: "Cardio", icon: "❤️" },
+    { id: "full_body", label: "Cuerpo completo", iconName: "target" as const },
+    { id: "upper", label: "Tren superior", iconName: "dumbbell" as const },
+    { id: "lower", label: "Tren inferior", iconName: "leg" as const },
+    { id: "core", label: "Core", iconName: "scale" as const },
+    { id: "cardio", label: "Cardio", iconName: "heart" as const },
   ];
 
   return (
@@ -238,11 +244,13 @@ function FocusStep({ value, onChange }: { value: string[]; onChange: (a: any) =>
         {areas.map((area) => (
           <button
             key={area.id}
-            className={`option-card ${value.includes(area.id) ? "selected" : ""}`}
-            onClick={() => onChange(area.id)}
-            disabled={!value.includes(area.id) && value.length >= 3}
+            className={`option-card ${value.includes(area.id as FocusArea) ? "selected" : ""}`}
+            onClick={() => onChange(area.id as FocusArea)}
+            disabled={!value.includes(area.id as FocusArea) && value.length >= 3}
           >
-            <span className="icon">{area.icon}</span>
+            <span className="icon">
+              <Icon name={area.iconName} size={24} color="var(--text)" />
+            </span>
             <span className="label">{area.label}</span>
           </button>
         ))}

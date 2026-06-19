@@ -12,3 +12,6 @@ export { NutritionStack } from "./nutrition-stack";
 export { WeekHeatmap } from "./week-heatmap";
 export { MonthSummary } from "./month-summary";
 export { QuickHealthModal } from "./quick-health-modal";
+export { TodayWorkoutCard } from "./today-workout-card";
+export { TodaySummary } from "./today-summary";
+export { ScoreCard } from "./score-card";

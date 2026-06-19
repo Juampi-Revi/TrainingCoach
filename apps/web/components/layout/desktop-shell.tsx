@@ -27,7 +27,7 @@ const COACH_NAV: NavItem[] = [
   { id: "plans",     icon: "calendar", label: "Planes",         href: "/coach/planes"     },
   { id: "templates", icon: "book",     label: "Entrenamientos", href: "/coach/workouts"   },
   { id: "library",   icon: "dumbbell", label: "Ejercicios",     href: "/coach/ejercicios" },
-  { id: "messages",  icon: "msg",      label: "Mensajes",       href: "/coach/mensajes"   },
+  // { id: "messages",  icon: "msg",      label: "Mensajes",       href: "/coach/mensajes"   },
 ];
 
 const GYM_NAV: NavItem[] = [
@@ -37,7 +37,7 @@ const GYM_NAV: NavItem[] = [
   { id: "plans",     icon: "calendar", label: "Planes",         href: "/coach/planes"        },
   { id: "templates", icon: "book",     label: "Entrenamientos", href: "/coach/workouts"      },
   { id: "library",   icon: "dumbbell", label: "Ejercicios",     href: "/coach/ejercicios"    },
-  { id: "messages",  icon: "msg",      label: "Mensajes",       href: "/coach/mensajes"      },
+  // { id: "messages",  icon: "msg",      label: "Mensajes",       href: "/coach/mensajes"      },
   { id: "groups",    icon: "users",    label: "Grupos",         href: "/coach/alumnos/grupos" },
 ];
 

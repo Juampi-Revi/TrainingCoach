@@ -30,17 +30,22 @@ export function AmrapBlockBuilder({
   setRestBetweenExercises: (next: string) => void;
 }) {
   return (
-    <>
-      <div style={{ fontSize: 11, color: "var(--text-mute)", lineHeight: 1.45 }}>
-        AMRAP: repetí la ronda de ejercicios tantas veces como puedas durante el tiempo total.
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, color: "var(--text-mute)", lineHeight: 1.5 }}>
+        El alumno repite la ronda de ejercicios tantas veces como pueda durante el tiempo total.
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <Input label="Preparación (seg)" placeholder="10" value={prepare} onChange={(e) => setPrepare(e.target.value)} />
         <Input
-          label="Duración total (min)"
-          placeholder="12"
+          label="¿Cuántos minutos en total?"
+          placeholder="Ej: 12"
           value={secondsToMinutesInput(totalSeconds)}
           onChange={(e) => setTotalSeconds(minutesToSecondsInput(e.target.value))}
+        />
+        <Input
+          label="Segundos de preparación antes de empezar"
+          placeholder="Ej: 10"
+          value={prepare}
+          onChange={(e) => setPrepare(e.target.value)}
         />
       </div>
       <Input
@@ -49,6 +54,6 @@ export function AmrapBlockBuilder({
         value={restBetweenExercises}
         onChange={(e) => setRestBetweenExercises(e.target.value)}
       />
-    </>
+    </div>
   );
 }

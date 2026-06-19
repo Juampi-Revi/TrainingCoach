@@ -31,6 +31,9 @@ export function WarmupOverlay({
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 20 }}>
         <div className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", letterSpacing: ".15em", fontWeight: 700 }}>CALENTAMIENTO</div>
+        <div style={{ fontSize: 12, color: "var(--text-mute)", textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
+          Opcional · no cuenta para el entreno · no hace falta registrar series
+        </div>
 
         <div style={{ position: "relative", width: 200, height: 200 }}>
           <svg width="200" height="200" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>

@@ -3,7 +3,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
-import { createClient } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import "./_styles.css";
@@ -61,9 +60,8 @@ const GOAL_CONFIGS = {
 
 export default function MetasPage() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { api } = useAuth();
   const toast = useToast();
-  const api = createClient(token);
   const [data, setData] = useState<GoalsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedKind, setExpandedKind] = useState<keyof typeof GOAL_CONFIGS | null>(null);

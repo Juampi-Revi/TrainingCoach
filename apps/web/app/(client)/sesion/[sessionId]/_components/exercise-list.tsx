@@ -17,6 +17,7 @@ export function ExerciseList({
   warmupDone,
   warmupTargetMs,
   onSelectEx,
+  onStartEx,
   onAddEx,
   onToggleWarmup,
   onStartBlock,
@@ -28,6 +29,7 @@ export function ExerciseList({
   warmupDone: boolean;
   warmupTargetMs: number | null;
   onSelectEx: (realIdx: number) => void;
+  onStartEx?: (realIdx: number) => void;
   onAddEx: () => void;
   onToggleWarmup: () => void;
   onStartBlock?: (block: WorkoutBlockSummary) => void;
@@ -70,8 +72,8 @@ export function ExerciseList({
       {blockGroups.map((bg, bgi) => {
         const block = bg.block;
         const isInterval = block?.type === "intervals";
-        const blockColor = block?.type === "warmup" ? "#FF8E72" : block?.type === "cooldown" ? "#A78BFA" : block?.type === "cardio" ? "#7AB8FF" : "var(--lime)";
-        const blockBg = block?.type === "warmup" ? "rgba(255,142,114,.06)" : block?.type === "cooldown" ? "rgba(167,139,250,.06)" : block?.type === "cardio" ? "rgba(122,184,255,.06)" : "rgba(215,255,58,.06)";
+        const blockColor = block?.type === "warmup" ? "var(--warn)" : block?.type === "cooldown" ? "var(--accent-text)" : block?.type === "cardio" ? "var(--accent-text)" : "var(--lime)";
+        const blockBg = block?.type === "warmup" ? "rgba(234,179,8,.06)" : block?.type === "cooldown" ? "rgba(255,255,255,.04)" : block?.type === "cardio" ? "rgba(255,255,255,.04)" : "rgba(215,255,58,.06)";
         
         // Group exercises within block by superset
         const supersetGroups: Array<{ group: string | null; items: Array<{ e: SessionExercise; realIdx: number }> }> = [];
@@ -105,19 +107,18 @@ export function ExerciseList({
                       e.stopPropagation();
                       onStartBlock(block);
                     }}
-                    style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#0B0B0C" }}
+                    style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "var(--bg)" }}
                   >
                     Iniciar
                   </button>
-                ) : block.type === "strength" ? (
+                ) : block.type === "strength" && onStartEx ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Select first exercise in the block to open the logger
                       const firstEx = bg.exercises[0];
-                      if (firstEx) onSelectEx(firstEx.realIdx);
+                      if (firstEx) onStartEx(firstEx.realIdx);
                     }}
-                    style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#0B0B0C" }}
+                    style={{ padding: "4px 10px", borderRadius: 6, background: blockColor, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "var(--bg)" }}
                   >
                     Iniciar
                   </button>
@@ -167,12 +168,6 @@ export function ExerciseList({
         );
       })}
 
-      <button onClick={onAddEx}
-        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", background: "transparent", border: "1px solid var(--line)", borderRadius: 12, cursor: "pointer", color: "var(--text-dim)", fontSize: 13 }}
-      >
-        <Icon name="plus" size={14} color="var(--text-dim)" />
-        Agregar ejercicio
-      </button>
     </div>
   );
 }

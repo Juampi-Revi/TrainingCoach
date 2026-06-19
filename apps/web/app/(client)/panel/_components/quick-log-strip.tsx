@@ -5,7 +5,7 @@
 import { Icon } from "@/components/ui";
 
 interface QuickLogStripProps {
-  workoutsCompleted: number;
+  workoutsToday: number;
   workoutsTarget: number | null;
   foodCount: number;
   stepsCount: number | null;
@@ -17,7 +17,7 @@ interface QuickLogStripProps {
 }
 
 export function QuickLogStrip({
-  workoutsCompleted,
+  workoutsToday,
   workoutsTarget,
   foodCount,
   stepsCount,
@@ -27,14 +27,14 @@ export function QuickLogStrip({
   onLogSteps,
   onLogSleep,
 }: QuickLogStripProps) {
-  const target = workoutsTarget ?? 4;
-  const workoutsDone = workoutsCompleted >= target;
+  const activityTarget = Math.max(1, Math.round((workoutsTarget ?? 4) / 7));
+  const workoutsDone = workoutsToday >= activityTarget;
   const hasSteps = stepsCount != null && stepsCount > 0;
   const hasSleep = sleepMinutes != null && sleepMinutes > 0;
 
   return (
     <div className="quick-log-container">
-      <div className="quick-log-label">HOY · REGISTRAR</div>
+      <div className="quick-log-label">Acciones rápidas</div>
       <div className="quick-log-grid">
         {/* Workout */}
         <QuickLogButton

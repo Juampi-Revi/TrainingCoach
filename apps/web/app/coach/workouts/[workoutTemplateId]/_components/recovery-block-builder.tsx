@@ -14,14 +14,14 @@ export function RecoveryBlockBuilder({
   setRestBetweenExercises: (next: string) => void;
 }) {
   return (
-    <>
-      <div style={{ fontSize: 11, color: "var(--text-mute)", lineHeight: 1.45 }}>
-        Usalo para movilidad, estiramientos, respiración o vuelta a la calma. Lo importante es que el alumno entienda la intención del bloque.
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, color: "var(--text-mute)", lineHeight: 1.5 }}>
+        Movilidad, estiramientos, respiración o vuelta a la calma. El alumno no registra series ni peso.
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Input
-          label="Tiempo objetivo (min)"
-          placeholder="10"
+          label="¿Cuántos minutos aproximadamente?"
+          placeholder="Ej: 10"
           value={targetMinutes}
           onChange={(e) => setTargetMinutes(e.target.value)}
         />
@@ -32,6 +32,6 @@ export function RecoveryBlockBuilder({
           onChange={(e) => setRestBetweenExercises(e.target.value)}
         />
       </div>
-    </>
+    </div>
   );
 }

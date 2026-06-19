@@ -48,15 +48,18 @@ export function ExerciseMediaViewer({
   }
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", padding: "0 16px", marginTop: 8, marginBottom: 12 }}>
       {/* Hero Image / Video Thumbnail */}
       <div
         onClick={onOpenLightbox}
         style={{
           position: "relative",
-          height: 200,
+          height: 180,
+          maxWidth: 320,
+          margin: "0 auto",
           background: "linear-gradient(135deg, #1f1f23, #0f0f12)",
-          borderBottom: "1px solid var(--line)",
+          borderRadius: 12,
+          border: "1px solid var(--line-2)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -64,7 +67,47 @@ export function ExerciseMediaViewer({
           overflow: "hidden",
         }}
       >
-        {heroImage ? (
+        {videos.length > 0 && videos[0].embedUrl ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              borderRadius: 12,
+              overflow: "hidden",
+            }}
+          >
+            <iframe
+              src={videos[0].embedUrl}
+              title="Exercise video"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                border: "none",
+              }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        ) : videos.length > 0 && videos[0].url ? (
+          <video
+            src={videos[0].url}
+            controls
+            playsInline
+            preload="metadata"
+            autoPlay={false}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        ) : heroImage ? (
           <Image
             src={heroImage.heroUrl || heroImage.url}
             alt={exerciseName}
@@ -74,75 +117,20 @@ export function ExerciseMediaViewer({
             priority
             unoptimized
           />
-        ) : videos.length > 0 ? (
-          <Image
-            src={videos[0].thumbnailUrl || ""}
-            alt={`${exerciseName} video`}
-            fill
-            sizes="100vw"
-            style={{ objectFit: "cover", opacity: 0.9 }}
-            unoptimized
-          />
         ) : null}
         
-        {/* Play Button Overlay */}
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            background: "rgba(215,255,58,.95)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 20px rgba(215,255,58,.3)",
-          }}
-        >
-          <Icon name="play" size={28} color="#0B0B0C" />
-        </div>
-        
-        {/* Media Indicators */}
+        {/* Media Count Badge — arriba a la derecha */}
         {hasMultipleMedia && (
           <div
             style={{
               position: "absolute",
-              bottom: 12,
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "flex",
-              gap: 6,
-              zIndex: 2,
-            }}
-          >
-            {allMedia.map((_, idx) => (
-              <div
-                key={idx}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  background: idx === currentIndex ? "var(--lime)" : "rgba(255,255,255,.4)",
-                  transition: "background 0.2s",
-                }}
-              />
-            ))}
-          </div>
-        )}
-        
-        {/* Media Count Badge */}
-        {hasMultipleMedia && (
-          <div
-            style={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              padding: "4px 10px",
+              top: 8,
+              right: 8,
+              padding: "3px 8px",
               background: "rgba(11,11,12,.7)",
               backdropFilter: "blur(8px)",
-              borderRadius: 12,
-              fontSize: 11,
+              borderRadius: 10,
+              fontSize: 10,
               fontWeight: 600,
               color: "var(--text)",
               zIndex: 2,
@@ -151,43 +139,37 @@ export function ExerciseMediaViewer({
             {currentIndex + 1} / {allMedia.length}
           </div>
         )}
-      </div>
-      
-      {/* Action Buttons */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 12,
-          left: 12,
-          display: "flex",
-          gap: 8,
-          zIndex: 2,
-        }}
-      >
+        
+        {/* Técnica badge — arriba a la izquierda */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onOpenLightbox?.();
           }}
           style={{
-            padding: "6px 12px",
+            position: "absolute",
+            top: 8,
+            left: 8,
+            zIndex: 2,
+            padding: "4px 8px",
             background: "rgba(11,11,12,.7)",
             backdropFilter: "blur(8px)",
             border: "1px solid var(--line-2)",
             borderRadius: 6,
             color: "var(--text)",
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 600,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 6,
+            gap: 4,
           }}
         >
-          <Icon name="image" size={12} />
+          <Icon name="image" size={10} />
           Técnica
         </button>
         
+        {/* YouTube link — abajo a la izquierda */}
         {youtubeUrl && (
           <a
             href={youtubeUrl}
@@ -195,23 +177,55 @@ export function ExerciseMediaViewer({
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             style={{
-              padding: "6px 12px",
+              position: "absolute",
+              bottom: 8,
+              left: 8,
+              zIndex: 2,
+              padding: "4px 8px",
               background: "rgba(255,0,0,.85)",
               border: "none",
               borderRadius: 6,
               color: "#fff",
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 600,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 4,
               textDecoration: "none",
             }}
           >
-            <Icon name="play" size={12} />
+            <Icon name="play" size={10} />
             YouTube
           </a>
+        )}
+        
+        {/* Media Indicators — abajo al centro */}
+        {hasMultipleMedia && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 8,
+              left: "50%",
+              transform: "translateX(-50%)",
+              display: "flex",
+              gap: 4,
+              zIndex: 2,
+            }}
+          >
+            {allMedia.map((_, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  background: idx === currentIndex ? "var(--lime)" : "rgba(255,255,255,.4)",
+                  transition: "background 0.2s",
+                }}
+              />
+            ))}
+          </div>
         )}
       </div>
       
@@ -223,6 +237,9 @@ export function ExerciseMediaViewer({
             top: "50%",
             transform: "translateY(-50%)",
             width: "100%",
+            maxWidth: 320,
+            left: "50%",
+            marginLeft: -160,
             display: "flex",
             justifyContent: "space-between",
             padding: "0 8px",
@@ -237,9 +254,9 @@ export function ExerciseMediaViewer({
                 setCurrentIndex((prev) => prev - 1);
               }}
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 background: "rgba(11,11,12,.5)",
                 border: "1px solid var(--line-2)",
                 cursor: "pointer",
@@ -249,7 +266,7 @@ export function ExerciseMediaViewer({
                 pointerEvents: "auto",
               }}
             >
-              <Icon name="chevL" size={16} color="#fff" />
+              <Icon name="chevL" size={14} color="#fff" />
             </button>
           )}
           {currentIndex < allMedia.length - 1 && (
@@ -259,9 +276,9 @@ export function ExerciseMediaViewer({
                 setCurrentIndex((prev) => prev + 1);
               }}
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 background: "rgba(11,11,12,.5)",
                 border: "1px solid var(--line-2)",
                 cursor: "pointer",
@@ -271,7 +288,7 @@ export function ExerciseMediaViewer({
                 pointerEvents: "auto",
               }}
             >
-              <Icon name="chevR" size={16} color="#fff" />
+              <Icon name="chevR" size={14} color="#fff" />
             </button>
           )}
         </div>

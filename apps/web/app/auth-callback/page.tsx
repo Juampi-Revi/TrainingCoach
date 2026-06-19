@@ -9,6 +9,7 @@ function CallbackHandler() {
 
   useEffect(() => {
     const token = searchParams.get("token");
+    const refreshToken = searchParams.get("refreshToken");
     const error = searchParams.get("error");
 
     if (error) {
@@ -19,6 +20,9 @@ function CallbackHandler() {
     if (token) {
       try {
         localStorage.setItem("regen_token", token);
+        if (refreshToken) {
+          localStorage.setItem("regen_refresh_token", refreshToken);
+        }
       } catch {}
       router.replace("/semana");
       return;

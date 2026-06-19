@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui";
 import type { WorkoutBlockSummary } from "@regen/types";
 import { blockTypeLabel, BLOCK_COLORS } from "@/lib/constants";
@@ -26,10 +26,12 @@ export function BlockRestScreen({
   onStartNext,
 }: BlockRestScreenProps) {
   const { playCountdown, playRestComplete } = useSounds();
+  const hasAutoStarted = useRef(false);
 
   // Auto-start next block when rest is over
   useEffect(() => {
-    if (restSecondsRemaining <= 0) {
+    if (restSecondsRemaining <= 0 && !hasAutoStarted.current) {
+      hasAutoStarted.current = true;
       playRestComplete();
       const t = setTimeout(onStartNext, 500);
       return () => clearTimeout(t);
@@ -136,31 +138,42 @@ export function BlockRestScreen({
           <div
             style={{
               width: "100%",
-              maxWidth: 320,
-              padding: 16,
+              maxWidth: 400,
+              padding: "24px 28px",
               background: "var(--bg-1)",
               border: `2px solid ${nextBlockColor}`,
-              borderRadius: 12,
+              borderRadius: 14,
+              boxShadow: "0 4px 24px rgba(0,0,0,.15)",
             }}
           >
             <div
               className="ta-mono"
               style={{
-                fontSize: 9,
+                fontSize: 10,
                 color: nextBlockColor,
                 fontWeight: 700,
                 letterSpacing: ".12em",
-                marginBottom: 6,
+                marginBottom: 8,
               }}
             >
               PRÓXIMO BLOQUE
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+            <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 6, lineHeight: 1.2 }}>
               {blockTypeLabel(nextBlock.block.type, nextBlock.block.intervalType)}
               {nextBlock.block.label ? ` · ${nextBlock.block.label}` : ""}
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-mute)" }}>
+            <div style={{ fontSize: 14, color: "var(--text-mute)", marginBottom: 8 }}>
               {nextBlock.block.targetMinutes ? `${nextBlock.block.targetMinutes} min` : ""}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5 }}>
+              {nextBlock.block.type === "intervals" && nextBlock.block.intervalType === "tabata" && `· ${nextBlock.block.workSeconds || 20}s trabajo / ${nextBlock.block.restSeconds || 10}s descanso`}
+              {nextBlock.block.type === "intervals" && nextBlock.block.intervalType === "hiit" && `· ${nextBlock.block.workSeconds || 30}s trabajo / ${nextBlock.block.restSeconds || 30}s descanso`}
+              {nextBlock.block.type === "intervals" && nextBlock.block.intervalType === "emom" && `· ${nextBlock.block.rounds || 20} minutos`}
+              {nextBlock.block.type === "intervals" && nextBlock.block.intervalType === "amrap" && `· ${nextBlock.block.totalDurationSeconds ? Math.round(nextBlock.block.totalDurationSeconds / 60) : 12} minutos`}
+              {nextBlock.block.type === "cardio" && nextBlock.block.targetMinutes && `· ${nextBlock.block.targetMinutes} min`}
+              {nextBlock.block.type === "warmup" && nextBlock.block.targetMinutes && `· ${nextBlock.block.targetMinutes} min`}
+              {nextBlock.block.type === "cooldown" && nextBlock.block.targetMinutes && `· ${nextBlock.block.targetMinutes} min`}
+              {nextBlock.block.type === "strength" && nextBlock.block.targetMinutes && `· ${nextBlock.block.targetMinutes} min`}
             </div>
           </div>
         )}

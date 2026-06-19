@@ -7,18 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { Avatar, Button, Icon, StateBlock } from "@/components/ui";
 import type { ClientWeekResponse } from "@regen/types";
 import { WeekWorkoutCard } from "./_components/week-workout-card";
-
-const DAY_LABELS = ["D", "L", "M", "X", "J", "V", "S"];
-
-function todayStrip() {
-  const now = new Date();
-  const dow = now.getDay(); // 0=Sun
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(now.getDate() - dow + i);
-    return { d: DAY_LABELS[i], n: d.getDate(), today: i === dow };
-  });
-}
+import { AfterTodaySection } from "./_components/after-today-section";
+import { weekContext, workoutBriefing, nextWorkoutMessage, todayStrip } from "./_lib/week-helpers";
 
 export default function SemanaPage() {
   const { api, user } = useAuth();
@@ -113,14 +103,7 @@ export default function SemanaPage() {
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 84 }}>
       {/* Header */}
       <div style={{ padding: "48px 20px 16px" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 18,
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div>
             <div style={{ fontSize: 12, color: "var(--text-mute)", letterSpacing: ".04em" }}>
               Hola, {user?.name?.split(" ")[0] ?? ""}
@@ -152,40 +135,19 @@ export default function SemanaPage() {
               }}
             >
               <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".06em" }}>{d.d}</span>
-              <span className="ta-mono" style={{ fontSize: 14, fontWeight: 600 }}>
-                {d.n}
-              </span>
+              <span className="ta-mono" style={{ fontSize: 14, fontWeight: 600 }}>{d.n}</span>
             </div>
           ))}
         </div>
 
         {/* Summary */}
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            padding: 14,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 12,
-            marginBottom: 20,
-          }}
-        >
+        <div style={{ display: "flex", gap: 12, padding: 14, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, marginBottom: 20 }}>
           <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: 10,
-                color: "var(--text-mute)",
-                textTransform: "uppercase",
-                letterSpacing: ".08em",
-                fontWeight: 600,
-              }}
-            >
+            <div style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600 }}>
               Hechas
             </div>
             <div className="ta-mono" style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>
-              {doneCount}
-              <span style={{ color: "var(--text-mute)" }}>/{totalCount}</span>
+              {doneCount}<span style={{ color: "var(--text-mute)" }}>/{totalCount}</span>
             </div>
             <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 4 }}>
               {fullCompletedCount} completas
@@ -195,106 +157,48 @@ export default function SemanaPage() {
           </div>
           <div style={{ width: 1, background: "var(--line)" }} />
           <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: 10,
-                color: "var(--text-mute)",
-                textTransform: "uppercase",
-                letterSpacing: ".08em",
-                fontWeight: 600,
-              }}
-            >
+            <div style={{ fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 600 }}>
               Plan
             </div>
-            <div
-              className="ta-mono ta-ellipsis"
-              style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: "var(--text)" }}
-            >
+            <div className="ta-mono ta-ellipsis" style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: "var(--text)" }}>
               {data.plan.title}
             </div>
           </div>
         </div>
 
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--text-mute)",
-            textTransform: "uppercase",
-            letterSpacing: ".1em",
-            fontWeight: 600,
-            marginBottom: 10,
-          }}
-        >
-          Próximo entreno
+        {/* Semana context */}
+        <div style={{ fontSize: 12, color: "var(--text-mute)", marginBottom: 18, lineHeight: 1.5 }}>
+          {weekContext(data.weekNumber, data.totalWeeks)}
         </div>
       </div>
 
       <div style={{ padding: "0 20px" }}>
-        {/* Today card */}
+        {/* Hero de intención */}
         {today ? (
-          <div
-            style={{
-              padding: 18,
-              borderRadius: 14,
-              background: "var(--lime)",
-              color: "#0B0B0C",
-              marginBottom: 10,
-            }}
-          >
+          <div style={{ padding: "18px 18px 16px", borderRadius: 14, background: "var(--lime)", color: "#0B0B0C", marginBottom: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", opacity: 0.7 }}>
-              HOY
+              HOY TOCA
             </div>
-            <div
-              style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-.02em", marginTop: 2 }}
-            >
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-.02em", marginTop: 2, lineHeight: 1.2 }}>
               {today.title}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.75, marginBottom: 18 }}>
-              {today.description ?? today.tags.join(" · ")} · {today.exerciseCount} ej
+            <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.75, marginBottom: 14, marginTop: 4 }}>
+              {workoutBriefing(today)}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {today.session?.status === "in_progress" ? (
-                <Link
-                  href={`/sesion/${today.session.id}`}
-                  style={{ flex: 1, textDecoration: "none" }}
-                >
-                  <Button
-                    block
-                    size="lg"
-                    icon="play"
-                    style={{ background: "#0B0B0C", color: "var(--lime)" }}
-                  >
-                    Continuar
+                <Link href={`/sesion/${today.session.id}`} style={{ flex: 1, textDecoration: "none" }}>
+                  <Button block size="lg" icon="play" style={{ background: "#0B0B0C", color: "var(--lime)" }}>
+                    Continuar entreno
                   </Button>
                 </Link>
               ) : (
-                <Link
-                  href={workoutHref(today)}
-                  style={{ flex: 1, textDecoration: "none" }}
-                >
-                  <Button
-                    block
-                    size="lg"
-                    icon="play"
-                    style={{ background: "#0B0B0C", color: "var(--lime)" }}
-                  >
-                    Empezar
+                <Link href={workoutHref(today)} style={{ flex: 1, textDecoration: "none" }}>
+                  <Button block size="lg" icon="play" style={{ background: "#0B0B0C", color: "var(--lime)" }}>
+                    Empezar entreno
                   </Button>
                 </Link>
               )}
-              <Link href={workoutHref(today)} style={{ textDecoration: "none" }}>
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  style={{
-                    background: "rgba(11,11,12,.08)",
-                    color: "#0B0B0C",
-                    border: "1px solid rgba(11,11,12,.2)",
-                  }}
-                >
-                  Ver
-                </Button>
-              </Link>
             </div>
             {today.progressionNote && (
               <div style={{ marginTop: 12, fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
@@ -303,16 +207,7 @@ export default function SemanaPage() {
             )}
           </div>
         ) : (
-          <div
-            style={{
-              padding: 18,
-              borderRadius: 14,
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              marginBottom: 10,
-              textAlign: "center",
-            }}
-          >
+          <div style={{ padding: 18, borderRadius: 14, background: "var(--bg-1)", border: "1px solid var(--line)", marginBottom: 10, textAlign: "center" }}>
             <div style={{ fontSize: 15, fontWeight: 600 }}>Semana completada</div>
             <div style={{ fontSize: 13, color: "var(--text-mute)", marginTop: 4 }}>
               Buen trabajo — descansá hasta la próxima semana
@@ -320,6 +215,7 @@ export default function SemanaPage() {
           </div>
         )}
 
+        {/* In progress */}
         {inProgress.length > 0 && (
           <>
             <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
@@ -340,60 +236,18 @@ export default function SemanaPage() {
           </>
         )}
 
-        {pending.length > 0 && (
-          <>
-            <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
-              Pendientes
-            </div>
-            {pending.map((w) => (
-              <WeekWorkoutCard
-                key={w.pwwId}
-                href={workoutHref(w)}
-                title={w.title}
-                description={w.description}
-                tags={w.tags}
-                exerciseCount={w.exerciseCount}
-                progressionNote={w.progressionNote}
-                variant="pending"
-              />
-            ))}
-          </>
+        {/* Después de hoy — colapsable */}
+        {(pending.length > 0 || completed.length > 0) && (
+          <AfterTodaySection pending={pending} completed={completed} workoutHref={workoutHref} />
         )}
 
-        {completed.length > 0 && (
-          <>
-            <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 10px" }}>
-              Completadas
-            </div>
-            {completed.map((w) => {
-              const s = w.session;
-              const setsCount = s?.setsCount ?? null;
-              const targetSetsCount = s?.targetSetsCount ?? null;
-              const isPartial =
-                setsCount != null && targetSetsCount != null && targetSetsCount > 0 && setsCount < targetSetsCount;
-
-              return (
-                <WeekWorkoutCard
-                  key={w.pwwId}
-                  href={workoutHref(w)}
-                  title={w.title}
-                  description={w.description}
-                  tags={w.tags}
-                  exerciseCount={w.exerciseCount}
-                  progressionNote={w.progressionNote}
-                  variant="completed"
-                  badge={
-                    isPartial && setsCount != null && targetSetsCount != null
-                      ? { text: `Parcial ${setsCount}/${targetSetsCount}`, tone: "warn" }
-                      : { text: "Lista", tone: "success" }
-                  }
-                />
-              );
-            })}
-          </>
-        )}
+        {/* Next step */}
+        <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: 12, background: "var(--bg-1)", border: "1px solid var(--line)" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-mute)", letterSpacing: ".05em" }}>
+            {nextWorkoutMessage(pending, completed)}
+          </div>
+        </div>
       </div>
-
     </div>
   );
 }

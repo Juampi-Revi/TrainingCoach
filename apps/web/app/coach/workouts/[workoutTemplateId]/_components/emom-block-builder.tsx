@@ -18,13 +18,23 @@ export function EmomBlockBuilder({
   setRestBetweenExercises: (next: string) => void;
 }) {
   return (
-    <>
-      <div style={{ fontSize: 11, color: "var(--text-mute)", lineHeight: 1.45 }}>
-        EMOM: cada minuto reinicia. La tarea del minuto se define con los ejercicios del bloque. El descanso es el tiempo que sobra del minuto.
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, color: "var(--text-mute)", lineHeight: 1.5 }}>
+        Cada minuto el alumno hace un ejercicio. Al final del minuto descansa lo que sobra. Se repite X minutos.
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <Input label="Preparación (seg)" placeholder="10" value={prepare} onChange={(e) => setPrepare(e.target.value)} />
-        <Input label="Minutos totales" placeholder="12" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+        <Input
+          label="¿Cuántos minutos dura el bloque?"
+          placeholder="Ej: 20"
+          value={minutes}
+          onChange={(e) => setMinutes(e.target.value)}
+        />
+        <Input
+          label="Segundos de preparación antes de empezar"
+          placeholder="Ej: 10"
+          value={prepare}
+          onChange={(e) => setPrepare(e.target.value)}
+        />
       </div>
       <Input
         label="Descanso entre ejercicios (seg, opcional)"
@@ -32,6 +42,6 @@ export function EmomBlockBuilder({
         value={restBetweenExercises}
         onChange={(e) => setRestBetweenExercises(e.target.value)}
       />
-    </>
+    </div>
   );
 }

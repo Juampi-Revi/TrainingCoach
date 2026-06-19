@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YourCoachFit — Vision UX (Pass 5)</title>
+    <style>
+      :root {
+        --bg: #0b0b0c;
+        --bg-1: #141417;
+        --bg-2: #1c1c20;
+        --bg-3: #26262c;
+        --line: #26262c;
+        --line-2: #33333a;
+        --text: #f5f5f4;
+        --text-mute: #8d8d94;
+        --text-dim: #6e6e76;
+        --lime: #d7ff3a;
+        --lime-600: #bee52d;
+        --lime-200: #eeffa8;
+        --success: #6ee7a8;
+        --warn: #ffb547;
+        --danger: #ff5b5b;
+        --info: #7ab8ff;
+        --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.45);
+        --shadow-md: 0 16px 32px rgba(0, 0, 0, 0.35);
+        --r-md: 12px;
+        --r-lg: 16px;
+        --r-xl: 20px;
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "SF Pro Display", "SF Pro Text", "Segoe UI",
+          sans-serif;
+        --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(215, 255, 58, 0.14), transparent 28%),
+          radial-gradient(circle at 18% 12%, rgba(122, 184, 255, 0.08), transparent 26%),
+          linear-gradient(180deg, #0d0e11 0%, var(--bg) 24%);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .page {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 54px 28px 82px;
+      }
+
+      .kicker {
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 11px;
+        color: var(--lime);
+      }
+
+      .card {
+        background: rgba(20, 20, 23, 0.88);
+        border: 1px solid rgba(51, 51, 58, 0.92);
+        border-radius: 24px;
+        box-shadow: var(--shadow-lg);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+
+      .hero-main {
+        padding: 28px;
+      }
+
+      .hero-main h1 {
+        margin-top: 14px;
+        font-size: 46px;
+        line-height: 0.98;
+        max-width: 18ch;
+        letter-spacing: -0.03em;
+      }
+
+      .hero-main p {
+        margin-top: 14px;
+        max-width: 76ch;
+        color: var(--text-mute);
+        line-height: 1.6;
+      }
+
+      .hero-side {
+        padding: 22px;
+        display: grid;
+        gap: 14px;
+        align-content: start;
+      }
+
+      .hero-side ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-mute);
+        line-height: 1.6;
+      }
+
+      .section {
+        margin-top: 26px;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 18px;
+        margin-bottom: 14px;
+      }
+
+      .section-head h2 {
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+
+      .section-head p {
+        color: var(--text-mute);
+        line-height: 1.6;
+        max-width: 68ch;
+      }
+
+      .screen {
+        padding: 18px;
+      }
+
+      .screen-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 16px;
+      }
+
+      .screen-head h3 {
+        font-size: 24px;
+        letter-spacing: -0.02em;
+      }
+
+      .screen-head p {
+        margin-top: 8px;
+        color: var(--text-mute);
+        line-height: 1.6;
+        max-width: 72ch;
+      }
+
+      .meta {
+        color: var(--text-mute);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .preview {
+        min-height: 560px;
+        border-radius: 22px;
+        overflow: hidden;
+        border: 1px solid rgba(51, 51, 58, 0.95);
+        background: linear-gradient(180deg, rgba(20, 20, 23, 0.96), rgba(11, 11, 12, 0.96));
+        position: relative;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 104px 1fr;
+        min-height: 560px;
+      }
+
+      .sidebar {
+        padding: 18px 14px;
+        border-right: 1px solid rgba(51, 51, 58, 0.85);
+        background: linear-gradient(180deg, rgba(16, 17, 19, 0.98), rgba(11, 11, 12, 0.98));
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .brand {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: var(--lime);
+        color: var(--bg);
+        font-weight: 900;
+      }
+
+      .nav {
+        margin-top: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .nav span {
+        border-radius: 12px;
+        padding: 10px 10px;
+        font-size: 12px;
+        color: var(--text-mute);
+        border: 1px solid transparent;
+      }
+
+      .nav .active {
+        color: var(--text);
+        background: rgba(215, 255, 58, 0.1);
+        border-color: rgba(215, 255, 58, 0.24);
+      }
+
+      .chip {
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        font-size: 11px;
+        color: var(--lime);
+      }
+
+      .main {
+        padding: 22px;
+      }
+
+      .topline {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .badge {
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid rgba(215, 255, 58, 0.22);
+        color: var(--lime-200);
+        background: rgba(215, 255, 58, 0.08);
+        white-space: nowrap;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: 1.25fr 0.85fr 0.9fr;
+        gap: 12px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .panel {
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(22, 22, 26, 0.9);
+        border: 1px solid rgba(51, 51, 58, 0.9);
+      }
+
+      .panel strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 20px;
+      }
+
+      .panel p {
+        margin-top: 6px;
+        color: var(--text-mute);
+        line-height: 1.55;
+      }
+
+      .cta {
+        margin-top: 14px;
+        border-radius: 22px;
+        padding: 16px;
+        background: linear-gradient(180deg, rgba(215, 255, 58, 0.96), rgba(190, 229, 45, 0.96));
+        color: var(--bg);
+        box-shadow: 0 18px 42px rgba(215, 255, 58, 0.18);
+      }
+
+      .cta h4 {
+        margin: 8px 0 8px;
+        font-size: 24px;
+        letter-spacing: -0.02em;
+      }
+
+      .cta p {
+        color: rgba(11, 11, 12, 0.78);
+        line-height: 1.55;
+        max-width: 70ch;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        padding: 12px 14px;
+        border: 1px solid rgba(11, 11, 12, 0.12);
+        background: rgba(11, 11, 12, 0.92);
+        color: var(--text);
+        font-weight: 800;
+        font-size: 13px;
+      }
+
+      .btn.ghost {
+        background: rgba(11, 11, 12, 0.12);
+        color: rgba(11, 11, 12, 0.86);
+      }
+
+      .list {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .item {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(17, 18, 20, 0.95);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .item strong {
+        display: block;
+      }
+
+      .item span {
+        color: var(--text-mute);
+        font-size: 13px;
+      }
+
+      .state {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        white-space: nowrap;
+      }
+
+      .state.ok {
+        border-color: rgba(110, 231, 168, 0.22);
+        background: rgba(110, 231, 168, 0.12);
+        color: var(--success);
+      }
+
+      .state.warn {
+        border-color: rgba(255, 181, 71, 0.22);
+        background: rgba(255, 181, 71, 0.12);
+        color: var(--warn);
+      }
+
+      .state.bad {
+        border-color: rgba(255, 91, 91, 0.22);
+        background: rgba(255, 91, 91, 0.12);
+        color: var(--danger);
+      }
+
+      .state.info {
+        border-color: rgba(122, 184, 255, 0.22);
+        background: rgba(122, 184, 255, 0.12);
+        color: var(--info);
+      }
+
+      .chat {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 12px;
+      }
+
+      .chat-pane {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(18, 18, 21, 0.92);
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .bubble {
+        max-width: 86%;
+        padding: 12px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(51, 51, 58, 0.8);
+        background: rgba(11, 11, 12, 0.18);
+        color: var(--text-mute);
+        line-height: 1.5;
+        font-size: 13px;
+      }
+
+      .bubble.me {
+        margin-left: auto;
+        background: rgba(215, 255, 58, 0.1);
+        color: var(--text);
+        border-color: rgba(215, 255, 58, 0.22);
+      }
+
+      .composer {
+        margin-top: auto;
+        padding-top: 10px;
+        border-top: 1px solid rgba(51, 51, 58, 0.65);
+        display: grid;
+        gap: 10px;
+      }
+
+      .quick {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .pill {
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(22, 22, 26, 0.92);
+        color: var(--text);
+      }
+
+      .input {
+        height: 42px;
+        border-radius: 14px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(11, 11, 12, 0.22);
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        color: var(--text-mute);
+        font-size: 13px;
+      }
+
+      .plan-layout {
+        display: grid;
+        grid-template-columns: 0.95fr 1.05fr;
+        gap: 12px;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .week {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(18, 18, 21, 0.92);
+      }
+
+      .week-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .days {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .day {
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(51, 51, 58, 0.75);
+        background: rgba(11, 11, 12, 0.18);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--text-mute);
+        font-size: 13px;
+      }
+
+      .aside-card {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(18, 18, 21, 0.92);
+      }
+
+      .aside-card h4 {
+        margin-top: 8px;
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+
+      @media (max-width: 1120px) {
+        .hero,
+        .grid-3,
+        .grid-2,
+        .chat,
+        .plan-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .shell {
+          grid-template-columns: 84px 1fr;
+        }
+
+        .page {
+          padding: 28px 16px 56px;
+        }
+
+        .hero-main h1 {
+          font-size: 36px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <article class="card hero-main">
+          <div class="kicker">Pass 5 · Reducir fricción</div>
+          <h1>Casos de uso clave que hoy se sienten “pesados” pasan a ser directos.</h1>
+          <p>
+            Esta ronda suma el mismo nivel de propuesta visual y razonamiento para: Panel/Hábitos,
+            Wearables/Salud, Mensajes/Feedback y Planes (coach). El criterio es siempre el mismo:
+            bajar pasos, bajar dudas y bajar puntos de falla.
+          </p>
+        </article>
+        <aside class="card hero-side">
+          <div class="kicker">Principios</div>
+          <ul>
+            <li>Estado visible (qué está ok / qué está roto / qué hacer).</li>
+            <li>Acción principal dominante (un CTA que destraba).</li>
+            <li>Menos “settings”, más “siguiente paso”.</li>
+            <li>Contexto cerca del lugar donde se usa (no en otra pantalla).</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <div class="kicker">Alumno</div>
+            <h2>Panel / Hábitos</h2>
+          </div>
+          <p>
+            El panel deja de ser un “dashboard de números” y pasa a ser una pantalla que destraba el
+            día: qué conviene hacer ahora, qué está impactando el plan y qué falta registrar.
+          </p>
+        </div>
+        <article class="card screen screen--panel">
+          <div class="screen-head">
+            <div>
+              <div class="kicker">Propuesta visual</div>
+              <h3>Panel diario con acciones rápidas</h3>
+              <p>Menos scroll, más claridad, y quick actions para hábitos que hoy se registran tarde o nunca.</p>
+            </div>
+            <div class="meta">Objetivo: reducir fricción de registro + dar feedback inmediato.</div>
+          </div>
+          <div class="preview">
+            <div class="shell">
+              <aside class="sidebar">
+                <div>
+                  <div class="brand">Y</div>
+                  <div class="nav">
+                    <span>Semana</span>
+                    <span class="active">Panel</span>
+                    <span>Historial</span>
+                    <span>Mensajes</span>
+                  </div>
+                </div>
+                <span class="chip">A1</span>
+              </aside>
+              <div class="main">
+                <div class="topline">
+                  <div>
+                    <div class="kicker">Hoy</div>
+                    <h3 style="font-size: 32px; margin-top: 8px">Tu día en 20 segundos</h3>
+                    <p class="meta" style="margin-top: 8px">Señales mínimas + acciones, sin ir a 4 pantallas distintas.</p>
+                  </div>
+                  <span class="badge">Recuperación: buena</span>
+                </div>
+                <div class="grid-3">
+                  <div class="panel">
+                    <span class="chip">Hábitos</span>
+                    <strong>3 / 5</strong>
+                    <p>Hidratación y pasos ok. Falta proteína y sueño.</p>
+                  </div>
+                  <div class="panel">
+                    <span class="chip">Pasos</span>
+                    <strong>7.420</strong>
+                    <p>Meta 9.000 · faltan 18 min caminando.</p>
+                  </div>
+                  <div class="panel">
+                    <span class="chip">Sueño</span>
+                    <strong>6h 40m</strong>
+                    <p>Hoy conviene bajar intensidad si estás muy cansado.</p>
+                  </div>
+                </div>
+                <div class="cta">
+                  <span class="chip" style="color: rgba(11, 11, 12, 0.6)">Siguiente paso</span>
+                  <h4>Registrá comida en 15s</h4>
+                  <p>
+                    En vez de abrir “nutrición” y buscar pantallas: una acción rápida. Si no querés
+                    detalle, log simple por porciones.
+                  </p>
+                  <div class="row">
+                    <span class="btn">Agregar comida</span>
+                    <span class="btn ghost">Solo proteína</span>
+                    <span class="btn ghost">Tomé agua</span>
+                  </div>
+                </div>
+                <div class="list">
+                  <div class="item">
+                    <div>
+                      <strong>Meta de proteína</strong>
+                      <span>Te falta ~35g para cerrar el día</span>
+                    </div>
+                    <span class="state warn">Pendiente</span>
+                  </div>
+                  <div class="item">
+                    <div>
+                      <strong>Checklist pre entreno</strong>
+                      <span>Agua + snack · 5 min</span>
+                    </div>
+                    <span class="state info">Recomendado</span>
+                  </div>
+                  <div class="item">
+                    <div>
+                      <strong>Entreno de hoy</strong>
+                      <span>Si te sentís pesado, baja 1 punto de RPE</span>
+                    </div>
+                    <span class="state ok">En track</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <div class="kicker">Alumno</div>
+            <h2>Wearables / Salud</h2>
+          </div>
+          <p>
+            Conectar y mantener la conexión no debería sentirse como “integración técnica”. La UX
+            tiene que tener estado y un camino único para destrabar cuando falla.
+          </p>
+        </div>
+        <article class="card screen screen--wearables">
+          <div class="screen-head">
+            <div>
+              <div class="kicker">Propuesta visual</div>
+              <h3>Centro de sincronización con estado y acciones</h3>
+              <p>Una sola pantalla responde: qué está conectado, cuándo fue el último sync y qué hacer si falla.</p>
+            </div>
+            <div class="meta">Objetivo: reducir fallas silenciosas y soporte.</div>
+          </div>
+          <div class="preview">
+            <div class="shell">
+              <aside class="sidebar">
+                <div>
+                  <div class="brand">Y</div>
+                  <div class="nav">
+                    <span>Semana</span>
+                    <span>Panel</span>
+                    <span class="active">Salud</span>
+                    <span>Cuenta</span>
+                  </div>
+                </div>
+                <span class="chip">A1</span>
+              </aside>
+              <div class="main">
+                <div class="topline">
+                  <div>
+                    <div class="kicker">Salud</div>
+                    <h3 style="font-size: 32px; margin-top: 8px">Sincronización</h3>
+                    <p class="meta" style="margin-top: 8px">Estado visible. Acciones claras. Nada de “no pasó nada”.</p>
+                  </div>
+                  <span class="badge">Último sync: hace 2h</span>
+                </div>
+                <div class="grid-2">
+                  <div class="panel">
+                    <span class="chip">Strava</span>
+                    <strong>Conectado</strong>
+                    <p>Importando actividades y ritmo.</p>
+                    <div class="row">
+                      <span class="state ok">Ok</span>
+                      <span class="state info">Re-sincronizar</span>
+                    </div>
+                  </div>
+                  <div class="panel">
+                    <span class="chip">Google Health</span>
+                    <strong>Necesita atención</strong>
+                    <p>Token expirado. No se importan pasos desde ayer.</p>
+                    <div class="row">
+                      <span class="state warn">Requiere login</span>
+                      <span class="state info">Ver detalle</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="cta">
+                  <span class="chip" style="color: rgba(11, 11, 12, 0.6)">Si algo falla</span>
+                  <h4>Re-conectar en 1 paso</h4>
+                  <p>
+                    En vez de fallas silenciosas: banner de problema + un botón único que reintenta
+                    OAuth y deja trazabilidad visible para el usuario.
+                  </p>
+                  <div class="row">
+                    <span class="btn">Reconectar Google</span>
+                    <span class="btn ghost">Ayuda rápida</span>
+                  </div>
+                </div>
+                <div class="list">
+                  <div class="item">
+                    <div>
+                      <strong>Qué se sincroniza</strong>
+                      <span>Pasos, sueño, actividades y cardio</span>
+                    </div>
+                    <span class="state info">Info</span>
+                  </div>
+                  <div class="item">
+                    <div>
+                      <strong>Calidad de datos</strong>
+                      <span>Te faltan pasos de ayer (google health)</span>
+                    </div>
+                    <span class="state warn">Gap</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <div class="kicker">Coach + Alumno</div>
+            <h2>Mensajes / Feedback</h2>
+          </div>
+          <p>
+            Chat no es solo “mensajes”. Tiene que resolver: feedback post-sesión, contexto de qué
+            entreno se está hablando, y decisiones rápidas sin texto largo.
+          </p>
+        </div>
+        <article class="card screen screen--messaging">
+          <div class="screen-head">
+            <div>
+              <div class="kicker">Propuesta visual</div>
+              <h3>Chat con contexto + quick replies</h3>
+              <p>Menos ida y vuelta y menos “¿de qué día me hablás?”. El entreno se adjunta como card.</p>
+            </div>
+            <div class="meta">Objetivo: reducir fricción para feedback y seguimiento diario.</div>
+          </div>
+          <div class="preview">
+            <div class="shell">
+              <aside class="sidebar">
+                <div>
+                  <div class="brand">Y</div>
+                  <div class="nav">
+                    <span>Alumnos</span>
+                    <span>Planes</span>
+                    <span>Workouts</span>
+                    <span class="active">Mensajes</span>
+                  </div>
+                </div>
+                <span class="chip">Coach</span>
+              </aside>
+              <div class="main">
+                <div class="topline">
+                  <div>
+                    <div class="kicker">Chat</div>
+                    <h3 style="font-size: 32px; margin-top: 8px">Alumno 1</h3>
+                    <p class="meta" style="margin-top: 8px">Feedback + contexto + decisión rápida.</p>
+                  </div>
+                  <span class="badge">Último mensaje: hoy</span>
+                </div>
+                <div class="chat">
+                  <div class="chat-pane">
+                    <div class="bubble">
+                      Terminé el Día B. Sentí el press banca pesado. ¿Bajo kilos o reps la próxima?
+                    </div>
+                    <div class="bubble me">
+                      Perfecto. Para la próxima mantené reps y bajá 2.5 kg solo en la primera serie.
+                    </div>
+                    <div class="bubble">
+                      Ok. ¿Te paso el RPE de los 3 movimientos?
+                    </div>
+                    <div class="bubble me">
+                      Sí. Elegí rápido acá abajo y listo.
+                    </div>
+                    <div class="composer">
+                      <div class="quick">
+                        <span class="pill">RPE 6</span>
+                        <span class="pill">RPE 7</span>
+                        <span class="pill">RPE 8</span>
+                        <span class="pill">RPE 9</span>
+                      </div>
+                      <div class="input">Escribí un mensaje…</div>
+                    </div>
+                  </div>
+                  <div class="aside-card">
+                    <span class="chip">Contexto</span>
+                    <h4 style="margin-top: 10px">Día B (Upper)</h4>
+                    <p style="margin-top: 8px" class="meta">
+                      Adjuntado al chat para que el coach y el alumno hablen sobre lo mismo.
+                    </p>
+                    <div class="list">
+                      <div class="item">
+                        <div>
+                          <strong>Press banca</strong>
+                          <span>4x5-7 · RPE 8</span>
+                        </div>
+                        <span class="state info">Edit</span>
+                      </div>
+                      <div class="item">
+                        <div>
+                          <strong>Remo con barra</strong>
+                          <span>4x8 · descanso 90s</span>
+                        </div>
+                        <span class="state ok">Ok</span>
+                      </div>
+                      <div class="item">
+                        <div>
+                          <strong>Check-in</strong>
+                          <span>Energía 2/5 · sueño 6h</span>
+                        </div>
+                        <span class="state warn">Atender</span>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <span class="btn" style="background: var(--lime); color: var(--bg); border-color: rgba(11, 11, 12, 0.12)">
+                        Ajustar sesión
+                      </span>
+                      <span class="btn" style="background: rgba(22, 22, 26, 0.88); border-color: rgba(51, 51, 58, 0.9)">
+                        Ver historial
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <div class="kicker">Coach</div>
+            <h2>Planes</h2>
+          </div>
+          <p>
+            Planes es el lugar donde más se paga fricción: editar, asignar, publicar y previsualizar.
+            La propuesta reduce pasos y elimina dudas sobre “qué ve el alumno” y “qué está vigente”.
+          </p>
+        </div>
+        <article class="card screen screen--plans">
+          <div class="screen-head">
+            <div>
+              <div class="kicker">Propuesta visual</div>
+              <h3>Plan con estados claros: draft / publicado / asignado</h3>
+              <p>Versionado simple, preview visible y asignación directa desde el mismo lugar.</p>
+            </div>
+            <div class="meta">Objetivo: reducir edición a ciegas y errores de asignación.</div>
+          </div>
+          <div class="preview">
+            <div class="shell">
+              <aside class="sidebar">
+                <div>
+                  <div class="brand">Y</div>
+                  <div class="nav">
+                    <span>Alumnos</span>
+                    <span class="active">Planes</span>
+                    <span>Workouts</span>
+                    <span>Mensajes</span>
+                  </div>
+                </div>
+                <span class="chip">Coach</span>
+              </aside>
+              <div class="main">
+                <div class="topline">
+                  <div>
+                    <div class="kicker">Plan</div>
+                    <h3 style="font-size: 32px; margin-top: 8px">Recomp 8 semanas</h3>
+                    <p class="meta" style="margin-top: 8px">
+                      Un plan tiene estado y trazabilidad. El coach no duda si lo que edita está activo.
+                    </p>
+                  </div>
+                  <span class="badge">Estado: publicado</span>
+                </div>
+                <div class="grid-3">
+                  <div class="panel">
+                    <span class="chip">Asignados</span>
+                    <strong>12</strong>
+                    <p>Alumnos con este plan activo.</p>
+                  </div>
+                  <div class="panel">
+                    <span class="chip">Progreso</span>
+                    <strong>Semana 3</strong>
+                    <p>La mayoría está en semana 2–3.</p>
+                  </div>
+                  <div class="panel">
+                    <span class="chip">Preview</span>
+                    <strong>Disponible</strong>
+                    <p>Vista alumno 1:1.</p>
+                  </div>
+                </div>
+                <div class="cta">
+                  <span class="chip" style="color: rgba(11, 11, 12, 0.6)">Acción principal</span>
+                  <h4>Asignar o ajustar sin cambiar de pantalla</h4>
+                  <p>
+                    La fricción típica (editar -> volver -> asignar -> ver preview) se reduce a un flujo
+                    corto: elegir alumno, previsualizar, publicar.
+                  </p>
+                  <div class="row">
+                    <span class="btn">Asignar a alumno</span>
+                    <span class="btn ghost">Vista alumno</span>
+                    <span class="btn ghost">Crear versión</span>
+                  </div>
+                </div>
+                <div class="plan-layout">
+                  <div class="timeline">
+                    <div class="week">
+                      <div class="week-head">
+                        <strong>Semana 1</strong>
+                        <span class="state ok">Publicada</span>
+                      </div>
+                      <div class="days">
+                        <div class="day"><span>Día A (Lower)</span><span>Fuerza</span></div>
+                        <div class="day"><span>Día B (Upper)</span><span>Fuerza</span></div>
+                        <div class="day"><span>Día C (Conditioning)</span><span>Cardio</span></div>
+                      </div>
+                    </div>
+                    <div class="week">
+                      <div class="week-head">
+                        <strong>Semana 2</strong>
+                        <span class="state info">Draft</span>
+                      </div>
+                      <div class="days">
+                        <div class="day"><span>Día A (Lower)</span><span>Progresión +1</span></div>
+                        <div class="day"><span>Día B (Upper)</span><span>Progresión +1</span></div>
+                        <div class="day"><span>Día C (Conditioning)</span><span>Intervals</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="aside-card">
+                    <span class="chip">Reducir fricción</span>
+                    <h4 style="margin-top: 10px">Checklist de publicación</h4>
+                    <p class="meta" style="margin-top: 8px">
+                      Antes de publicar, la UI te muestra lo mínimo para evitar errores: preview, notas, y
+                      coherencia de volumen.
+                    </p>
+                    <div class="list">
+                      <div class="item">
+                        <div>
+                          <strong>Vista alumno</strong>
+                          <span>Validada</span>
+                        </div>
+                        <span class="state ok">Ok</span>
+                      </div>
+                      <div class="item">
+                        <div>
+                          <strong>Notas del coach</strong>
+                          <span>Falta briefing semana 2</span>
+                        </div>
+                        <span class="state warn">Pendiente</span>
+                      </div>
+                      <div class="item">
+                        <div>
+                          <strong>Volumen semanal</strong>
+                          <span>Comparable a semana 1</span>
+                        </div>
+                        <span class="state ok">Ok</span>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <span class="btn" style="background: var(--lime); color: var(--bg); border-color: rgba(11, 11, 12, 0.12)">
+                        Publicar semana 2
+                      </span>
+                      <span class="btn" style="background: rgba(22, 22, 26, 0.88); border-color: rgba(51, 51, 58, 0.9)">
+                        Guardar draft
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

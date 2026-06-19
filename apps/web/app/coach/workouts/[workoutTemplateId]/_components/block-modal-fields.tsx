@@ -1,9 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui";
-import { blockTypeLabel } from "@/lib/constants";
 import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
-import { BLOCK_TYPES } from "./block-modal.constants";
 import { BlockModalSummary } from "./block-modal-summary";
 import { IntervalBlockBuilder } from "./interval-block-builder";
 import { CardioBlockBuilder } from "./cardio-block-builder";
@@ -27,8 +25,6 @@ interface BlockModalFieldsProps {
   targetZone: string;
   steps: WorkoutBlockStepSummary[];
   restAfterSeconds: string;
-  setBlockType: (t: BlockType) => void;
-  setIntervalType: (t: IntervalType | null) => void;
   setLabel: (v: string) => void;
   setDescription: (v: string) => void;
   setPrepare: (v: string) => void;
@@ -64,8 +60,6 @@ export function BlockModalFields({
   targetZone,
   steps,
   restAfterSeconds,
-  setBlockType,
-  setIntervalType,
   setLabel,
   setDescription,
   setPrepare,
@@ -91,54 +85,11 @@ export function BlockModalFields({
 
   return (
     <div style={{ padding: 18, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 10, color: "var(--text-mute)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
-          Tipo de bloque
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {BLOCK_TYPES.map((t) => (
-            <button
-              key={t}
-              onClick={() => {
-                setBlockType(t);
-                if (t === "intervals" && !intervalType) setIntervalType("tabata");
-                if (t !== "intervals") setIntervalType(null);
-              }}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 600,
-                border: `1px solid ${blockType === t ? "var(--lime)" : "var(--line-2)"}`,
-                background: blockType === t ? "rgba(215,255,58,.12)" : "transparent",
-                color: blockType === t ? "var(--lime)" : "var(--text-mute)",
-              }}
-            >
-              {t === "intervals" ? "Timer guiado" : t === "cardio" ? "Cardio / Running" : blockTypeLabel(t)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <Input label="Nombre del bloque" placeholder="Ej: Tabata · 4 ejercicios" value={label} onChange={(e) => setLabel(e.target.value)} />
+      {/* 1. Nombre y descripción */}
+      <Input label="Nombre del bloque" placeholder="Ej: Tabata de piernas" value={label} onChange={(e) => setLabel(e.target.value)} />
       <Input label="Descripción (opcional)" placeholder="Notas sobre este bloque..." value={description} onChange={(e) => setDescription(e.target.value)} />
 
-      <BlockModalSummary
-        blockType={blockType}
-        intervalType={intervalType}
-        prepare={prepare}
-        work={work}
-        rest={rest}
-        rounds={rounds}
-        setCount={setCount}
-        setRest={setRestSeconds}
-        total={total}
-        targetMinutes={targetMinutes}
-        restBetweenExercises={restBetweenExercises}
-        restAfterSeconds={restAfterSeconds}
-      />
-
+      {/* 3. Configuración específica del tipo */}
       {isInterval && intervalType && (
         <IntervalBlockBuilder
           intervalType={intervalType}
@@ -152,7 +103,6 @@ export function BlockModalFields({
           total={total}
           restBetweenExercises={restBetweenExercises}
           restAfterSeconds={restAfterSeconds}
-          setIntervalType={setIntervalType}
           setPrepare={setPrepare}
           setWork={setWork}
           setRest={setRest}
@@ -187,17 +137,41 @@ export function BlockModalFields({
       )}
 
       {showUniversalConfig && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Input label="Tiempo objetivo (min)" placeholder="Ej: 10" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
-          <Input label="Descanso entre ejercicios (seg)" placeholder="Ej: 60" value={restBetweenExercises} onChange={(e) => setRestBetweenExercises(e.target.value)} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 12, color: "var(--text-mute)", lineHeight: 1.5 }}>
+            {isWarmup
+              ? "Movilidad y activación. El alumno no registra series. Agregá ejercicios de calentamiento."
+              : "El alumno registra series y repeticiones con peso. Agregá ejercicios al bloque para definir el contenido."}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Input label="¿Cuántos minutos aproximadamente?" placeholder="Ej: 45" value={targetMinutes} onChange={(e) => setTargetMinutes(e.target.value)} />
+            <Input label="Descanso entre ejercicios (seg, opcional)" placeholder="Ej: 60" value={restBetweenExercises} onChange={(e) => setRestBetweenExercises(e.target.value)} />
+          </div>
         </div>
       )}
 
+      {/* 4. Descanso después del bloque (aplica a todos) */}
       <Input
-        label="Descanso después del bloque (seg, opcional)"
+        label="Descanso después del bloque antes del siguiente (seg, opcional)"
         placeholder="Ej: 120"
         value={restAfterSeconds}
         onChange={(e) => setRestAfterSeconds(e.target.value)}
+      />
+
+      {/* 5. Resumen */}
+      <BlockModalSummary
+        blockType={blockType}
+        intervalType={intervalType}
+        prepare={prepare}
+        work={work}
+        rest={rest}
+        rounds={rounds}
+        setCount={setCount}
+        setRest={setRestSeconds}
+        total={total}
+        targetMinutes={targetMinutes}
+        restBetweenExercises={restBetweenExercises}
+        restAfterSeconds={restAfterSeconds}
       />
     </div>
   );

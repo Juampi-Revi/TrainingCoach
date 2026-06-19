@@ -364,7 +364,7 @@ export default function SessionCompletadaPage() {
           Comentarios
         </Button>
         <Button size="lg" style={{ flex: 1.4 }} disabled={saving} onClick={save}>
-          {saving ? "Guardando…" : "Confirmar"}
+          {saving ? "Guardando…" : "Guardar y cerrar sesión"}
           {!saving && <Icon name="check" size={14} color="#0B0B0C" />}
         </Button>
       </div>

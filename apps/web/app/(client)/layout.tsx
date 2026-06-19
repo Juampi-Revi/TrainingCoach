@@ -15,7 +15,7 @@ const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string; mobil
   { id: "home",          icon: "home",    label: "Semana",    href: "/semana"    },
   { id: "panel",         icon: "chart",   label: "Mi panel",  href: "/panel"     },
   { id: "history",       icon: "history", label: "Historial", href: "/historial" },
-  { id: "messages",      icon: "msg",     label: "Mensajes",  href: "/mensajes"  },
+  // { id: "messages",      icon: "msg",     label: "Mensajes",  href: "/mensajes"  },
   { id: "notifications", icon: "bell",    label: "Notificaciones", href: "/notificaciones", mobileHide: true },
   { id: "me",            icon: "user",    label: "Cuenta",    href: "/cuenta"    },
 ];
@@ -25,7 +25,7 @@ function useActiveNav(): NavId {
   if (p.startsWith("/panel")) return "panel";
   if (p.startsWith("/comida")) return "panel";
   if (p.startsWith("/historial")) return "history";
-  if (p.startsWith("/mensajes") || p.startsWith("/comentarios")) return "messages";
+  if (p.startsWith("/mensajes") || p.startsWith("/comentarios")) return "home";
   if (p.startsWith("/notificaciones")) return "notifications";
   if (p.startsWith("/cuenta")) return "me";
   return "home";
@@ -82,7 +82,6 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const active = useActiveNav();
-  const unread = useUnreadMessages(token);
   const { unreadCount: notifCount } = useNotifications();
 
   useEffect(() => {
@@ -135,11 +134,9 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         {NAV.map((n) => {
           const isActive = n.id === active;
           const badge =
-            n.id === "messages"
-              ? unread
-              : n.id === "notifications"
-                ? notifCount
-                : 0;
+            n.id === "notifications"
+              ? notifCount
+              : 0;
           return (
             <Link key={n.id} href={n.href} className="ta-nav-item" style={{
               display: "flex", alignItems: "center", gap: 10,
@@ -194,11 +191,9 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         {NAV.filter((item) => !item.mobileHide).map((item) => {
           const isActive = item.id === active;
           const badge =
-            item.id === "messages"
-              ? unread
-              : item.id === "notifications"
-                ? notifCount
-                : 0;
+            item.id === "notifications"
+              ? notifCount
+              : 0;
           return (
             <Link key={item.id} href={item.href} style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3,

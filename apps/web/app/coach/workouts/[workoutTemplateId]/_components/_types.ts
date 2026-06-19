@@ -5,7 +5,7 @@ export interface WE {
   sortOrder: number;
   supersetGroup: string | null;
   workoutBlockId: string;
-  exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl?: string | null; youtubeUrl?: string | null; isSystem?: boolean };
+  exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean };
   targetSets: number | null;
   targetReps: string | null;
   durationSeconds: number | null;

@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YourCoachFit — Vision UX (Mobile)</title>
+    <style>
+      :root {
+        --bg: #0b0b0c;
+        --bg-1: #141417;
+        --bg-2: #1c1c20;
+        --bg-3: #26262c;
+        --line: #26262c;
+        --line-2: #33333a;
+        --text: #f5f5f4;
+        --text-mute: #8d8d94;
+        --text-dim: #6e6e76;
+        --lime: #d7ff3a;
+        --lime-600: #bee52d;
+        --lime-200: #eeffa8;
+        --success: #6ee7a8;
+        --warn: #ffb547;
+        --danger: #ff5b5b;
+        --info: #7ab8ff;
+        --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.55);
+        --shadow-md: 0 16px 32px rgba(0, 0, 0, 0.4);
+        --r-sm: 8px;
+        --r-md: 12px;
+        --r-lg: 16px;
+        --r-xl: 20px;
+        --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", ui-monospace, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(215, 255, 58, 0.12), transparent 28%),
+          radial-gradient(circle at 10% 20%, rgba(122, 184, 255, 0.06), transparent 25%),
+          linear-gradient(180deg, #0d0e11 0%, var(--bg) 28%);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .page {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 44px 20px 72px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .card {
+        background: rgba(20, 20, 23, 0.88);
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        border-radius: 24px;
+        box-shadow: var(--shadow-lg);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero-main {
+        padding: 26px;
+      }
+
+      .kicker {
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 11px;
+        color: var(--lime);
+      }
+
+      .hero-main h1 {
+        font-size: 44px;
+        line-height: 0.98;
+        max-width: 16ch;
+        margin: 14px 0 14px;
+      }
+
+      .hero-main p {
+        color: var(--text-mute);
+        line-height: 1.62;
+        max-width: 72ch;
+      }
+
+      .hero-side {
+        padding: 22px;
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .hero-side ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-mute);
+        line-height: 1.6;
+      }
+
+      .section {
+        margin-top: 22px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .section-head h2 {
+        font-size: 26px;
+      }
+
+      .section-head p {
+        color: var(--text-mute);
+        line-height: 1.6;
+        max-width: 62ch;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .mock {
+        padding: 16px;
+      }
+
+      .mock h3 {
+        font-size: 18px;
+        margin-top: 8px;
+      }
+
+      .mock p {
+        margin-top: 8px;
+        color: var(--text-mute);
+        line-height: 1.55;
+      }
+
+      .phone-wrap {
+        margin-top: 14px;
+        display: grid;
+        justify-content: center;
+      }
+
+      .phone {
+        width: 392px;
+        border-radius: 44px;
+        padding: 14px;
+        background: linear-gradient(180deg, rgba(45, 45, 52, 0.85), rgba(22, 22, 26, 0.85));
+        border: 1px solid rgba(93, 93, 102, 0.4);
+        box-shadow:
+          0 32px 64px rgba(0, 0, 0, 0.55),
+          0 0 0 1px rgba(215, 255, 58, 0.08);
+      }
+
+      .notch {
+        width: 132px;
+        height: 26px;
+        border-radius: 999px;
+        background: rgba(11, 11, 12, 0.82);
+        margin: 6px auto 12px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+      }
+
+      .screen {
+        width: 100%;
+        height: 720px;
+        border-radius: 34px;
+        overflow: hidden;
+        border: 1px solid rgba(51, 51, 58, 0.92);
+        background:
+          radial-gradient(circle at top, rgba(215, 255, 58, 0.14), transparent 32%),
+          linear-gradient(180deg, rgba(16, 17, 19, 0.98), rgba(11, 11, 12, 0.98));
+      }
+
+      .appbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(51, 51, 58, 0.65);
+        background: rgba(15, 15, 18, 0.88);
+      }
+
+      .brand {
+        width: 30px;
+        height: 30px;
+        border-radius: 12px;
+        background: var(--lime);
+        color: var(--bg);
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        font-size: 13px;
+      }
+
+      .appbar strong {
+        font-size: 14px;
+      }
+
+      .pill {
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(20, 20, 23, 0.9);
+        color: var(--text-mute);
+      }
+
+      .content {
+        padding: 16px;
+      }
+
+      .title {
+        font-size: 24px;
+        line-height: 1.06;
+        letter-spacing: -0.02em;
+      }
+
+      .sub {
+        margin-top: 8px;
+        color: var(--text-mute);
+        line-height: 1.55;
+        font-size: 13px;
+      }
+
+      .micro {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .micro-card {
+        padding: 10px 10px;
+        border-radius: 16px;
+        background: rgba(20, 20, 23, 0.9);
+        border: 1px solid rgba(51, 51, 58, 0.9);
+      }
+
+      .micro-card span {
+        display: block;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+
+      .micro-card strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 15px;
+      }
+
+      .hero-cta {
+        margin-top: 14px;
+        border-radius: 22px;
+        padding: 16px;
+        background: linear-gradient(180deg, rgba(215, 255, 58, 0.96), rgba(190, 229, 45, 0.96));
+        color: var(--bg);
+        box-shadow: 0 18px 42px rgba(215, 255, 58, 0.18);
+      }
+
+      .hero-cta .kicker {
+        color: rgba(11, 11, 12, 0.6);
+        font-size: 10px;
+        letter-spacing: 0.16em;
+      }
+
+      .hero-cta h4 {
+        margin: 8px 0 8px;
+        font-size: 22px;
+      }
+
+      .hero-cta p {
+        color: rgba(11, 11, 12, 0.78);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .cta-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .btn {
+        flex: 1;
+        border-radius: 16px;
+        padding: 12px 12px;
+        text-align: center;
+        font-weight: 800;
+        font-size: 13px;
+        background: rgba(11, 11, 12, 0.14);
+        color: rgba(11, 11, 12, 0.88);
+        border: 1px solid rgba(11, 11, 12, 0.12);
+      }
+
+      .btn.primary {
+        background: rgba(11, 11, 12, 0.92);
+        color: var(--text);
+      }
+
+      .list {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .list-item {
+        padding: 12px 12px;
+        border-radius: 18px;
+        background: rgba(20, 20, 23, 0.9);
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .list-item strong {
+        font-size: 13px;
+      }
+
+      .tag {
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(11, 11, 12, 0.2);
+        color: var(--text-mute);
+        white-space: nowrap;
+      }
+
+      .tag.ok {
+        border-color: rgba(110, 231, 168, 0.22);
+        color: var(--success);
+        background: rgba(110, 231, 168, 0.12);
+      }
+
+      .tag.risk {
+        border-color: rgba(255, 181, 71, 0.22);
+        color: var(--warn);
+        background: rgba(255, 181, 71, 0.12);
+      }
+
+      .tag.bad {
+        border-color: rgba(255, 91, 91, 0.22);
+        color: var(--danger);
+        background: rgba(255, 91, 91, 0.12);
+      }
+
+      .bottom-nav {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 12px 12px 18px;
+        background: linear-gradient(180deg, transparent, rgba(11, 11, 12, 0.92) 22%);
+      }
+
+      .nav-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 10px 8px;
+        border-radius: 16px;
+        text-align: center;
+        font-size: 11px;
+        border: 1px solid rgba(51, 51, 58, 0.85);
+        background: rgba(20, 20, 23, 0.86);
+        color: var(--text-mute);
+      }
+
+      .nav-item.active {
+        color: var(--text);
+        border-color: rgba(215, 255, 58, 0.28);
+        background: rgba(215, 255, 58, 0.1);
+      }
+
+      .runner {
+        height: 720px;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background:
+          radial-gradient(circle at center, rgba(215, 255, 58, 0.12), transparent 30%),
+          linear-gradient(180deg, rgba(16, 17, 19, 0.98), rgba(11, 11, 12, 0.98));
+      }
+
+      .runner-inner {
+        width: 100%;
+        text-align: center;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin: 0 auto 16px;
+        max-width: 320px;
+      }
+
+      .step {
+        height: 8px;
+        border-radius: 999px;
+        background: var(--bg-3);
+      }
+
+      .step.active {
+        background: var(--lime);
+      }
+
+      .circle {
+        width: 214px;
+        height: 214px;
+        border-radius: 50%;
+        margin: 18px auto 16px;
+        display: grid;
+        place-items: center;
+        border: 12px solid rgba(215, 255, 58, 0.22);
+        box-shadow:
+          inset 0 0 0 1px rgba(215, 255, 58, 0.18),
+          0 0 80px rgba(215, 255, 58, 0.12);
+      }
+
+      .circle strong {
+        font-size: 50px;
+        font-family: var(--font-mono);
+      }
+
+      .runner-pill {
+        margin: 0 auto;
+        max-width: 330px;
+        padding: 10px 12px;
+        border-radius: 18px;
+        background: rgba(20, 20, 23, 0.9);
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        color: var(--text-mute);
+        font-size: 13px;
+      }
+
+      .runner-actions {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .runner-actions .btn {
+        flex: unset;
+      }
+
+      .runner-actions .btn.primary {
+        grid-column: 1 / -1;
+        background: var(--lime);
+        border-color: rgba(11, 11, 12, 0.12);
+        color: var(--bg);
+      }
+
+      .coach-row {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .coach-card {
+        padding: 14px;
+        border-radius: 20px;
+        background: rgba(20, 20, 23, 0.9);
+        border: 1px solid rgba(51, 51, 58, 0.9);
+      }
+
+      .coach-card strong {
+        font-size: 14px;
+      }
+
+      .coach-card p {
+        margin-top: 6px;
+        color: var(--text-mute);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .split {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .preview {
+        padding: 14px;
+        border-radius: 22px;
+        background: rgba(20, 20, 23, 0.9);
+        border: 1px solid rgba(51, 51, 58, 0.9);
+      }
+
+      .preview-hero {
+        padding: 14px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(215, 255, 58, 0.96), rgba(190, 229, 45, 0.96));
+        color: var(--bg);
+      }
+
+      .preview-hero strong {
+        display: block;
+        font-size: 18px;
+        margin-top: 8px;
+      }
+
+      .preview-list {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .preview-item {
+        padding: 12px;
+        border-radius: 18px;
+        border: 1px solid rgba(51, 51, 58, 0.9);
+        background: rgba(11, 11, 12, 0.12);
+      }
+
+      .preview-item strong {
+        font-size: 13px;
+      }
+
+      .preview-item p {
+        margin-top: 6px;
+        color: var(--text-mute);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 980px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .page {
+          padding: 22px 14px 56px;
+        }
+
+        .phone {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <article class="card hero-main">
+          <div class="kicker">Vision mobile</div>
+          <h1>En mobile, el foco es: 1 pantalla, 1 decisión, 1 CTA.</h1>
+          <p>
+            La propuesta mantiene el lenguaje visual actual, pero adapta la interacción a pulgar:
+            navegación inferior, cards con jerarquía más fuerte, y una experiencia de sesión que
+            reduce dudas mientras el usuario está entrenando.
+          </p>
+        </article>
+        <aside class="card hero-side">
+          <div class="kicker">Principios</div>
+          <ul>
+            <li>Training primero: la app abre donde importa.</li>
+            <li>Menos texto técnico antes de empezar.</li>
+            <li>Progreso visible durante sesión.</li>
+            <li>Coach opera por prioridad.</li>
+            <li>Preview alumno acompaña al builder.</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <div class="kicker">Cliente</div>
+            <h2>Semana y sesión en mobile</h2>
+          </div>
+          <p>
+            El alumno no debería “navegar” para entender. Debería entrar, ver qué toca y arrancar.
+            La sesión se vuelve más guiada, con progreso macro y controles ordenados por estado.
+          </p>
+        </div>
+        <div class="grid">
+          <article class="card mock">
+            <div class="kicker">Semana</div>
+            <h3>Home semanal con foco</h3>
+            <p>El entreno del día domina. Pendientes y progreso acompañan sin competir.</p>
+            <div class="phone-wrap">
+              <div class="phone">
+                <div class="notch"></div>
+                <div class="screen mobile-week">
+                  <div class="appbar">
+                    <div style="display: flex; align-items: center; gap: 10px">
+                      <div class="brand">Y</div>
+                      <div>
+                        <strong>Semana 4/4</strong>
+                        <div style="font-size: 11px; color: var(--text-mute); margin-top: 2">Plan recomposición</div>
+                      </div>
+                    </div>
+                    <span class="pill">A1</span>
+                  </div>
+                  <div class="content" style="padding-bottom: 86px">
+                    <div class="title">Hoy toca upper y cierre fuerte</div>
+                    <div class="sub">Empuje + tirón · 45 min · con progresión sugerida</div>
+                    <div class="micro">
+                      <div class="micro-card">
+                        <span>Completadas</span>
+                        <strong>2 / 3</strong>
+                      </div>
+                      <div class="micro-card">
+                        <span>Energía</span>
+                        <strong>OK</strong>
+                      </div>
+                      <div class="micro-card">
+                        <span>Racha</span>
+                        <strong>5w</strong>
+                      </div>
+                    </div>
+                    <div class="hero-cta">
+                      <div class="kicker">Hoy</div>
+                      <h4>Día B (Upper)</h4>
+                      <p>Si completás el rango de reps, subí 2.5 kg en principales.</p>
+                      <div class="cta-row">
+                        <div class="btn primary">Empezar</div>
+                        <div class="btn">Detalle</div>
+                      </div>
+                    </div>
+                    <div class="sub" style="margin-top: 14px">Después de hoy</div>
+                    <div class="list">
+                      <div class="list-item">
+                        <div>
+                          <strong>Día C (Conditioning)</strong>
+                          <div style="font-size: 12px; color: var(--text-mute); margin-top: 2">Queda pendiente</div>
+                        </div>
+                        <span class="tag risk">Pendiente</span>
+                      </div>
+                      <div class="list-item">
+                        <div>
+                          <strong>Día A (Lower)</strong>
+                          <div style="font-size: 12px; color: var(--text-mute); margin-top: 2">Completado · 4/5</div>
+                        </div>
+                        <span class="tag ok">Ok</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bottom-nav">
+                    <div class="nav-row">
+                      <div class="nav-item active">Semana</div>
+                      <div class="nav-item">Panel</div>
+                      <div class="nav-item">Chat</div>
+                      <div class="nav-item">Cuenta</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card mock">
+            <div class="kicker">Sesión</div>
+            <h3>Runner guiado</h3>
+            <p>Progreso macro + estado actual + próximos pasos. Menos duda durante ejecución.</p>
+            <div class="phone-wrap">
+              <div class="phone">
+                <div class="notch"></div>
+                <div class="screen mobile-session">
+                  <div class="runner">
+                    <div class="runner-inner">
+                      <div class="steps">
+                        <span class="step active"></span>
+                        <span class="step active"></span>
+                        <span class="step"></span>
+                        <span class="step"></span>
+                        <span class="step"></span>
+                      </div>
+                      <div class="kicker" style="color: var(--lime-200)">Bloque 2 de 5 · Work</div>
+                      <div class="circle">
+                        <div>
+                          <strong>00:45</strong>
+                          <div class="sub" style="margin: 8px 0 0; font-size: 12px">corrida suave</div>
+                        </div>
+                      </div>
+                      <div class="runner-pill">Ahora: 45s carrera suave</div>
+                      <div class="runner-pill" style="margin-top: 10px">Después: 30s recuperación</div>
+                      <div class="runner-actions">
+                        <div class="btn">Pausar</div>
+                        <div class="btn">Reiniciar</div>
+                        <div class="btn primary">Marcar como hecho</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <div class="kicker">Coach</div>
+            <h2>Operación y builder en mobile</h2>
+          </div>
+          <p>
+            El coach en mobile necesita menos densidad y más decisión. El tablero prioriza atención.
+            El builder se apoya en preview alumno con un switch de modo.
+          </p>
+        </div>
+        <div class="grid">
+          <article class="card mock">
+            <div class="kicker">Alumnos</div>
+            <h3>Tablero de atención</h3>
+            <p>Cards por alumno con señal mínima útil y acciones rápidas.</p>
+            <div class="phone-wrap">
+              <div class="phone">
+                <div class="notch"></div>
+                <div class="screen mobile-coach">
+                  <div class="appbar">
+                    <div style="display: flex; align-items: center; gap: 10px">
+                      <div class="brand">Y</div>
+                      <div>
+                        <strong>Alumnos</strong>
+                        <div style="font-size: 11px; color: var(--text-mute); margin-top: 2">9 requieren atención</div>
+                      </div>
+                    </div>
+                    <span class="pill">Coach</span>
+                  </div>
+                  <div class="content" style="padding-bottom: 86px">
+                    <div class="micro">
+                      <div class="micro-card">
+                        <span>Atención</span>
+                        <strong>9</strong>
+                      </div>
+                      <div class="micro-card">
+                        <span>Sin plan</span>
+                        <strong>4</strong>
+                      </div>
+                      <div class="micro-card">
+                        <span>Msgs</span>
+                        <strong>6</strong>
+                      </div>
+                    </div>
+                    <div class="coach-row">
+                      <div class="coach-card">
+                        <div style="display: flex; justify-content: space-between; gap: 10px; align-items: center">
+                          <strong>Alumno 1</strong>
+                          <span class="tag risk">Atender hoy</span>
+                        </div>
+                        <p>4 días sin completar · energía 2/5 · upper pendiente</p>
+                        <div class="cta-row">
+                          <div class="btn primary">Mensaje</div>
+                          <div class="btn">Ajustar</div>
+                        </div>
+                      </div>
+                      <div class="coach-card">
+                        <div style="display: flex; justify-content: space-between; gap: 10px; align-items: center">
+                          <strong>Alumno 2</strong>
+                          <span class="tag bad">Sin plan</span>
+                        </div>
+                        <p>Ingresó hace 2 días. Falta asignación de plan.</p>
+                        <div class="cta-row">
+                          <div class="btn primary">Asignar</div>
+                          <div class="btn">Mensaje</div>
+                        </div>
+                      </div>
+                      <div class="coach-card">
+                        <div style="display: flex; justify-content: space-between; gap: 10px; align-items: center">
+                          <strong>Alumno 3</strong>
+                          <span class="tag ok">En track</span>
+                        </div>
+                        <p>Adherencia 92% · semana 5 · sin alertas</p>
+                        <div class="cta-row">
+                          <div class="btn primary">Ver detalle</div>
+                          <div class="btn">Historial</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bottom-nav">
+                    <div class="nav-row">
+                      <div class="nav-item active">Alumnos</div>
+                      <div class="nav-item">Planes</div>
+                      <div class="nav-item">Workouts</div>
+                      <div class="nav-item">Chat</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card mock">
+            <div class="kicker">Builder</div>
+            <h3>Editar + preview alumno</h3>
+            <p>En mobile el preview vive como modo alternable, no en split.</p>
+            <div class="phone-wrap">
+              <div class="phone">
+                <div class="notch"></div>
+                <div class="screen mobile-builder">
+                  <div class="appbar">
+                    <div style="display: flex; align-items: center; gap: 10px">
+                      <div class="brand">Y</div>
+                      <div>
+                        <strong>Día B (Upper)</strong>
+                        <div style="font-size: 11px; color: var(--text-mute); margin-top: 2">Vista alumno</div>
+                      </div>
+                    </div>
+                    <span class="pill">Preview</span>
+                  </div>
+                  <div class="content" style="padding-bottom: 86px">
+                    <div class="split">
+                      <div class="preview">
+                        <div class="preview-hero">
+                          <div class="kicker" style="color: rgba(11, 11, 12, 0.6)">Hoy</div>
+                          <strong>Día B (Upper)</strong>
+                          <div style="margin-top: 6px; font-size: 12px; color: rgba(11, 11, 12, 0.8)">
+                            Empuje + tirón · 45 min
+                          </div>
+                          <div class="cta-row" style="margin-top: 12px">
+                            <div class="btn primary" style="background: rgba(11, 11, 12, 0.92); color: var(--text)">Empezar</div>
+                            <div class="btn">Detalle</div>
+                          </div>
+                        </div>
+                        <div class="preview-list">
+                          <div class="preview-item">
+                            <strong>Calentamiento</strong>
+                            <p>Entrada simple, sin fricción.</p>
+                          </div>
+                          <div class="preview-item">
+                            <strong>Bloque principal</strong>
+                            <p>7 ejercicios, con RPE y descansos claros.</p>
+                          </div>
+                          <div class="preview-item">
+                            <strong>Nota del coach</strong>
+                            <p>Si completás el rango, subí 2.5 kg.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bottom-nav">
+                    <div class="nav-row">
+                      <div class="nav-item">Editar</div>
+                      <div class="nav-item active">Alumno</div>
+                      <div class="nav-item">Coach</div>
+                      <div class="nav-item">Guardar</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

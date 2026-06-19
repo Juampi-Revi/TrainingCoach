@@ -27,10 +27,19 @@ export default function LoginPage() {
       else router.replace("/semana");
     } catch (e) {
       if (e instanceof ApiError) {
-        if (e.status === 401) setError("Email o contraseña incorrectos");
-        else setError(e.message || "Error al ingresar");
+        if (e.status === 401) {
+          setError("Email o contraseña incorrectos");
+        } else if (e.status === 500) {
+          setError("Error en el servidor. Intentá en unos segundos.");
+        } else if (e.status === 429) {
+          setError("Demasiados intentos. Esperá unos minutos.");
+        } else {
+          setError(e.message || "No pudimos conectar. Probá de nuevo.");
+        }
+      } else if (e instanceof Error && e.name === "TypeError") {
+        setError("No hay conexión. Verificá tu red.");
       } else {
-        setError(e instanceof Error ? e.message : "Error al ingresar");
+        setError("No pudimos conectar. Probá de nuevo.");
       }
     } finally {
       setLoading(false);

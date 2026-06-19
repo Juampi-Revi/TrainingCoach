@@ -45,6 +45,27 @@
   padding-top: 8px;
 }
 
+.panel-card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.workout-card-pending {
+  border-color: var(--lime);
+  background: rgba(215, 255, 58, 0.04);
+}
+
+.workout-card-done {
+  opacity: 0.85;
+}
+
+.today-summary {
+  padding: 14px 16px;
+}
+
 .score-card {
   background: var(--bg-1);
   border: 1px solid var(--line);
@@ -341,6 +362,16 @@
 
   .panel-section-score {
     padding-top: 24px;
+  }
+
+  .panel-card {
+    padding: 20px 24px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+  }
+
+  .today-summary {
+    padding: 20px 24px;
   }
 
   .score-card {

@@ -78,14 +78,14 @@ export default function WorkoutDetailPage() {
         <button
           onClick={() => router.back()}
           style={{
-            width: 32, height: 32, borderRadius: 8,
+            width: 44, height: 44, borderRadius: 12,
             background: "rgba(11,11,12,.5)", border: "1px solid var(--line-2)",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "var(--text)", cursor: "pointer",
-            position: "absolute", top: 50, left: 14,
+            position: "absolute", top: 42, left: 14,
           }}
         >
-          <Icon name="chevL" size={16} />
+          <Icon name="chevL" size={18} />
         </button>
 
         <div style={{ marginTop: 28 }}>

@@ -15,6 +15,7 @@ import { ExerciseRow } from "./_components/exercise-row";
 import { ExerciseInspector } from "./_components/exercise-inspector";
 import { WorkoutProperties } from "./_components/workout-properties";
 import { BlockModal } from "./_components/block-modal";
+import { WorkoutBlockHeader } from "./_components/workout-block-header";
 import { Icon } from "@/components/ui";
 import type { WorkoutSport } from "@regen/types";
 
@@ -217,64 +218,20 @@ export default function TemplateEditorPage() {
                 const canMoveDown = bIdx < blocksSorted.length - 1;
                 return (
                   <div key={b.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--line)" }}>
-                    {/* Block Header */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "var(--bg-2)" }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: b.type === "warmup" ? "rgba(255,142,114,.12)" : b.type === "cooldown" ? "rgba(167,139,250,.12)" : b.type === "cardio" ? "rgba(122,184,255,.12)" : "rgba(215,255,58,.12)",
-                        border: `1px solid ${b.type === "warmup" ? "rgba(255,142,114,.25)" : b.type === "cooldown" ? "rgba(167,139,250,.25)" : b.type === "cardio" ? "rgba(122,184,255,.25)" : "rgba(215,255,58,.25)"}`,
-                        display: "flex", alignItems: "center", justifyContent: "center"
-                      }}>
-                        <Icon
-                          name={b.type === "warmup" ? "flame" : b.type === "cooldown" ? "moon" : b.type === "cardio" ? "repeat" : b.type === "intervals" ? "timer" : "dumbbell"}
-                          size={14}
-                          color={b.type === "warmup" ? "#FF8E72" : b.type === "cooldown" ? "#A78BFA" : b.type === "cardio" ? "#7AB8FF" : "var(--lime)"}
-                        />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="ta-mono" style={{
-                          fontSize: 10, fontWeight: 800,
-                          color: b.type === "warmup" ? "#FF8E72" : b.type === "cooldown" ? "#A78BFA" : b.type === "cardio" ? "#7AB8FF" : "var(--lime)",
-                          letterSpacing: ".08em"
-                        }}>
-                          {blockTypeLabel(b.type, b.intervalType).toUpperCase()} {b.label ? `· ${b.label}` : ""}
-                        </div>
-                        <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2 }}>
-                          {blockPatternLabel(b)} · {blockCoachSummary(b)}
-                          <span style={{ margin: "0 6px" }}>·</span>
-                          {blockExercises.length} ejercicio{blockExercises.length === 1 ? "" : "s"}
-                          {b.restBetweenExercisesSeconds ? ` · descanso ${b.restBetweenExercisesSeconds}s` : ""}
-                          {b.restAfterSeconds ? ` · descanso post ${b.restAfterSeconds}s` : ""}
-                        </div>
-                        {b.description && (
-                          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2, fontStyle: "italic" }}>
-                            {b.description}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <Button variant="ghost" size="sm" icon="chevUp" title="Mover bloque arriba" ariaLabel="Mover bloque arriba" disabled={!canMoveUp} onClick={() => { if (!canMoveUp) return; const next = [...blocksSorted]; const swapIdx = bIdx - 1; [next[bIdx], next[swapIdx]] = [next[swapIdx]!, next[bIdx]!]; void reorderBlocks(next); }} />
-                        <Button variant="ghost" size="sm" icon="chevD" title="Mover bloque abajo" ariaLabel="Mover bloque abajo" disabled={!canMoveDown} onClick={() => { if (!canMoveDown) return; const next = [...blocksSorted]; const swapIdx = bIdx + 1; [next[bIdx], next[swapIdx]] = [next[swapIdx]!, next[bIdx]!]; void reorderBlocks(next); }} />
-                        <Button variant="outline" size="sm" onClick={() => { setEditingBlockId(b.id); setBlockModalOpen(true); }}>
-                          Configurar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon="book"
-                          onClick={() =>
-                            router.push(
-                              `/coach/ejercicios?templateId=${encodeURIComponent(workoutTemplateId)}&blockId=${encodeURIComponent(b.id)}&context=workout&returnTo=${encodeURIComponent(`/coach/workouts/${workoutTemplateId}`)}`,
-                            )
-                          }
-                        >
-                          Biblioteca
-                        </Button>
-                        <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(b.id); setShowPicker(true); }}>
-                          Ejercicio
-                        </Button>
-                      </div>
-                    </div>
+                    <WorkoutBlockHeader
+                      b={b}
+                      bIdx={bIdx}
+                      blocksSorted={blocksSorted}
+                      exercises={exercises}
+                      onReorder={reorderBlocks}
+                      onEdit={() => { setEditingBlockId(b.id); setBlockModalOpen(true); }}
+                      onLibrary={() =>
+                        router.push(
+                          `/coach/ejercicios?templateId=${encodeURIComponent(workoutTemplateId)}&blockId=${encodeURIComponent(b.id)}&context=workout&returnTo=${encodeURIComponent(`/coach/workouts/${workoutTemplateId}`)}`,
+                        )
+                      }
+                      onAddExercise={() => { setPickerBlockId(b.id); setShowPicker(true); }}
+                    />
 
                     {/* Exercises in block */}
                     {blockExercises.length === 0 && (

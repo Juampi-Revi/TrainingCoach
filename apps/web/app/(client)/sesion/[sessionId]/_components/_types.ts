@@ -16,7 +16,7 @@ export interface SheetRow {
   durationPlaceholder?: string;
   kgPlaceholder?: string;
   effortPlaceholder?: string;
-  existingId?: string;
+  isSaved?: boolean;
 }
 
 export interface LastRef {

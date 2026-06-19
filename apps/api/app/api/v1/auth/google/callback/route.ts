@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { err, withHandler } from "@/lib/api-response";
 import { getApiBaseUrl, getWebBaseUrl } from "@/lib/public-urls";
+import { createRefreshToken } from "@/lib/auth/refresh-token.service";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim() ?? "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "";
@@ -96,7 +97,13 @@ export async function GET(req: NextRequest) {
       role: user.role,
       billingStatus: user.billingStatus,
     });
+    const refreshTokenResult = await createRefreshToken(user.id);
 
-    return Response.redirect(`${FRONTEND_URL}/auth-callback?token=${encodeURIComponent(token)}`);
+    const redirectUrl = new URL(`${FRONTEND_URL}/auth-callback`);
+    redirectUrl.searchParams.set("token", token);
+    redirectUrl.searchParams.set("refreshToken", refreshTokenResult.token);
+    redirectUrl.searchParams.set("refreshTokenExpiresAt", refreshTokenResult.expiresAt.toISOString());
+
+    return Response.redirect(redirectUrl.toString());
   });
 }

@@ -96,14 +96,14 @@ export function EmomRunner({
   }, [done, playComplete]);
 
   const saveCurrentSet = useCallback(
-    async (reps: string) => {
+    async () => {
       const ex = currentEx;
       const count = setsCount[ex.id] ?? ex.sets.length;
       const nextSetNum = count + 1;
       try {
         await api.put(
           `/client/sessions/${sessionId}/exercises/${ex.id}/sets/${nextSetNum}`,
-          { reps: reps !== "" ? Number(reps) : null }
+          { reps: ex.target?.reps ?? null }
         );
         setSetsCount((prev) => ({ ...prev, [ex.id]: nextSetNum }));
         onSaved();
@@ -115,8 +115,8 @@ export function EmomRunner({
   );
 
   const advanceMinute = useCallback(
-    async (reps: string) => {
-      await saveCurrentSet(reps);
+    async () => {
+      await saveCurrentSet();
       if (minute >= totalMinutes) {
         setDone(true);
         return;
@@ -132,11 +132,6 @@ export function EmomRunner({
     advanceMinuteRef.current = advanceMinute;
   }, [advanceMinute]);
 
-  const repsInputRef = useRef<string>("");
-  useEffect(() => {
-    repsInputRef.current = String(currentEx.target?.reps ?? "");
-  }, [currentEx.id, currentEx.target?.reps]);
-
   useEffect(() => {
     if (!started || paused || done) return;
 
@@ -147,7 +142,7 @@ export function EmomRunner({
             setIsPreparing(false);
             return minuteSeconds;
           }
-          setTimeout(() => advanceMinuteRef.current(repsInputRef.current), 0);
+          setTimeout(() => advanceMinuteRef.current(), 0);
           return minuteSeconds;
         }
         return prev - 1;
@@ -188,53 +183,32 @@ export function EmomRunner({
               )}
             </div>
 
-            {/* Reps input */}
+            {/* Objetivo del minuto */}
             <div style={{ width: "100%", maxWidth: 280 }}>
               <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 8, textAlign: "center" }}>
-                {isPreparing ? "ARRANCA EN" : "REPS COMPLETADAS"}
+                {isPreparing ? "ARRANCA EN" : "OBJETIVO"}
               </div>
-              {isPreparing ? (
-                <div style={{
-                  width: "100%",
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  fontSize: 28,
-                  fontWeight: 700,
-                  fontFamily: "var(--font-mono)",
-                  color: "var(--text)",
-                  textAlign: "center",
-                  boxSizing: "border-box",
-                }}>
-                  {seconds}s
-                </div>
-              ) : (
-                <input
-                  key={currentEx.id}
-                  type="number"
-                  inputMode="numeric"
-                  defaultValue={currentEx.target?.reps ?? ""}
-                  onChange={(e) => {
-                    repsInputRef.current = e.target.value;
-                  }}
-                  placeholder={currentEx.target?.reps ?? "0"}
-                  style={{
-                    width: "100%",
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--line-2)",
-                    borderRadius: 10,
-                    padding: "14px 16px",
-                    fontSize: 28,
-                    fontWeight: 700,
-                    fontFamily: "var(--font-mono)",
-                    color: "var(--text)",
-                    outline: "none",
-                    textAlign: "center",
-                    boxSizing: "border-box",
-                  }}
-                />
-              )}
+              <div style={{
+                width: "100%",
+                background: "var(--bg-2)",
+                border: "1px solid var(--line-2)",
+                borderRadius: 10,
+                padding: "14px 16px",
+                fontSize: 28,
+                fontWeight: 700,
+                fontFamily: "var(--font-mono)",
+                color: "var(--text)",
+                textAlign: "center",
+                boxSizing: "border-box",
+              }}>
+                {isPreparing ? `${seconds}s` : (() => {
+                  const reps = currentEx.target?.reps;
+                  const dur = currentEx.target?.durationSeconds ?? minuteSeconds;
+                  if (reps) return `${reps} reps`;
+                  if (dur) return `${dur} seg`;
+                  return `${minuteSeconds} seg`;
+                })()}
+              </div>
             </div>
           </div>
 
@@ -258,16 +232,18 @@ export function EmomRunner({
             </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button
-                onClick={() => advanceMinute(repsInputRef.current)}
-                style={primaryButtonStyle("var(--lime)", "#000")}
-              >
-                <Icon name="check" size={18} color="#000" />
-                <span>Completé</span>
-              </button>
               <button onClick={() => setPaused((p) => !p)} style={primaryButtonStyle("var(--bg-2)", "var(--text)")}>
                 <Icon name={paused ? "play" : "pause"} size={18} />
                 <span>{paused ? "Reanudar" : "Pausar"}</span>
+              </button>
+              <button onClick={() => setDone(true)} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                width: "100%", padding: "14px 20px", background: "transparent",
+                color: "var(--danger)", border: "1px solid var(--danger)", borderRadius: 12,
+                fontSize: 15, fontWeight: 700, cursor: "pointer", letterSpacing: "-.01em",
+              }}>
+                <Icon name="x" size={18} color="var(--danger)" />
+                <span>Cancelar EMOM</span>
               </button>
             </div>
           )}

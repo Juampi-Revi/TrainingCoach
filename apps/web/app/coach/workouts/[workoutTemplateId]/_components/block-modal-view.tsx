@@ -4,9 +4,13 @@ import { Button, ConfirmModal, Icon } from "@/components/ui";
 import { blockTypeLabel } from "@/lib/constants";
 import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
 import type { WB } from "./_types";
-import { BlockModalFields } from "./block-modal-fields";
+import { BlockModalSelector } from "./block-modal-selector";
+import { BlockModalForm } from "./block-modal-form";
+import { BlockModalPreview } from "./block-modal-preview";
+import { type BlockPattern, BLOCK_PATTERNS } from "./block-pattern-selector";
+import { INTERVAL_PRESETS } from "./block-modal.constants";
 
-interface BlockModalViewProps {
+export interface BlockModalViewProps {
   block: WB | null;
   saving: boolean;
   confirmDelete: boolean;
@@ -95,6 +99,43 @@ export function BlockModalView({
   onCancelDelete,
   onConfirmDelete,
 }: BlockModalViewProps) {
+  const isInterval = blockType === "intervals";
+  const isCardio = blockType === "cardio";
+  const isWarmup = blockType === "warmup";
+  const isCooldown = blockType === "cooldown";
+  const isStrength = blockType === "strength";
+
+  const currentPattern: BlockPattern | null = isInterval && intervalType
+    ? { type: "intervals", intervalType, label: "", desc: "", icon: "timer" }
+    : isCardio
+    ? { type: "cardio", label: "", desc: "", icon: "repeat" }
+    : isWarmup
+    ? { type: "warmup", label: "", desc: "", icon: "flame" }
+    : isCooldown
+    ? { type: "cooldown", label: "", desc: "", icon: "moon" }
+    : isStrength
+    ? { type: "strength", label: "", desc: "", icon: "dumbbell" }
+    : null;
+
+  function handlePatternChange(p: BlockPattern) {
+    setBlockType(p.type);
+    if (p.type === "intervals" && p.intervalType) {
+      setIntervalType(p.intervalType);
+      const preset = INTERVAL_PRESETS.find((ip) => ip.intervalType === p.intervalType);
+      if (preset) {
+        setPrepare(preset.prepare);
+        setWork(preset.work);
+        setRest(preset.rest);
+        setRounds(preset.rounds);
+        setSetCount(preset.setCount);
+        setSetRestSeconds(preset.setRest);
+        setTotal(preset.total);
+      }
+    } else {
+      setIntervalType(null);
+    }
+  }
+
   return (
     <div
       style={{
@@ -113,8 +154,8 @@ export function BlockModalView({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
-          maxWidth: 520,
-          maxHeight: "80vh",
+          maxWidth: 1200,
+          maxHeight: "90vh",
           background: "var(--bg-1)",
           border: "1px solid var(--line)",
           borderRadius: 16,
@@ -160,42 +201,59 @@ export function BlockModalView({
           </button>
         </div>
 
-        <BlockModalFields
-          blockType={blockType}
-          intervalType={intervalType}
-          label={label}
-          description={description}
-          prepare={prepare}
-          work={work}
-          rest={rest}
-          rounds={rounds}
-          setCount={setCount}
-          setRestSeconds={setRestSeconds}
-          intervalExerciseStrategy={intervalExerciseStrategy}
-          total={total}
-          targetMinutes={targetMinutes}
-          restBetweenExercises={restBetweenExercises}
-          targetZone={targetZone}
-          steps={steps}
-          restAfterSeconds={restAfterSeconds}
-          setBlockType={setBlockType}
-          setIntervalType={setIntervalType}
-          setLabel={setLabel}
-          setDescription={setDescription}
-          setPrepare={setPrepare}
-          setWork={setWork}
-          setRest={setRest}
-          setRounds={setRounds}
-          setSetCount={setSetCount}
-          setSetRestSeconds={setSetRestSeconds}
-          setIntervalExerciseStrategy={setIntervalExerciseStrategy}
-          setTotal={setTotal}
-          setTargetMinutes={setTargetMinutes}
-          setRestBetweenExercises={setRestBetweenExercises}
-          setTargetZone={setTargetZone}
-          setSteps={setSteps}
-          setRestAfterSeconds={setRestAfterSeconds}
-        />
+        <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 320px", overflow: "hidden", flex: 1 }}>
+          <BlockModalSelector currentPattern={currentPattern} onChange={handlePatternChange} />
+          <BlockModalForm
+            blockType={blockType}
+            intervalType={intervalType}
+            label={label}
+            description={description}
+            prepare={prepare}
+            work={work}
+            rest={rest}
+            rounds={rounds}
+            setCount={setCount}
+            setRestSeconds={setRestSeconds}
+            intervalExerciseStrategy={intervalExerciseStrategy}
+            total={total}
+            targetMinutes={targetMinutes}
+            restBetweenExercises={restBetweenExercises}
+            targetZone={targetZone}
+            steps={steps}
+            restAfterSeconds={restAfterSeconds}
+            setLabel={setLabel}
+            setDescription={setDescription}
+            setPrepare={setPrepare}
+            setWork={setWork}
+            setRest={setRest}
+            setRounds={setRounds}
+            setSetCount={setSetCount}
+            setSetRestSeconds={setSetRestSeconds}
+            setIntervalExerciseStrategy={setIntervalExerciseStrategy}
+            setTotal={setTotal}
+            setTargetMinutes={setTargetMinutes}
+            setRestBetweenExercises={setRestBetweenExercises}
+            setTargetZone={setTargetZone}
+            setSteps={setSteps}
+            setRestAfterSeconds={setRestAfterSeconds}
+          />
+          <BlockModalPreview
+            blockType={blockType}
+            intervalType={intervalType}
+            label={label}
+            description={description}
+            prepare={prepare}
+            work={work}
+            rest={rest}
+            rounds={rounds}
+            setCount={setCount}
+            setRestSeconds={setRestSeconds}
+            total={total}
+            targetMinutes={targetMinutes}
+            restBetweenExercises={restBetweenExercises}
+            restAfterSeconds={restAfterSeconds}
+          />
+        </div>
 
         <div style={{ padding: "12px 18px 18px", borderTop: "1px solid var(--line)", display: "flex", gap: 8 }}>
           {block && (

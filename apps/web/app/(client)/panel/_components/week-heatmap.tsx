@@ -76,10 +76,12 @@ export function WeekHeatmap({
             <button
               key={`steps-${i}`}
               className="heatmap-cell"
-              style={{ backgroundColor: getStepsColor(value) }}
+              style={{ backgroundColor: getStepsColor(value), color: value !== null ? "var(--bg-1)" : "var(--text-mute)" }}
               onClick={() => onDayClick?.(i)}
               title={value !== null ? `${value.toLocaleString()} pasos` : "Sin datos"}
-            />
+            >
+              {value !== null ? (value >= 1000 ? `${(value / 1000).toFixed(1).replace(".", ",")}k` : String(value)) : "—"}
+            </button>
           ))}
         </div>
 
@@ -93,10 +95,12 @@ export function WeekHeatmap({
             <button
               key={`sleep-${i}`}
               className="heatmap-cell"
-              style={{ backgroundColor: getSleepColor(value) }}
+              style={{ backgroundColor: getSleepColor(value), color: value !== null ? "var(--bg-1)" : "var(--text-mute)" }}
               onClick={() => onDayClick?.(i)}
               title={value !== null ? `${Math.floor(value / 60)}h ${value % 60}m` : "Sin datos"}
-            />
+            >
+              {value !== null ? `${Math.floor(value / 60)}h` : "—"}
+            </button>
           ))}
         </div>
 
@@ -110,10 +114,12 @@ export function WeekHeatmap({
             <button
               key={`workout-${i}`}
               className="heatmap-cell"
-              style={{ backgroundColor: getWorkoutColor(value) }}
+              style={{ backgroundColor: getWorkoutColor(value), color: value !== null ? "var(--bg-1)" : "var(--text-mute)" }}
               onClick={() => onDayClick?.(i)}
               title={value > 0 ? `${value} entrenamiento${value > 1 ? "s" : ""}` : "Sin entrenamiento"}
-            />
+            >
+              {value > 0 ? String(value) : "—"}
+            </button>
           ))}
         </div>
       </div>
@@ -205,16 +211,23 @@ export function WeekHeatmap({
         }
 
         .heatmap-cell {
-          aspect-ratio: 1;
           border-radius: 4px;
           border: none;
           cursor: pointer;
           transition: all 0.2s ease;
-          min-height: 24px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 8px;
+          font-weight: 700;
+          font-family: var(--font-mono);
+          padding: 0 1px;
+          overflow: hidden;
         }
 
         .heatmap-cell:hover {
-          transform: scale(1.1);
+          transform: scale(1.05);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 

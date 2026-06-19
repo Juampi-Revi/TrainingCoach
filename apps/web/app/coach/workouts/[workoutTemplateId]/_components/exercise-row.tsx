@@ -9,9 +9,6 @@ import type { BlockType, IntervalType } from "@regen/types";
 
 function fmtIntervalTarget(we: WE): string {
   if (we.durationSeconds) return `${we.durationSeconds}s`;
-  if (we.targetReps) return `${we.targetReps} reps`;
-  if (we.targetSets && we.targetReps) return `${we.targetSets} × ${we.targetReps}`;
-  if (we.targetSets) return `${we.targetSets} ×`;
   return "—";
 }
 
@@ -59,7 +56,7 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
           </button>
         </div>
 
-        <div style={{ position: "relative", width: 52, height: 52, borderRadius: 8, background: we.exercise.thumbnailUrl ? "var(--bg-2)" : hasVideo ? "linear-gradient(135deg, #FF0000 0%, #CC0000 100%)" : "var(--bg-2)", border: we.exercise.thumbnailUrl || hasVideo ? "1px solid var(--line-2)" : "1px dashed var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "relative", width: 52, height: 52, borderRadius: 8, background: we.exercise.thumbnailUrl ? "var(--bg-2)" : hasVideo ? "var(--danger)" : "var(--bg-2)", border: we.exercise.thumbnailUrl || hasVideo ? "1px solid var(--line-2)" : "1px dashed var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
           {we.exercise.thumbnailUrl ? (
             <Image unoptimized src={we.exercise.thumbnailUrl} alt="" fill sizes="52px" style={{ objectFit: "cover" }} />
           ) : hasVideo ? (
@@ -72,7 +69,7 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
               alignItems: "center",
               justifyContent: "center",
             }}>
-              <Icon name="play" size={14} color="#FF0000" />
+              <Icon name="play" size={14} color="var(--bg)" />
             </div>
           ) : (
             <div style={{
@@ -90,14 +87,14 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
           )}
           {/* Group badge */}
           {gc && (
-            <div style={{ position: "absolute", top: 2, left: 2, width: 16, height: 16, borderRadius: 3, background: gc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#0B0B0C", fontFamily: "var(--font-mono)" }}>
+              <div style={{ position: "absolute", top: 2, left: 2, width: 16, height: 16, borderRadius: 3, background: gc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "var(--bg)", fontFamily: "var(--font-mono)" }}>
               {we.supersetGroup}
             </div>
           )}
           {/* Video indicator (only when thumbnail exists) */}
           {hasVideo && we.exercise.thumbnailUrl && (
-            <div style={{ position: "absolute", bottom: 2, right: 2, width: 16, height: 16, borderRadius: 8, background: "#FF0000", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Icon name="play" size={8} color="#fff" />
+            <div style={{ position: "absolute", bottom: 2, right: 2, width: 16, height: 16, borderRadius: 8, background: "var(--danger)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name="play" size={8} color="var(--bg-1)" />
             </div>
           )}
         </div>
@@ -142,7 +139,7 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
 
         <div>
           {(we.alternativesCount ?? 0) > 0 ? (
-            <span style={{ padding: "2px 6px", borderRadius: 5, background: "rgba(122,184,255,.15)", border: "1px solid rgba(122,184,255,.3)", fontSize: 9, fontWeight: 700, color: "#7AB8FF", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+            <span style={{ padding: "2px 6px", borderRadius: 5, background: "rgba(122,184,255,.15)", border: "1px solid rgba(122,184,255,.3)", fontSize: 9, fontWeight: 700, color: "var(--accent-text)", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
               {we.alternativesCount} alt
             </span>
           ) : (
@@ -154,9 +151,9 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
           <button
             onClick={onSelect}
             title="Editar"
-            style={{ width: 28, height: 28, borderRadius: 7, background: selected ? "var(--lime)" : "transparent", border: `1px solid ${selected ? "var(--lime)" : "var(--line-2)"}`, color: selected ? "#0B0B0C" : "var(--text-mute)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+            style={{ width: 28, height: 28, borderRadius: 7, background: selected ? "var(--lime)" : "transparent", border: `1px solid ${selected ? "var(--lime)" : "var(--line-2)"}`, color: selected ? "var(--bg)" : "var(--text-mute)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
           >
-            <Icon name="edit" size={12} color={selected ? "#0B0B0C" : "var(--text-mute)"} />
+            <Icon name="edit" size={12} color={selected ? "var(--bg)" : "var(--text-mute)"} />
           </button>
           <button
             onClick={() => setConfirmDelete(true)}

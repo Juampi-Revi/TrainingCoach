@@ -7,7 +7,6 @@ import { useToast } from "@/lib/toast";
 import type { ClientDashboard } from "@regen/types";
 import {
   ScoreHeader,
-  QuickLogStrip,
   MetricCard,
   DotProgress,
   MiniBars,
@@ -17,6 +16,7 @@ import {
   WeekHeatmap,
   MonthSummary,
   QuickHealthModal,
+  TodaySummary,
 } from "./_components";
 import "./_styles.css";
 
@@ -76,22 +76,28 @@ export default function PanelPage() {
     try {
       const res = await api.get<ClientDashboard>("/client/dashboard");
       setData(res);
-    } catch { /* silent */ }
-  }, [api]);
+    } catch {
+      toast.error("No se pudo cargar el panel");
+    }
+  }, [api, toast]);
 
   const loadToday = useCallback(async () => {
     try {
       const res = await api.get<TodayData>("/client/today");
       setTodayData(res);
-    } catch { /* silent */ }
-  }, [api]);
+    } catch {
+      toast.error("No se pudo cargar los datos de hoy");
+    }
+  }, [api, toast]);
 
   const loadGoals = useCallback(async () => {
     try {
       const res = await api.get<{ goals: HealthGoal[] }>("/client/goals");
       setGoals(res.goals || []);
-    } catch { /* silent */ }
-  }, [api]);
+    } catch {
+      toast.error("No se pudieron cargar las metas");
+    }
+  }, [api, toast]);
 
   const loadAll = useCallback(async () => {
     await Promise.all([loadDashboard(), loadToday(), loadGoals()]);
@@ -152,6 +158,22 @@ export default function PanelPage() {
   const stepsGoalK = Math.round((stepsGoal / 1000) * 10) / 10;
   const sleepGoalHours = sleepGoalMinutes / 60;
 
+  // Días faltantes para entrenos
+  const todayIndex = new Date().getDay(); // 0 = dom, 1 = lun...
+  const missingDays = (d?: typeof data) => {
+    if (!d) return [];
+    const missing: string[] = [];
+    const days = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
+    for (let i = 0; i < 7; i++) {
+      if (i > todayIndex && d.dailyWorkouts[i] === 0) {
+        missing.push(days[i]);
+      }
+    }
+    return missing;
+  };
+  const missingStrength = missingDays(d).slice(0, 2);
+  const missingCardio = missingDays(d).slice(0, 2);
+
   return (
     <div className="panel-page">
       <div className="panel-header">
@@ -161,36 +183,22 @@ export default function PanelPage() {
         </div>
       </div>
 
-      <div className="panel-section panel-section-score">
+      {/* ─── HOY ─── */}
+      <div className="panel-section" style={{ marginTop: 16 }}>
         {d && todayData && (
-          <ScoreHeader
-            weekNumber={d.weekNumber}
-            totalWeeks={d.totalWeeks}
-            weekScore={d.weekScore}
-            previousWeekScore={d.previousWeekScore}
-            workoutsWeeklyTarget={d.workoutsTarget}
+          <TodaySummary
             today={todayData}
             goals={goals}
+            workoutsWeeklyTarget={d.workoutsTarget}
+            onSteps={() => setModalOpen("steps")}
+            onSleep={() => setModalOpen("sleep")}
+            onFood={() => router.push("/comida")}
+            onWorkout={() => router.push("/semana")}
           />
         )}
       </div>
 
-      <div className="panel-section">
-        {d && todayData && (
-          <QuickLogStrip
-            workoutsCompleted={d.workoutsCompleted}
-            workoutsTarget={d.workoutsTarget}
-            foodCount={todayData.food.length}
-            stepsCount={todayData.steps}
-            sleepMinutes={todayData.sleepMinutes}
-            onLogWorkout={() => router.push("/semana")}
-            onLogFood={() => router.push("/comida")}
-            onLogSteps={() => setModalOpen("steps")}
-            onLogSleep={() => setModalOpen("sleep")}
-          />
-        )}
-      </div>
-
+      {/* ─── SEMANAL ─── */}
       <div className="panel-section">
         <div className="panel-section-title">RESUMEN DE LA SEMANA</div>
         <div className="stats-grid-main">
@@ -203,6 +211,11 @@ export default function PanelPage() {
                 accent="var(--lime)"
               >
                 {strengthTarget > 0 ? <DotProgress count={strengthTarget} done={d.strengthCompleted} color="var(--lime)" /> : null}
+                {missingStrength.length > 0 && (
+                  <div style={{ fontSize: 10, color: "var(--warn)", marginTop: 6, fontWeight: 600 }}>
+                    Falta: {missingStrength.join(", ")}
+                  </div>
+                )}
               </MetricCard>
               <MetricCard
                 label="AERÓBICO"
@@ -211,11 +224,16 @@ export default function PanelPage() {
                 accent="var(--info)"
               >
                 {cardioTarget > 0 ? <DotProgress count={cardioTarget} done={d.cardioCompleted} color="var(--info)" /> : null}
+                {missingCardio.length > 0 && (
+                  <div style={{ fontSize: 10, color: "var(--warn)", marginTop: 6, fontWeight: 600 }}>
+                    Falta: {missingCardio.join(", ")}
+                  </div>
+                )}
               </MetricCard>
-              <MetricCard label="PASOS · 7D" value={stepsK !== null ? stepsK.toFixed(1).replace(".", ",") + "k" : "—"} sub={stepsK !== null ? `prom diario · meta ${String(stepsGoalK).replace(".", ",")}k` : "no registrado"} trend={trend} accent="var(--lime)">
+              <MetricCard label="PASOS · 7D" value={stepsK !== null ? stepsK.toFixed(1).replace(".", ",") + "k" : "—"} sub={stepsK !== null ? `prom diario · meta ${String(stepsGoalK).replace(".", ",")}k` : "Sin datos"} trend={trend} accent="var(--lime)">
                 <MiniBars data={dailyStepsK} target={stepsGoalK} color="var(--lime)" unit="k" />
               </MetricCard>
-              <MetricCard label="SUEÑO" value={sleepHours !== null ? fmtSleepH(sleepHours) : "—"} sub={sleepHours !== null ? `prom · meta ${fmtSleepH(sleepGoalHours)}` : "no registrado"} accent="var(--sleep)">
+              <MetricCard label="SUEÑO" value={sleepHours !== null ? fmtSleepH(sleepHours) : "—"} sub={sleepHours !== null ? `prom · meta ${fmtSleepH(sleepGoalHours)}` : "Sin datos · registrá tu sueño"} accent="var(--sleep)">
                 {sleepHours !== null && <div style={{ display: "flex", justifyContent: "flex-end" }}><SleepRing hours={sleepHours} targetHours={sleepGoalHours} size={40} /></div>}
               </MetricCard>
             </>
@@ -235,7 +253,7 @@ export default function PanelPage() {
                     <span className="secondary-value" style={{ color: "var(--info)" }}>{d.energyAvg !== null ? d.energyAvg.toFixed(1).replace(".", ",") : "—"}</span>
                     <span className="secondary-unit">/ 5</span>
                   </div>
-                  <div className="secondary-sub">{d.energyAvg !== null ? "promedio 7 días" : "sin datos"}</div>
+                  <div className="secondary-sub">{d.energyAvg !== null ? "promedio 7 días" : "Sin datos · registrá tu energía"}</div>
                   <div style={{ marginTop: 16 }}><EnergyBars data={d.dailyEnergy} /></div>
                 </div>
               </div>

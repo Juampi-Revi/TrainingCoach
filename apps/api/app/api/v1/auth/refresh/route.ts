@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { signToken, verifyRefreshToken, hashRefreshToken } from "@/lib/jwt";
+import { signToken, hashRefreshToken } from "@/lib/jwt";
 import { ok, err, withValidatedHandler, ValidationError } from "@/lib/api-response";
 import { z } from "zod";
 
@@ -19,21 +19,13 @@ export async function POST(req: NextRequest) {
 
     const { refreshToken } = validationResult.data;
 
-    // Verify the refresh token JWT
-    let payload;
-    try {
-      payload = verifyRefreshToken(refreshToken);
-    } catch {
-      return err("Refresh token inválido o expirado", 401);
-    }
-
-    // Hash the token to compare with stored hash
+    // Refresh tokens are opaque random strings stored hashed in DB.
+    // We validate them by hash + expiry instead of JWT verification.
     const tokenHash = hashRefreshToken(refreshToken);
 
     // Find user with matching refresh token
     const user = await prisma.user.findFirst({
       where: {
-        id: payload.sub,
         refreshToken: tokenHash,
         refreshTokenExpiry: {
           gt: new Date(),
