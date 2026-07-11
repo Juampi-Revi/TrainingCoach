@@ -67,6 +67,12 @@ export async function GET(
         id: b.id,
         type: b.type,
         label: b.label,
+        isExtra: b.isExtra,
+        labels: {
+          role: b.roleLabel,
+          effort: b.effortLabel,
+          execution: b.executionLabel,
+        },
         description: b.description,
         sortOrder: b.sortOrder,
         restAfterSeconds: b.restAfterSeconds,
@@ -99,10 +105,23 @@ export async function GET(
         },
         targetSets: we.targetSets,
         targetReps: we.targetReps,
+        durationSeconds: we.durationSeconds,
+        labels: {
+          role: we.roleLabel,
+          effort: we.effortLabel,
+          execution: we.executionLabel,
+        },
         intensityType: we.intensityType,
         intensityTarget: we.intensityTarget ? String(we.intensityTarget) : null,
         restSeconds: we.restSeconds,
         notes: we.notes,
+        groupNote: we.groupNote ?? null,
+        groupIsExtra: we.groupIsExtra,
+        groupLabels: {
+          role: we.groupRoleLabel,
+          effort: we.groupEffortLabel,
+          execution: we.groupExecutionLabel,
+        },
       })),
     });
   });

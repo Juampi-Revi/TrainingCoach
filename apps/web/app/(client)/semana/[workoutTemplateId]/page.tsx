@@ -64,6 +64,14 @@ export default function WorkoutDetailPage() {
   const blocksSorted = [...data.blocks].sort((a, b) => a.sortOrder - b.sortOrder);
   const totalExercises = data.exercises.length;
   const totalEstimated = formatBlockDurationShort(estimateWorkoutDurationSeconds(blocksSorted));
+  const extraBlockCount = blocksSorted.filter((block) => block.isExtra).length;
+  const extraGroupCount = Array.from(
+    new Set(
+      data.exercises
+        .filter((exercise) => exercise.supersetGroup && exercise.groupIsExtra)
+        .map((exercise) => `${exercise.workoutBlockId}:${exercise.supersetGroup}`),
+    ),
+  ).length;
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: "calc(120px + 84px + env(safe-area-inset-bottom))" }}>
@@ -111,6 +119,33 @@ export default function WorkoutDetailPage() {
       </div>
 
       <div style={{ padding: "14px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {(extraBlockCount > 0 || extraGroupCount > 0) && (
+          <div
+            style={{
+              background: "rgba(215,255,58,.06)",
+              border: "1px solid rgba(215,255,58,.22)",
+              borderLeft: "3px solid var(--lime)",
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 4,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Icon name="plus" size={14} color="var(--lime)" />
+              <span className="ta-mono" style={{ fontSize: 9, color: "var(--lime)", letterSpacing: ".1em", fontWeight: 700 }}>
+                EXTRAS OPCIONALES
+              </span>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 600, lineHeight: 1.35 }}>
+              {extraBlockCount > 0 ? `${extraBlockCount} bloque${extraBlockCount > 1 ? "s" : ""}` : null}
+              {extraBlockCount > 0 && extraGroupCount > 0 ? " · " : null}
+              {extraGroupCount > 0 ? `${extraGroupCount} grupo${extraGroupCount > 1 ? "s" : ""}` : null}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 4, lineHeight: 1.45 }}>
+              Se ven desde el inicio y no cuentan para completar el entrenamiento.
+            </div>
+          </div>
+        )}
         {progressionNote && (
           <div
             style={{

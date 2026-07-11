@@ -59,6 +59,10 @@ export function deleteWorkoutTemplate(workoutTemplateId: string, coachUserId: st
 export async function createBlock(workoutTemplateId: string, data: {
   type: string;
   label?: string;
+  isExtra?: boolean;
+  roleLabel?: string | null;
+  effortLabel?: string | null;
+  executionLabel?: string | null;
   description?: string;
   intervalType?: string;
   prepareSeconds?: number;
@@ -90,6 +94,10 @@ export async function createBlock(workoutTemplateId: string, data: {
       sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
       type: data.type,
       label: data.label,
+      isExtra: data.isExtra ?? false,
+      roleLabel: data.roleLabel ?? null,
+      effortLabel: data.effortLabel ?? null,
+      executionLabel: data.executionLabel ?? null,
       description: data.description,
       intervalType: data.intervalType,
       prepareSeconds: data.prepareSeconds,
@@ -106,7 +114,7 @@ export async function createBlock(workoutTemplateId: string, data: {
   });
 }
 
-export function updateBlock(blockId: string, data: { label?: string; description?: string; intervalType?: string; prepareSeconds?: number; workSeconds?: number; restSeconds?: number; rounds?: number; setCount?: number; restBetweenSetsSeconds?: number; intervalExerciseStrategy?: string; restAfterSeconds?: number; targetMinutes?: number; targetZone?: string }) {
+export function updateBlock(blockId: string, data: { label?: string; isExtra?: boolean; roleLabel?: string | null; effortLabel?: string | null; executionLabel?: string | null; description?: string; intervalType?: string; prepareSeconds?: number; workSeconds?: number; restSeconds?: number; rounds?: number; setCount?: number; restBetweenSetsSeconds?: number; intervalExerciseStrategy?: string; restAfterSeconds?: number; targetMinutes?: number; targetZone?: string }) {
   return prisma.workoutBlock.update({ where: { id: blockId }, data });
 }
 
@@ -127,6 +135,9 @@ export async function deleteBlock(blockId: string) {
 }
 
 export async function addExerciseToWorkout(workoutTemplateId: string, blockId: string, exerciseId: string, data?: {
+  roleLabel?: string | null;
+  effortLabel?: string | null;
+  executionLabel?: string | null;
   targetSets?: number;
   targetReps?: string;
   durationSeconds?: number;
@@ -135,6 +146,11 @@ export async function addExerciseToWorkout(workoutTemplateId: string, blockId: s
   intensityType?: string;
   intensityTarget?: number;
   notes?: string;
+  groupNote?: string | null;
+  groupIsExtra?: boolean;
+  groupRoleLabel?: string | null;
+  groupEffortLabel?: string | null;
+  groupExecutionLabel?: string | null;
 }) {
   const maxSort = await prisma.workoutExercise.aggregate({
     where: { workoutTemplateId, workoutBlockId: blockId },
@@ -147,6 +163,9 @@ export async function addExerciseToWorkout(workoutTemplateId: string, blockId: s
       workoutBlockId: blockId,
       exerciseId,
       sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+      roleLabel: data?.roleLabel ?? null,
+      effortLabel: data?.effortLabel ?? null,
+      executionLabel: data?.executionLabel ?? null,
       targetSets: data?.targetSets,
       targetReps: data?.targetReps,
       durationSeconds: data?.durationSeconds,
@@ -155,11 +174,16 @@ export async function addExerciseToWorkout(workoutTemplateId: string, blockId: s
       intensityType: data?.intensityType,
       intensityTarget: data?.intensityTarget,
       notes: data?.notes,
+      groupNote: data?.groupNote ?? null,
+      groupIsExtra: data?.groupIsExtra ?? false,
+      groupRoleLabel: data?.groupRoleLabel ?? null,
+      groupEffortLabel: data?.groupEffortLabel ?? null,
+      groupExecutionLabel: data?.groupExecutionLabel ?? null,
     },
   });
 }
 
-export function updateWorkoutExercise(weId: string, data: { targetSets?: number; targetReps?: string; durationSeconds?: number; restSeconds?: number; supersetGroup?: string; workoutBlockId?: string; intensityType?: string; intensityTarget?: number; notes?: string }) {
+export function updateWorkoutExercise(weId: string, data: { roleLabel?: string | null; effortLabel?: string | null; executionLabel?: string | null; targetSets?: number; targetReps?: string; durationSeconds?: number; restSeconds?: number; supersetGroup?: string; workoutBlockId?: string; intensityType?: string; intensityTarget?: number; notes?: string; groupNote?: string | null; groupIsExtra?: boolean; groupRoleLabel?: string | null; groupEffortLabel?: string | null; groupExecutionLabel?: string | null }) {
   return prisma.workoutExercise.update({ where: { id: weId }, data });
 }
 
@@ -230,6 +254,10 @@ export async function duplicateWorkoutTemplate(args: { coachUserId: string; work
           sortOrder: b.sortOrder,
           type: b.type,
           label: b.label,
+          isExtra: b.isExtra,
+          roleLabel: b.roleLabel,
+          effortLabel: b.effortLabel,
+          executionLabel: b.executionLabel,
           description: b.description,
           restAfterSeconds: b.restAfterSeconds,
           intervalType: b.intervalType,
@@ -275,6 +303,9 @@ export async function duplicateWorkoutTemplate(args: { coachUserId: string; work
           exerciseId: we.exerciseId,
           sortOrder: we.sortOrder,
           supersetGroup: we.supersetGroup,
+          roleLabel: we.roleLabel,
+          effortLabel: we.effortLabel,
+          executionLabel: we.executionLabel,
           targetSets: we.targetSets,
           targetReps: we.targetReps,
           durationSeconds: we.durationSeconds,
@@ -285,6 +316,10 @@ export async function duplicateWorkoutTemplate(args: { coachUserId: string; work
           tempo: we.tempo,
           notes: we.notes,
           groupNote: we.groupNote,
+          groupIsExtra: we.groupIsExtra,
+          groupRoleLabel: we.groupRoleLabel,
+          groupEffortLabel: we.groupEffortLabel,
+          groupExecutionLabel: we.groupExecutionLabel,
         },
         select: { id: true },
       });

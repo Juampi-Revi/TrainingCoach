@@ -3,6 +3,8 @@
 import { Icon } from "@/components/ui";
 import { GROUP_COLORS, groupLabel, fmtDuration, blockTypeLabel, blockSummary } from "@/lib/constants";
 import type { SessionDetail, SessionExercise, WorkoutBlockSummary } from "@regen/types";
+import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
+import { isSessionExerciseExtra } from "@/lib/workout-labels";
 
 interface BlockGroup {
   block: WorkoutBlockSummary | null;
@@ -101,6 +103,9 @@ export function ExerciseList({
                 )}
               </div>
               {block && (
+                <WorkoutLabelChips labels={block.labels} isExtra={block.isExtra} compact />
+              )}
+              {block && (
                 isInterval && onStartBlock ? (
                   <button
                     onClick={(e) => {
@@ -140,11 +145,19 @@ export function ExerciseList({
                       {sg.items[0]?.e.target?.groupNote && (
                         <span style={{ fontSize: 10, color: gc ?? "var(--text-mute)", opacity: 0.8 }}>· {sg.items[0].e.target.groupNote}</span>
                       )}
+                      <div style={{ marginLeft: "auto" }}>
+                        <WorkoutLabelChips
+                          labels={sg.items[0]?.e.target?.groupLabels ?? { role: null, effort: null, execution: null }}
+                          isExtra={!!sg.items[0]?.e.target?.groupIsExtra}
+                          compact
+                        />
+                      </div>
                     </div>
                   )}
                   {sg.items.map(({ e, realIdx }, itemIdx) => {
                     const done = e.sets.length >= (e.target?.sets ?? 3);
                     const active = realIdx === currentExIdx;
+                    const isExtra = isSessionExerciseExtra(e);
                     const isLast = itemIdx === sg.items.length - 1 && sgi === supersetGroups.length - 1;
                     return (
                       <button key={e.id} onClick={() => onSelectEx(realIdx)}
@@ -154,6 +167,11 @@ export function ExerciseList({
                         <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 700 : 500, color: done ? "var(--text-mute)" : "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {e.exercise.name}
                         </span>
+                        {isExtra && (
+                          <span className="ta-mono" style={{ fontSize: 9, fontWeight: 700, color: "var(--lime)", border: "1px solid rgba(215,255,58,.35)", borderRadius: 999, padding: "2px 6px", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                            Extra
+                          </span>
+                        )}
                         <span className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: done ? "var(--success)" : active ? "var(--lime)" : "var(--text-dim)", flexShrink: 0 }}>
                           {isInterval ? "○" : `${e.sets.length}/${e.target?.sets ?? "—"}`}
                         </span>

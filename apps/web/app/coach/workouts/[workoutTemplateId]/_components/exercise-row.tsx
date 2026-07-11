@@ -6,6 +6,7 @@ import { Icon, ConfirmModal } from "@/components/ui";
 import { MUSCLE_LABEL, GROUP_COLORS } from "@/lib/constants";
 import type { WE } from "./_types";
 import type { BlockType, IntervalType } from "@regen/types";
+import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 
 function fmtDurationShort(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -111,6 +112,9 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
           <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{we.exercise.name}</div>
           <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 2 }}>
             {muscleLabel ? muscleLabel.toUpperCase() : "—"}
+          </div>
+          <div style={{ marginTop: 5 }}>
+            <WorkoutLabelChips labels={we.labels} compact />
           </div>
         </div>
 

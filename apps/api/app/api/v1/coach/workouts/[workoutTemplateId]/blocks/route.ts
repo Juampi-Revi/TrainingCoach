@@ -59,6 +59,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const {
       type,
       label,
+      isExtra,
+      roleLabel,
+      effortLabel,
+      executionLabel,
       description,
       restAfterSeconds,
       // Interval-specific
@@ -104,6 +108,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         workoutTemplateId,
         type,
         label: label || null,
+        isExtra: !!isExtra,
+        roleLabel: roleLabel || null,
+        effortLabel: effortLabel || null,
+        executionLabel: executionLabel || null,
         description: description || null,
         restAfterSeconds: restAfterSeconds ? Number(restAfterSeconds) : null,
         // Interval-specific
@@ -134,7 +142,17 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       include: { steps: { orderBy: { sortOrder: "asc" } } },
     });
 
-    return ok({ ...block, exerciseCount: 0, steps: block.steps.map(mapWorkoutBlockStep) }, 201);
+    return ok({
+      ...block,
+      exerciseCount: 0,
+      isExtra: block.isExtra,
+      labels: {
+        role: block.roleLabel,
+        effort: block.effortLabel,
+        execution: block.executionLabel,
+      },
+      steps: block.steps.map(mapWorkoutBlockStep),
+    }, 201);
   });
 }
 

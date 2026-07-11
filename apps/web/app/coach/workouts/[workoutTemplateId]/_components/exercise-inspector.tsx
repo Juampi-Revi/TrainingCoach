@@ -11,7 +11,7 @@ import { ExerciseInspectorMeta } from "./exercise-inspector-meta";
 import { ExerciseInspectorObjective } from "./exercise-inspector-objective";
 import { ExerciseInspectorDetails } from "./exercise-inspector-details";
 
-export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSizes, nextGroup, onUpdate, onSetGroup, onClose }: {
+export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSizes, nextGroup, onUpdate, onUpdateGroupMeta, onSetGroup, onClose }: {
   we: WE;
   templateId: string;
   blocks: WorkoutTemplateDetail["blocks"];
@@ -19,6 +19,7 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
   groupSizes: Record<string, number>;
   nextGroup: string;
   onUpdate: (patch: Partial<WE>) => void;
+  onUpdateGroupMeta: (patch: Partial<WE>) => void;
   onSetGroup: (group: string | null) => void;
   onClose: () => void;
 }) {
@@ -35,6 +36,9 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
   const [localRest, setLocalRest] = useState(String(we.restSeconds ?? ""));
   const [localNotes, setLocalNotes] = useState(we.notes ?? "");
   const [localGroupNote, setLocalGroupNote] = useState(we.groupNote ?? "");
+  const [localLabels, setLocalLabels] = useState(we.labels);
+  const [localGroupLabels, setLocalGroupLabels] = useState(we.groupLabels);
+  const [localGroupIsExtra, setLocalGroupIsExtra] = useState(we.groupIsExtra);
   const [localYoutubeUrl, setLocalYoutubeUrl] = useState(we.exercise.youtubeUrl ?? "");
   
   // Media state
@@ -98,6 +102,9 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
     setLocalRest(String(we.restSeconds ?? ""));
     setLocalNotes(we.notes ?? "");
     setLocalGroupNote(we.groupNote ?? "");
+    setLocalLabels(we.labels);
+    setLocalGroupLabels(we.groupLabels);
+    setLocalGroupIsExtra(we.groupIsExtra);
     setLocalYoutubeUrl(we.exercise.youtubeUrl ?? "");
     // Load media when exercise changes
     loadMedia();
@@ -141,10 +148,35 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
 
   function commitNotes() { save({ notes: localNotes || null }); }
 
+  function commitLabels(next = localLabels) {
+    setLocalLabels(next);
+    save({
+      labels: next,
+      roleLabel: next.role,
+      effortLabel: next.effort,
+      executionLabel: next.execution,
+    });
+  }
+
   function commitGroupNote() {
     const trimmed = localGroupNote.trim().slice(0, 100);
     if (trimmed !== localGroupNote) setLocalGroupNote(trimmed);
+    onUpdateGroupMeta({ groupNote: trimmed || null });
     save({ groupNote: trimmed || null });
+  }
+
+  function commitGroupMeta(nextLabels = localGroupLabels, nextIsExtra = localGroupIsExtra) {
+    setLocalGroupLabels(nextLabels);
+    setLocalGroupIsExtra(nextIsExtra);
+    const patch = {
+      groupIsExtra: nextIsExtra,
+      groupLabels: nextLabels,
+      groupRoleLabel: nextLabels.role,
+      groupEffortLabel: nextLabels.effort,
+      groupExecutionLabel: nextLabels.execution,
+    };
+    onUpdateGroupMeta(patch);
+    save(patch);
   }
 
   async function commitYoutubeUrl() {
@@ -239,12 +271,17 @@ export function ExerciseInspector({ we, templateId, blocks, usedGroups, groupSiz
           templateId={templateId}
           we={we}
           gc={gc}
+          localLabels={localLabels}
+          commitLabels={commitLabels}
           localNotes={localNotes}
           setLocalNotes={setLocalNotes}
           commitNotes={commitNotes}
           localGroupNote={localGroupNote}
           setLocalGroupNote={setLocalGroupNote}
           commitGroupNote={commitGroupNote}
+          localGroupLabels={localGroupLabels}
+          localGroupIsExtra={localGroupIsExtra}
+          commitGroupMeta={commitGroupMeta}
           localYoutubeUrl={localYoutubeUrl}
           setLocalYoutubeUrl={setLocalYoutubeUrl}
           commitYoutubeUrl={commitYoutubeUrl}

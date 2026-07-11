@@ -58,7 +58,10 @@ export async function GET(
               select: {
                 supersetGroup: true,
                 workoutBlockId: true,
-                workoutBlock: { select: { id: true, type: true, label: true, description: true, restAfterSeconds: true, intervalType: true, prepareSeconds: true, workSeconds: true, restSeconds: true, rounds: true, setCount: true, restBetweenSetsSeconds: true, intervalExerciseStrategy: true, totalDurationSeconds: true, restBetweenExercisesSeconds: true, targetMinutes: true, targetZone: true, sortOrder: true, steps: { orderBy: { sortOrder: "asc" } } } },
+                roleLabel: true,
+                effortLabel: true,
+                executionLabel: true,
+                workoutBlock: { select: { id: true, type: true, label: true, isExtra: true, roleLabel: true, effortLabel: true, executionLabel: true, description: true, restAfterSeconds: true, intervalType: true, prepareSeconds: true, workSeconds: true, restSeconds: true, rounds: true, setCount: true, restBetweenSetsSeconds: true, intervalExerciseStrategy: true, totalDurationSeconds: true, restBetweenExercisesSeconds: true, targetMinutes: true, targetZone: true, sortOrder: true, steps: { orderBy: { sortOrder: "asc" } } } },
                 targetSets: true,
                 targetReps: true,
                 durationSeconds: true,
@@ -67,6 +70,10 @@ export async function GET(
                 restSeconds: true,
                 notes: true,
                 groupNote: true,
+                groupIsExtra: true,
+                groupRoleLabel: true,
+                groupEffortLabel: true,
+                groupExecutionLabel: true,
                 alternatives: {
                   orderBy: { priority: "asc" },
                   include: {
@@ -126,6 +133,12 @@ export async function GET(
         id: block.id,
         type: block.type,
         label: block.label,
+        isExtra: block.isExtra,
+        labels: {
+          role: block.roleLabel,
+          effort: block.effortLabel,
+          execution: block.executionLabel,
+        },
         description: block.description,
         sortOrder: block.sortOrder,
         restAfterSeconds: block.restAfterSeconds,
@@ -153,6 +166,12 @@ export async function GET(
               id: ex.workoutExercise.workoutBlock.id,
               type: ex.workoutExercise.workoutBlock.type,
               label: ex.workoutExercise.workoutBlock.label,
+              isExtra: ex.workoutExercise.workoutBlock.isExtra,
+              labels: {
+                role: ex.workoutExercise.workoutBlock.roleLabel,
+                effort: ex.workoutExercise.workoutBlock.effortLabel,
+                execution: ex.workoutExercise.workoutBlock.executionLabel,
+              },
               description: ex.workoutExercise.workoutBlock.description,
               sortOrder: ex.workoutExercise.workoutBlock.sortOrder,
               restAfterSeconds: ex.workoutExercise.workoutBlock.restAfterSeconds,
@@ -215,6 +234,11 @@ export async function GET(
               sets: ex.workoutExercise.targetSets,
               reps: ex.workoutExercise.targetReps,
               durationSeconds: ex.workoutExercise.durationSeconds,
+              labels: {
+                role: ex.workoutExercise.roleLabel,
+                effort: ex.workoutExercise.effortLabel,
+                execution: ex.workoutExercise.executionLabel,
+              },
               intensityType: ex.workoutExercise.intensityType,
               intensityTarget: ex.workoutExercise.intensityTarget
                 ? String(ex.workoutExercise.intensityTarget)
@@ -222,6 +246,12 @@ export async function GET(
               restSeconds: ex.workoutExercise.restSeconds,
               notes: ex.workoutExercise.notes,
               groupNote: ex.workoutExercise.groupNote,
+              groupIsExtra: ex.workoutExercise.groupIsExtra,
+              groupLabels: {
+                role: ex.workoutExercise.groupRoleLabel,
+                effort: ex.workoutExercise.groupEffortLabel,
+                execution: ex.workoutExercise.groupExecutionLabel,
+              },
             }
           : null,
         sets: ex.sets.map((s) => ({

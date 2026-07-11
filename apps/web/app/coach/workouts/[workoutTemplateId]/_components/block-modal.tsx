@@ -25,6 +25,8 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   
   // Common fields
   const [label, setLabel] = useState(block?.label ?? "");
+  const [isExtra, setIsExtra] = useState(block?.isExtra ?? false);
+  const [localLabels, setLocalLabels] = useState(block?.labels ?? { role: null, effort: null, execution: null });
   const [description, setDescription] = useState(block?.description ?? "");
   const [restAfterSeconds, setRestAfterSeconds] = useState(String(block?.restAfterSeconds ?? ""));
   
@@ -56,6 +58,8 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       setBlockType(block?.type ?? "intervals");
       setIntervalType(block?.type === "intervals" ? (block.intervalType ?? "tabata") : null);
       setLabel(block?.label ?? "");
+      setIsExtra(block?.isExtra ?? false);
+      setLocalLabels(block?.labels ?? { role: null, effort: null, execution: null });
       setDescription(block?.description ?? "");
       setRestAfterSeconds(String(block?.restAfterSeconds ?? ""));
       setPrepare(String(block?.prepareSeconds ?? ""));
@@ -91,6 +95,10 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
     try {
       const basePayload = {
         label: label || null,
+        isExtra,
+        roleLabel: localLabels.role,
+        effortLabel: localLabels.effort,
+        executionLabel: localLabels.execution,
         description: description || null,
         restAfterSeconds: !isNaN(restAfter) && restAfter > 0 ? restAfter : null,
       };
@@ -221,6 +229,8 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       blockType={blockType}
       intervalType={intervalType}
       label={label}
+      isExtra={isExtra}
+      localLabels={localLabels}
       description={description}
       restAfterSeconds={restAfterSeconds}
       prepare={prepare}
@@ -238,6 +248,8 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
       setBlockType={setBlockType}
       setIntervalType={setIntervalType}
       setLabel={setLabel}
+      setIsExtra={setIsExtra}
+      setLocalLabels={setLocalLabels}
       setDescription={setDescription}
       setRestAfterSeconds={setRestAfterSeconds}
       setPrepare={setPrepare}

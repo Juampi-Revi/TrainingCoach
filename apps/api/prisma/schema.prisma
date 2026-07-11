@@ -271,6 +271,10 @@ model WorkoutBlock {
   sortOrder                   Int      @default(0)
   type                        String   // 'warmup' | 'strength' | 'intervals' | 'cardio' | 'cooldown'
   label                       String?
+  isExtra                     Boolean  @default(false)
+  roleLabel                   String?
+  effortLabel                 String?
+  executionLabel              String?
   description                 String?  // coach notes about this block
   restAfterSeconds            Int?     // rest after completing this block (before next block)
 
@@ -389,6 +393,9 @@ model WorkoutExercise {
   sortOrder         Int      @default(0)
   supersetGroup     String?  // 'A' | 'B' | 'C' ... — groups exercises into biseries/triseries/circuits
   workoutBlockId    String   // ALL exercises belong to a block (warmup/strength/intervals/cooldown)
+  roleLabel         String?
+  effortLabel       String?
+  executionLabel    String?
   targetSets        Int?
   targetReps        String?
   durationSeconds   Int?     // if set, exercise is timed (replaces reps)
@@ -399,6 +406,10 @@ model WorkoutExercise {
   tempo             String?
   notes             String?
   groupNote         String?  // coach note shown next to superset group label (first exercise of group only)
+  groupIsExtra      Boolean  @default(false)
+  groupRoleLabel    String?
+  groupEffortLabel  String?
+  groupExecutionLabel String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

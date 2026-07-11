@@ -52,10 +52,19 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         sortOrder: nextSort,
         targetSets: body.targetSets ?? 3,
         targetReps: body.targetReps ?? "8-12",
+        durationSeconds: body.durationSeconds ?? null,
+        roleLabel: body.roleLabel ?? null,
+        effortLabel: body.effortLabel ?? null,
+        executionLabel: body.executionLabel ?? null,
         intensityType: body.intensityType ?? null,
         intensityTarget: body.intensityTarget ?? null,
         restSeconds: body.restSeconds ?? null,
         notes: body.notes ?? null,
+        groupNote: body.groupNote ?? null,
+        groupIsExtra: body.groupIsExtra ?? false,
+        groupRoleLabel: body.groupRoleLabel ?? null,
+        groupEffortLabel: body.groupEffortLabel ?? null,
+        groupExecutionLabel: body.groupExecutionLabel ?? null,
       },
     });
 
@@ -67,10 +76,23 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       exercise,
       targetSets: we.targetSets,
       targetReps: we.targetReps,
+      durationSeconds: we.durationSeconds,
+      labels: {
+        role: we.roleLabel,
+        effort: we.effortLabel,
+        execution: we.executionLabel,
+      },
       intensityType: we.intensityType,
       intensityTarget: we.intensityTarget ? String(we.intensityTarget) : null,
       restSeconds: we.restSeconds,
       notes: we.notes,
+      groupNote: we.groupNote ?? null,
+      groupIsExtra: we.groupIsExtra,
+      groupLabels: {
+        role: we.groupRoleLabel,
+        effort: we.groupEffortLabel,
+        execution: we.groupExecutionLabel,
+      },
     }, 201);
   });
 }

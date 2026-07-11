@@ -6,6 +6,7 @@ export interface WE {
   supersetGroup: string | null;
   workoutBlockId: string;
   exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean };
+  labels: WorkoutTemplateDetail["exercises"][number]["labels"];
   targetSets: number | null;
   targetReps: string | null;
   durationSeconds: number | null;
@@ -14,6 +15,8 @@ export interface WE {
   restSeconds: number | null;
   notes: string | null;
   groupNote: string | null;
+  groupIsExtra: boolean;
+  groupLabels: WorkoutTemplateDetail["exercises"][number]["groupLabels"];
   alternativesCount?: number;
 }
 

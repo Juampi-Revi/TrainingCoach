@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Icon } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 import type { LastRef } from "./_types";
+import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 
 export function LoggerHeader({ ex, lastRef }: { ex: SessionExercise; lastRef: LastRef | null }) {
+  const isExtra = !!(ex.block?.isExtra || (ex.supersetGroup && ex.target?.groupIsExtra));
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
       <div style={{ flex: 1, overflow: "hidden" }}>
@@ -14,6 +16,17 @@ export function LoggerHeader({ ex, lastRef }: { ex: SessionExercise; lastRef: La
         </div>
         <div style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
           {ex.sets.length}/{ex.target?.sets ?? "—"} series
+        </div>
+        <div style={{ marginTop: 6 }}>
+          <WorkoutLabelChips
+            labels={{
+              role: ex.target?.labels.role ?? null,
+              effort: ex.target?.labels.effort ?? null,
+              execution: ex.target?.labels.execution ?? null,
+            }}
+            isExtra={isExtra}
+            compact
+          />
         </div>
         {lastRef && (
           <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 3, display: "flex", flexWrap: "wrap", gap: "0 6px" }}>

@@ -18,6 +18,7 @@ import { BlockModal } from "./_components/block-modal";
 import { WorkoutBlockHeader } from "./_components/workout-block-header";
 import { Icon } from "@/components/ui";
 import type { WorkoutSport } from "@regen/types";
+import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 
 export default function TemplateEditorPage() {
   const { api, user } = useAuth();
@@ -91,6 +92,16 @@ export default function TemplateEditorPage() {
     setExercises((prev) => prev.map((e) => e.id === id ? { ...e, ...patch } : e));
   }
 
+  function updateGroupExercises(blockId: string, group: string, patch: Partial<WE>) {
+    setExercises((prev) =>
+      prev.map((e) =>
+        e.workoutBlockId === blockId && e.supersetGroup === group
+          ? { ...e, ...patch }
+          : e,
+      ),
+    );
+  }
+
   function moveExerciseInSection(id: string, direction: "up" | "down", blockId: string) {
     setExercises((prev) => {
       const section = prev.filter((e) => e.workoutBlockId === blockId);
@@ -109,7 +120,17 @@ export default function TemplateEditorPage() {
   }
 
   async function setExerciseGroup(id: string, group: string | null) {
-    setExercises((prev) => prev.map((e) => e.id === id ? { ...e, supersetGroup: group } : e));
+    const current = exercises.find((e) => e.id === id) ?? null;
+    const source = group && current
+      ? exercises.find((e) => e.id !== id && e.workoutBlockId === current.workoutBlockId && e.supersetGroup === group) ?? null
+      : null;
+    setExercises((prev) => prev.map((e) => e.id === id ? {
+      ...e,
+      supersetGroup: group,
+      groupNote: group ? (source?.groupNote ?? e.groupNote) : null,
+      groupIsExtra: group ? (source?.groupIsExtra ?? false) : false,
+      groupLabels: group ? (source?.groupLabels ?? e.groupLabels) : { role: null, effort: null, execution: null },
+    } : e));
     try {
       await api.patch(`/coach/workouts/${workoutTemplateId}/exercises/${id}`, { supersetGroup: group });
     } catch (e) { console.error(e); }
@@ -275,6 +296,9 @@ export default function TemplateEditorPage() {
                                   · {we.groupNote}
                                 </span>
                               )}
+                              <div style={{ marginLeft: "auto" }}>
+                                <WorkoutLabelChips labels={we.groupLabels} isExtra={we.groupIsExtra} compact />
+                              </div>
                             </div>
                           )}
                           <ExerciseRow
@@ -322,6 +346,10 @@ export default function TemplateEditorPage() {
                 groupSizes={groupSizes}
                 nextGroup={nextGroup}
                 onUpdate={(patch) => updateExercise(selectedWe.id, patch)}
+                onUpdateGroupMeta={(patch) => {
+                  if (!selectedWe.supersetGroup) return;
+                  updateGroupExercises(selectedWe.workoutBlockId, selectedWe.supersetGroup, patch);
+                }}
                 onSetGroup={(group) => setExerciseGroup(selectedWe.id, group)}
                 onClose={() => setSelectedWeId(null)}
               />

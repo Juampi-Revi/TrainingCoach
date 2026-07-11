@@ -4,6 +4,7 @@ import { Button, Icon } from "@/components/ui";
 import { blockTypeLabel } from "@/lib/constants";
 import { blockCoachSummary, blockPatternLabel } from "@/lib/training-blocks";
 import type { WorkoutTemplateDetail } from "@regen/types";
+import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 
 interface WorkoutBlockHeaderProps {
   b: WorkoutTemplateDetail["blocks"][number];
@@ -60,6 +61,9 @@ export function WorkoutBlockHeader({
           {blockExercises.length} ejercicio{blockExercises.length === 1 ? "" : "s"}
           {b.restBetweenExercisesSeconds ? ` · descanso ${b.restBetweenExercisesSeconds}s` : ""}
           {b.restAfterSeconds ? ` · descanso post ${b.restAfterSeconds}s` : ""}
+        </div>
+        <div style={{ marginTop: 6 }}>
+          <WorkoutLabelChips labels={b.labels} isExtra={b.isExtra} compact />
         </div>
         {b.description && (
           <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2, fontStyle: "italic" }}>

@@ -24,6 +24,7 @@ import { SessionBottomBar } from "./_components/session-bottom-bar";
 import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
 import { useBlockExecution } from "./_hooks/use-block-execution";
+import { isSessionExerciseExtra } from "@/lib/workout-labels";
 
 export default function SessionInProgressPage() {
   const { api } = useAuth();
@@ -176,7 +177,17 @@ export default function SessionInProgressPage() {
   const ex = session.exercises[currentExIdx];
   const warmupExercises = session.exercises.filter((e) => e.block?.type === "warmup");
   const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
-  const completedExs = workExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
+  const requiredExercises = workExercises.filter((e) => !isSessionExerciseExtra(e));
+  const completedExs = requiredExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
+  const extraBlockCount = session.blocks.filter((block) => block.isExtra).length;
+  const extraGroupCount = Array.from(
+    new Set(
+      workExercises
+        .filter((item) => item.supersetGroup && item.target?.groupIsExtra)
+        .map((item) => `${item.block?.id ?? "block"}:${item.supersetGroup}`),
+    ),
+  ).length;
+  const extraCount = extraBlockCount + extraGroupCount;
   const warmupExists = warmupExercises.length > 0;
   const warmupTargetMs = null; // No longer using warmupMinutes from template
   const workoutElapsedMs = workoutStartedAtMs != null ? Math.max(0, nowMs - workoutStartedAtMs) : 0;
@@ -220,6 +231,20 @@ export default function SessionInProgressPage() {
           <button onClick={flushQueue} style={{ background: "rgba(0,0,0,.15)", border: "none", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", color: "#0B0B0C" }}>
             Reintentar
           </button>
+        </div>
+      )}
+
+      {extraCount > 0 && (
+        <div style={{ margin: "8px 16px 0", padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(215,255,58,.24)", background: "rgba(215,255,58,.06)", color: "var(--text)" }}>
+          <div className="ta-mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--lime)", letterSpacing: ".08em", textTransform: "uppercase" }}>
+            Incluye extras opcionales
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 4, lineHeight: 1.45 }}>
+            {extraBlockCount > 0 ? `${extraBlockCount} bloque${extraBlockCount > 1 ? "s" : ""}` : null}
+            {extraBlockCount > 0 && extraGroupCount > 0 ? " · " : null}
+            {extraGroupCount > 0 ? `${extraGroupCount} grupo${extraGroupCount > 1 ? "s" : ""}` : null}
+            {" · "}No cuentan para completar el entrenamiento, pero podés sumarlos si te sentís con energía.
+          </div>
         </div>
       )}
 
@@ -274,7 +299,7 @@ export default function SessionInProgressPage() {
         loggerOpen={loggerOpen}
         ex={ex}
         completedExs={completedExs}
-        workExercises={workExercises}
+        workExercises={requiredExercises}
         completing={completing}
         onOpenLogger={openLogger}
         onComplete={completeSession}

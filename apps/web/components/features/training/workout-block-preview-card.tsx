@@ -2,6 +2,7 @@
 
 import type { WorkoutBlockSummary, WorkoutTemplateDetail } from "@regen/types";
 import { blockTypeLabel } from "@/lib/constants";
+import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 import {
   blockCoachSummary,
   blockPatternLabel,
@@ -94,6 +95,9 @@ export function WorkoutBlockPreviewCard({
         <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 6, lineHeight: 1.45 }}>
           {buildStudentRecipe(block)}
         </div>
+        <div style={{ marginTop: 8 }}>
+          <WorkoutLabelChips labels={block.labels} isExtra={block.isExtra} compact />
+        </div>
         {block.description && (
           <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 6, lineHeight: 1.45 }}>
             {block.description}
@@ -154,6 +158,9 @@ export function WorkoutBlockPreviewCard({
             >
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{exercise.exercise.name}</div>
+                <div style={{ marginTop: 5 }}>
+                  <WorkoutLabelChips labels={exercise.labels} compact />
+                </div>
                 {exercise.notes && (
                   <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4, lineHeight: 1.45 }}>
                     {exercise.notes}

@@ -4,17 +4,25 @@ import { AlternativesPanel } from "./alternatives-panel";
 import { MediaManager } from "./media-manager";
 import { Icon } from "@/components/ui";
 import type { WE } from "./_types";
+import type { WorkoutLabelsSummary } from "@regen/types";
+import { WorkoutLabelEditor } from "./workout-label-editor";
+import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 
 interface ExerciseInspectorDetailsProps {
   templateId: string;
   we: WE;
   gc: string | null;
+  localLabels: WorkoutLabelsSummary;
+  commitLabels: (next?: WorkoutLabelsSummary) => void;
   localNotes: string;
   setLocalNotes: (v: string) => void;
   commitNotes: () => void;
   localGroupNote: string;
   setLocalGroupNote: (v: string) => void;
   commitGroupNote: () => void;
+  localGroupLabels: WorkoutLabelsSummary;
+  localGroupIsExtra: boolean;
+  commitGroupMeta: (nextLabels?: WorkoutLabelsSummary, nextIsExtra?: boolean) => void;
   localYoutubeUrl: string;
   setLocalYoutubeUrl: (v: string) => void;
   commitYoutubeUrl: () => void;
@@ -37,12 +45,17 @@ export function ExerciseInspectorDetails({
   templateId,
   we,
   gc,
+  localLabels,
+  commitLabels,
   localNotes,
   setLocalNotes,
   commitNotes,
   localGroupNote,
   setLocalGroupNote,
   commitGroupNote,
+  localGroupLabels,
+  localGroupIsExtra,
+  commitGroupMeta,
   localYoutubeUrl,
   setLocalYoutubeUrl,
   commitYoutubeUrl,
@@ -59,6 +72,14 @@ export function ExerciseInspectorDetails({
           Si el equipo no está disponible el cliente puede cambiar al alternativo.
         </div>
         <AlternativesPanel weId={we.id} templateId={templateId} />
+      </div>
+
+      <div>
+        <WorkoutLabelEditor
+          title="Intención del ejercicio"
+          value={localLabels}
+          onChange={commitLabels}
+        />
       </div>
 
       <div>
@@ -117,6 +138,19 @@ export function ExerciseInspectorDetails({
           />
           <div style={{ fontSize: 10, color: "var(--text-dim)", textAlign: "right", marginTop: 2 }}>
             {localGroupNote.length}/100
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <WorkoutLabelEditor
+              title={`Intención del grupo ${we.supersetGroup}`}
+              value={localGroupLabels}
+              onChange={(next) => commitGroupMeta(next, localGroupIsExtra)}
+              isExtra={localGroupIsExtra}
+              onToggleExtra={(next) => commitGroupMeta(localGroupLabels, next)}
+              extraLabel={`Marcar grupo ${we.supersetGroup} como extra opcional`}
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <WorkoutLabelChips labels={localGroupLabels} isExtra={localGroupIsExtra} compact />
           </div>
         </div>
       )}

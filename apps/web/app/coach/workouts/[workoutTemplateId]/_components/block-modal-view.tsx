@@ -2,7 +2,7 @@
 
 import { Button, ConfirmModal, Icon } from "@/components/ui";
 import { blockTypeLabel } from "@/lib/constants";
-import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
+import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary, WorkoutLabelsSummary } from "@regen/types";
 import type { WB } from "./_types";
 import { BlockModalSelector } from "./block-modal-selector";
 import { BlockModalForm } from "./block-modal-form";
@@ -17,6 +17,8 @@ export interface BlockModalViewProps {
   blockType: BlockType;
   intervalType: IntervalType | null;
   label: string;
+  isExtra: boolean;
+  localLabels: WorkoutLabelsSummary;
   description: string;
   restAfterSeconds: string;
   prepare: string;
@@ -34,6 +36,8 @@ export interface BlockModalViewProps {
   setBlockType: (t: BlockType) => void;
   setIntervalType: (t: IntervalType | null) => void;
   setLabel: (v: string) => void;
+  setIsExtra: (v: boolean) => void;
+  setLocalLabels: (next: WorkoutLabelsSummary) => void;
   setDescription: (v: string) => void;
   setRestAfterSeconds: (v: string) => void;
   setPrepare: (v: string) => void;
@@ -62,6 +66,8 @@ export function BlockModalView({
   blockType,
   intervalType,
   label,
+  isExtra,
+  localLabels,
   description,
   restAfterSeconds,
   prepare,
@@ -79,6 +85,8 @@ export function BlockModalView({
   setBlockType,
   setIntervalType,
   setLabel,
+  setIsExtra,
+  setLocalLabels,
   setDescription,
   setRestAfterSeconds,
   setPrepare,
@@ -207,6 +215,8 @@ export function BlockModalView({
             blockType={blockType}
             intervalType={intervalType}
             label={label}
+            isExtra={isExtra}
+            localLabels={localLabels}
             description={description}
             prepare={prepare}
             work={work}
@@ -222,6 +232,8 @@ export function BlockModalView({
             steps={steps}
             restAfterSeconds={restAfterSeconds}
             setLabel={setLabel}
+            setIsExtra={setIsExtra}
+            setLocalLabels={setLocalLabels}
             setDescription={setDescription}
             setPrepare={setPrepare}
             setWork={setWork}

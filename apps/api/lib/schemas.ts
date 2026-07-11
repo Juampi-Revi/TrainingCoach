@@ -128,6 +128,9 @@ export const sessionCommentSchema = z.object({
 export const blockTypeSchema = z.enum(["warmup", "strength", "intervals", "cardio", "cooldown"]);
 
 export const intervalTypeSchema = z.enum(["tabata", "hiit", "emom", "amrap"]);
+export const workoutRoleLabelSchema = z.enum(["primary", "complementary", "recovery"]);
+export const workoutEffortLabelSchema = z.enum(["heavy", "moderate", "light"]);
+export const workoutExecutionLabelSchema = z.enum(["explosive", "controlled", "slow", "technical"]);
 
 export const createPlanSchema = z.object({
   title: z.string().min(1, "El título es requerido").max(100, "Máximo 100 caracteres"),
@@ -163,6 +166,10 @@ export const updateWorkoutTemplateSchema = z.object({
 export const createBlockSchema = z.object({
   type: blockTypeSchema,
   label: z.string().max(100).optional(),
+  isExtra: z.boolean().optional(),
+  roleLabel: workoutRoleLabelSchema.nullable().optional(),
+  effortLabel: workoutEffortLabelSchema.nullable().optional(),
+  executionLabel: workoutExecutionLabelSchema.nullable().optional(),
   description: z.string().max(500).optional(),
   sortOrder: z.number().int().optional(),
   restAfterSeconds: z.number().int().min(0).optional(),
@@ -185,6 +192,9 @@ export const createWorkoutExerciseSchema = z.object({
   workoutBlockId: z.string().uuid(),
   sortOrder: z.number().int().optional(),
   supersetGroup: z.string().max(50).nullable().optional(),
+  roleLabel: workoutRoleLabelSchema.nullable().optional(),
+  effortLabel: workoutEffortLabelSchema.nullable().optional(),
+  executionLabel: workoutExecutionLabelSchema.nullable().optional(),
   targetSets: z.number().int().min(0).nullable().optional(),
   targetReps: z.string().max(50).nullable().optional(),
   durationSeconds: z.number().int().min(0).nullable().optional(),
@@ -194,10 +204,17 @@ export const createWorkoutExerciseSchema = z.object({
   tempo: z.string().max(20).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
   groupNote: z.string().max(1000).nullable().optional(),
+  groupIsExtra: z.boolean().optional(),
+  groupRoleLabel: workoutRoleLabelSchema.nullable().optional(),
+  groupEffortLabel: workoutEffortLabelSchema.nullable().optional(),
+  groupExecutionLabel: workoutExecutionLabelSchema.nullable().optional(),
 });
 
 export const workoutExercisePatchSchema = z.object({
   workoutBlockId: z.string().uuid().optional(),
+  roleLabel: workoutRoleLabelSchema.nullable().optional(),
+  effortLabel: workoutEffortLabelSchema.nullable().optional(),
+  executionLabel: workoutExecutionLabelSchema.nullable().optional(),
   targetSets: z.union([z.number().int().positive(), z.null()]).optional(),
   targetReps: z.union([z.string().max(50), z.null()]).optional(),
   durationSeconds: z.union([z.number().int().positive(), z.null()]).optional(),
@@ -208,6 +225,10 @@ export const workoutExercisePatchSchema = z.object({
   sortOrder: z.number().int().optional(),
   supersetGroup: z.union([z.string().max(50), z.null()]).optional(),
   groupNote: z.union([z.string().max(2000), z.null()]).optional(),
+  groupIsExtra: z.boolean().optional(),
+  groupRoleLabel: workoutRoleLabelSchema.nullable().optional(),
+  groupEffortLabel: workoutEffortLabelSchema.nullable().optional(),
+  groupExecutionLabel: workoutExecutionLabelSchema.nullable().optional(),
 });
 
 export const addAlternativeSchema = z.object({

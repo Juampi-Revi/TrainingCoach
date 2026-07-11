@@ -27,6 +27,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const body = await req.json().catch(() => ({}));
     const {
       label,
+      isExtra,
+      roleLabel,
+      effortLabel,
+      executionLabel,
       description,
       restAfterSeconds,
       // Interval-specific
@@ -70,6 +74,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         where: { id: blockId },
         data: {
           label: label !== undefined ? label || null : undefined,
+          isExtra: isExtra !== undefined ? !!isExtra : undefined,
+          roleLabel: roleLabel !== undefined ? roleLabel || null : undefined,
+          effortLabel: effortLabel !== undefined ? effortLabel || null : undefined,
+          executionLabel: executionLabel !== undefined ? executionLabel || null : undefined,
           description: description !== undefined ? description || null : undefined,
           restAfterSeconds:
             restAfterSeconds !== undefined ? Number(restAfterSeconds) || null : undefined,
@@ -115,7 +123,16 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       });
     });
 
-    return ok({ ...block, steps: block.steps.map(mapWorkoutBlockStep) });
+    return ok({
+      ...block,
+      isExtra: block.isExtra,
+      labels: {
+        role: block.roleLabel,
+        effort: block.effortLabel,
+        execution: block.executionLabel,
+      },
+      steps: block.steps.map(mapWorkoutBlockStep),
+    });
   });
 }
 

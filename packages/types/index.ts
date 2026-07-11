@@ -25,6 +25,15 @@ export type IntervalExerciseStrategy = "repeat_single" | "rotate_per_round" | "r
 export type WorkoutSport = "run" | "ride" | "generic";
 export type WorkoutStepKind = "warmup" | "work" | "recover" | "cooldown";
 export type WorkoutStepTargetType = "hr_zone" | "hr_bpm" | "pace" | "speed" | "rpe" | "free";
+export type WorkoutRoleLabel = "primary" | "complementary" | "recovery";
+export type WorkoutEffortLabel = "heavy" | "moderate" | "light";
+export type WorkoutExecutionLabel = "explosive" | "controlled" | "slow" | "technical";
+
+export interface WorkoutLabelsSummary {
+  role: WorkoutRoleLabel | null;
+  effort: WorkoutEffortLabel | null;
+  execution: WorkoutExecutionLabel | null;
+}
 
 export interface WorkoutBlockStepSummary {
   id: string;
@@ -45,6 +54,8 @@ export interface WorkoutBlockSummary {
   id: string;
   type: BlockType;
   label: string | null;
+  isExtra: boolean;
+  labels: WorkoutLabelsSummary;
   description: string | null;
   sortOrder: number;
   restAfterSeconds: number | null; // rest after completing this block
@@ -143,11 +154,14 @@ export interface ExerciseTarget {
   sets: number | null;
   reps: string | null;
   durationSeconds: number | null;
+  labels: WorkoutLabelsSummary;
   intensityType: string | null;
   intensityTarget: string | null;
   restSeconds: number | null;
   notes: string | null;
   groupNote: string | null;
+  groupIsExtra: boolean;
+  groupLabels: WorkoutLabelsSummary;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -201,11 +215,14 @@ export interface WorkoutTemplateDetail {
     targetSets: number | null;
     targetReps: string | null;
     durationSeconds: number | null;
+    labels: WorkoutLabelsSummary;
     intensityType: string | null;
     intensityTarget: string | null;
     restSeconds: number | null;
     notes: string | null;
     groupNote: string | null;
+    groupIsExtra: boolean;
+    groupLabels: WorkoutLabelsSummary;
     alternativesCount?: number;
   }>;
 }

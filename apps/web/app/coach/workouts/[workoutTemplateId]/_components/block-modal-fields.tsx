@@ -1,16 +1,19 @@
 "use client";
 
 import { Input } from "@/components/ui";
-import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary } from "@regen/types";
+import type { BlockType, IntervalExerciseStrategy, IntervalType, WorkoutBlockStepSummary, WorkoutLabelsSummary } from "@regen/types";
 import { BlockModalSummary } from "./block-modal-summary";
 import { IntervalBlockBuilder } from "./interval-block-builder";
 import { CardioBlockBuilder } from "./cardio-block-builder";
 import { RecoveryBlockBuilder } from "./recovery-block-builder";
+import { WorkoutLabelEditor } from "./workout-label-editor";
 
 interface BlockModalFieldsProps {
   blockType: BlockType;
   intervalType: IntervalType | null;
   label: string;
+  isExtra: boolean;
+  localLabels: WorkoutLabelsSummary;
   description: string;
   prepare: string;
   work: string;
@@ -26,6 +29,8 @@ interface BlockModalFieldsProps {
   steps: WorkoutBlockStepSummary[];
   restAfterSeconds: string;
   setLabel: (v: string) => void;
+  setIsExtra: (v: boolean) => void;
+  setLocalLabels: (next: WorkoutLabelsSummary) => void;
   setDescription: (v: string) => void;
   setPrepare: (v: string) => void;
   setWork: (v: string) => void;
@@ -46,6 +51,8 @@ export function BlockModalFields({
   blockType,
   intervalType,
   label,
+  isExtra,
+  localLabels,
   description,
   prepare,
   work,
@@ -61,6 +68,8 @@ export function BlockModalFields({
   steps,
   restAfterSeconds,
   setLabel,
+  setIsExtra,
+  setLocalLabels,
   setDescription,
   setPrepare,
   setWork,
@@ -87,6 +96,14 @@ export function BlockModalFields({
     <div style={{ padding: 18, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
       {/* 1. Nombre y descripción */}
       <Input label="Nombre del bloque" placeholder="Ej: Tabata de piernas" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <WorkoutLabelEditor
+        title="Intención del bloque"
+        value={localLabels}
+        onChange={setLocalLabels}
+        isExtra={isExtra}
+        onToggleExtra={setIsExtra}
+        extraLabel="Marcar bloque como extra opcional"
+      />
       <Input label="Descripción (opcional)" placeholder="Notas sobre este bloque..." value={description} onChange={(e) => setDescription(e.target.value)} />
 
       {/* 3. Configuración específica del tipo */}
