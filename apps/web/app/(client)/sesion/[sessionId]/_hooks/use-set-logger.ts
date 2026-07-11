@@ -31,6 +31,7 @@ export function useSetLogger({
   const [equipmentType, setEquipmentType] = useState<"barra" | "mancuernas" | "maquina" | null>(null);
   const [activeTimerRow, setActiveTimerRow] = useState<number | null>(null);
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
+  const [timerEndsAtMs, setTimerEndsAtMs] = useState<number | null>(null);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(90);
   const [restFromLogger, setRestFromLogger] = useState(false);
@@ -41,6 +42,7 @@ export function useSetLogger({
   const lastRef = session ? lastRefMap[session.exercises[currentExIdx]?.exercise.id] ?? null : null;
 
   useLoggerEffects({
+    sessionId,
     session,
     currentExIdx,
     loggerOpen,
@@ -55,6 +57,8 @@ export function useSetLogger({
     setActiveTimerRow,
     timerSecondsLeft,
     setTimerSecondsLeft,
+    timerEndsAtMs,
+    setTimerEndsAtMs,
     restSeconds,
     setRestSeconds,
     restFromLogger,
@@ -89,7 +93,7 @@ export function useSetLogger({
 
   return {
     effortMode, setEffortMode, loggerOpen, setLoggerOpen, sheetRows, setSheetRows, sheetSaving,
-    equipmentType, setEquipmentType, activeTimerRow, setActiveTimerRow, timerSecondsLeft, setTimerSecondsLeft,
+    equipmentType, setEquipmentType, activeTimerRow, setActiveTimerRow, timerSecondsLeft, setTimerSecondsLeft, timerEndsAtMs, setTimerEndsAtMs,
     restSeconds, setRestSeconds, restTotal, lastRef, lastSaved, openLogger, saveSheet, deleteSet,
   };
 }

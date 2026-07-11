@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Icon } from "@/components/ui";
+import { Button } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 
 interface SessionBottomBarProps {
@@ -9,13 +9,9 @@ interface SessionBottomBarProps {
   warmupDone: boolean;
   loggerOpen: boolean;
   ex: SessionExercise | undefined;
-  prevRealIdx: number | null;
-  nextRealIdx: number | null;
   completedExs: number;
   workExercises: SessionExercise[];
   completing: boolean;
-  onPrev: () => void;
-  onNext: () => void;
   onOpenLogger: (ex: SessionExercise) => void;
   onComplete: () => void;
   onReset: () => void;
@@ -28,13 +24,9 @@ export function SessionBottomBar({
   warmupDone,
   loggerOpen,
   ex,
-  prevRealIdx,
-  nextRealIdx,
   completedExs,
   workExercises,
   completing,
-  onPrev,
-  onNext,
   onOpenLogger,
   onComplete,
   onReset,
@@ -73,57 +65,18 @@ export function SessionBottomBar({
           Reiniciar
         </button>
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        {prevRealIdx != null && prevRealIdx >= 0 && (
-          <button
-            onClick={onPrev}
-            style={{
-              width: 56,
-              height: 64,
-              borderRadius: 14,
-              border: "1px solid var(--line-2)",
-              background: "var(--bg-2)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--text)",
-              flexShrink: 0,
-            }}
-          >
-            <Icon name="chevL" size={20} />
-          </button>
-        )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {completedExs === workExercises.length ? (
           <Button size="xl" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={onComplete}>
             {completing ? "Completando…" : "Finalizar sesión"}
           </Button>
         ) : (
           <>
-            {nextRealIdx != null && nextRealIdx >= 0 && (
-              <button
-                onClick={onNext}
-                style={{
-                  width: 56,
-                  height: 64,
-                  borderRadius: 14,
-                  border: "1px solid var(--line-2)",
-                  background: "var(--bg-2)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--text)",
-                  flexShrink: 0,
-                }}
-              >
-                <Icon name="chevR" size={20} />
-              </button>
-            )}
             <Button
               size="xl"
+              block
               icon={ex?.block?.type === "intervals" ? "timer" : "book"}
-              style={{ flex: 1, fontSize: 16 }}
+              style={{ fontSize: 16 }}
               disabled={!ex}
               onClick={() => {
                 if (!ex) return;
@@ -136,26 +89,16 @@ export function SessionBottomBar({
             >
               {ex?.block?.type === "intervals" ? "Iniciar bloque" : "Registrar series"}
             </Button>
-            <button
-              onClick={onComplete}
+            <Button
+              size="lg"
+              block
+              variant="secondary"
+              icon="check"
               disabled={completing}
-              style={{
-                width: 56,
-                height: 64,
-                borderRadius: 14,
-                border: "1px solid var(--line-2)",
-                background: "var(--bg-2)",
-                cursor: completing ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text)",
-                flexShrink: 0,
-                opacity: completing ? 0.6 : 1,
-              }}
+              onClick={onComplete}
             >
-              <Icon name="check" size={20} />
-            </button>
+              {completing ? "Completando…" : "Terminar entrenamiento"}
+            </Button>
           </>
         )}
       </div>

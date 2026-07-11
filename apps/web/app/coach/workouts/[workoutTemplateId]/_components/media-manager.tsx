@@ -42,10 +42,13 @@ export function MediaManager({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [addingImageUrl, setAddingImageUrl] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [addingVideo, setAddingVideo] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingPrimaryId, setSettingPrimaryId] = useState<string | null>(null);
+  const [brokenImageIds, setBrokenImageIds] = useState<Record<string, boolean>>({});
   const [preview, setPreview] = useState<
     | { kind: "image"; url: string }
     | { kind: "video"; url: string }
@@ -141,6 +144,31 @@ export function MediaManager({
       toast.error(msg);
     } finally {
       setUploadingVideo(false);
+    }
+  }
+
+  async function addImageByUrl() {
+    const trimmed = imageUrl.trim();
+    if (!trimmed) {
+      toast.error("Ingresá una URL de imagen");
+      return;
+    }
+    if (!canAddImage) {
+      toast.error(`Límite de ${limits.maxImages} imágenes alcanzado`);
+      return;
+    }
+
+    setAddingImageUrl(true);
+    try {
+      await api.post(`/coach/exercises/${exerciseId}/media`, { url: trimmed });
+      toast.success("Imagen agregada");
+      setImageUrl("");
+      onMediaChange();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error al agregar imagen";
+      toast.error(msg);
+    } finally {
+      setAddingImageUrl(false);
     }
   }
 
@@ -267,7 +295,7 @@ export function MediaManager({
                   }}
                   aria-label={`Ver imagen ${idx + 1}`}
                 >
-                  {img.thumbnailUrl ? (
+                  {img.thumbnailUrl && !brokenImageIds[img.id] ? (
                     <Image
                       src={img.thumbnailUrl}
                       alt={`${exerciseName} ${idx + 1}`}
@@ -275,10 +303,20 @@ export function MediaManager({
                       sizes="100px"
                       style={{ objectFit: "cover" }}
                       unoptimized
+                      onError={() => {
+                        setBrokenImageIds((prev) => ({ ...prev, [img.id]: true }));
+                      }}
                     />
                   ) : (
                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Icon name="image" size={24} color="var(--text-mute)" />
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 8 }}>
+                        <Icon name="image" size={24} color="var(--text-mute)" />
+                        {brokenImageIds[img.id] && (
+                          <span style={{ fontSize: 9, color: "var(--text-dim)", textAlign: "center" }}>
+                            URL no disponible
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </button>
@@ -356,35 +394,72 @@ export function MediaManager({
 
         {/* Upload Zone */}
         {!readOnly && canAddImage && (
-          <div
-            {...getRootProps()}
-            style={{
-              padding: "20px",
-              border: `2px dashed ${isDragActive ? "var(--lime)" : "var(--line)"}`,
-              borderRadius: 8,
-              background: isDragActive
-                ? "rgba(215,255,58,0.05)"
-                : "var(--bg-2)",
-              cursor: uploading ? "wait" : "pointer",
-              opacity: uploading ? 0.6 : 1,
-              textAlign: "center",
-            }}
-          >
-            <input {...getInputProps()} />
-            <Icon
-              name="image"
-              size={32}
-              color={isDragActive ? "var(--lime)" : "var(--text-mute)"}
-            />
-            <div style={{ fontSize: 13, marginTop: 8, color: "var(--text)", fontWeight: 600 }}>
-              {uploading
-                ? "Subiendo..."
-                : isDragActive
-                ? "Soltá la imagen aquí"
-                : "Agregar imagen"}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div
+              {...getRootProps()}
+              style={{
+                padding: "20px",
+                border: `2px dashed ${isDragActive ? "var(--lime)" : "var(--line)"}`,
+                borderRadius: 8,
+                background: isDragActive
+                  ? "rgba(215,255,58,0.05)"
+                  : "var(--bg-2)",
+                cursor: uploading ? "wait" : "pointer",
+                opacity: uploading ? 0.6 : 1,
+                textAlign: "center",
+              }}
+            >
+              <input {...getInputProps()} />
+              <Icon
+                name="image"
+                size={32}
+                color={isDragActive ? "var(--lime)" : "var(--text-mute)"}
+              />
+              <div style={{ fontSize: 13, marginTop: 8, color: "var(--text)", fontWeight: 600 }}>
+                {uploading
+                  ? "Subiendo..."
+                  : isDragActive
+                  ? "Soltá la imagen aquí"
+                  : "Subir imagen"}
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 4 }}>
+                JPG, PNG, WebP · Máx 10MB
+              </div>
             </div>
-            <div style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 4 }}>
-              JPG, PNG, WebP · Máx 10MB
+
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 8, fontWeight: 600 }}>
+                Agregar imagen por URL:
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://..."
+                  style={{
+                    flex: 1,
+                    padding: "10px 12px",
+                    background: "var(--bg-1)",
+                    border: "1px solid var(--line-2)",
+                    borderRadius: 6,
+                    fontSize: 13,
+                    color: "var(--text)",
+                    outline: "none",
+                  }}
+                />
+                <Button
+                  size="md"
+                  disabled={!imageUrl.trim() || addingImageUrl}
+                  onClick={addImageByUrl}
+                  style={{ minWidth: 100 }}
+                >
+                  {addingImageUrl ? "Agregando..." : "Agregar"}
+                </Button>
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 6 }}>
+                Se guarda la URL externa tal cual. Si deja de existir, la app la oculta sin romper la vista.
+              </div>
             </div>
           </div>
         )}

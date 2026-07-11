@@ -7,8 +7,16 @@ import { MUSCLE_LABEL, GROUP_COLORS } from "@/lib/constants";
 import type { WE } from "./_types";
 import type { BlockType, IntervalType } from "@regen/types";
 
+function fmtDurationShort(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const rem = seconds % 60;
+  if (rem === 0) return `${mins}min`;
+  return `${mins}m ${rem}s`;
+}
+
 function fmtIntervalTarget(we: WE): string {
-  if (we.durationSeconds) return `${we.durationSeconds}s`;
+  if (we.durationSeconds) return fmtDurationShort(we.durationSeconds);
   return "—";
 }
 
@@ -109,9 +117,17 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
         {/* Sets/Reps for strength, Duration for time-based blocks */}
         <div className="ta-mono" style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}>
           {blockType === "strength" ? (
-            we.targetSets && we.targetReps ? `${we.targetSets} × ${we.targetReps}` : we.targetSets ? `${we.targetSets} ×` : "—"
+            we.targetSets && we.durationSeconds
+              ? `${we.targetSets} × ${fmtDurationShort(we.durationSeconds)}`
+              : we.targetSets && we.targetReps
+                ? `${we.targetSets} × ${we.targetReps}`
+                : we.durationSeconds
+                  ? fmtDurationShort(we.durationSeconds)
+                  : we.targetSets
+                    ? `${we.targetSets} ×`
+                    : "—"
           ) : blockType === "warmup" || blockType === "cooldown" || blockType === "cardio" ? (
-            we.durationSeconds ? `${Math.round(we.durationSeconds / 60)}min` : "—"
+            we.durationSeconds ? fmtDurationShort(we.durationSeconds) : "—"
           ) : blockType === "intervals" ? (
             fmtIntervalTarget(we)
           ) : (

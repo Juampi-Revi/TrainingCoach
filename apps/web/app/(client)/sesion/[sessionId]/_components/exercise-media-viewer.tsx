@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Icon } from "@/components/ui";
 
@@ -32,10 +32,11 @@ export function ExerciseMediaViewer({
   onOpenLightbox,
 }: ExerciseMediaViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [failedImageIds, setFailedImageIds] = useState<Record<string, boolean>>({});
   
-  const images = media.filter((m) => m.mediaType === "image");
+  const images = media.filter((m) => m.mediaType === "image" && !failedImageIds[m.id]);
   const videos = media.filter((m) => m.mediaType === "video");
-  const allMedia = [...images, ...videos];
+  const allMedia = useMemo(() => [...images, ...videos], [images, videos]);
   
   const currentMedia = allMedia[currentIndex];
   const hasMultipleMedia = allMedia.length > 1;
@@ -46,6 +47,11 @@ export function ExerciseMediaViewer({
   if (allMedia.length === 0 && !youtubeUrl) {
     return null;
   }
+
+  useEffect(() => {
+    if (currentIndex < allMedia.length) return;
+    setCurrentIndex(Math.max(0, allMedia.length - 1));
+  }, [allMedia.length, currentIndex]);
 
   return (
     <div style={{ position: "relative", padding: "0 16px", marginTop: 8, marginBottom: 12 }}>
@@ -116,6 +122,9 @@ export function ExerciseMediaViewer({
             style={{ objectFit: "cover", opacity: 0.9 }}
             priority
             unoptimized
+            onError={() => {
+              setFailedImageIds((prev) => ({ ...prev, [heroImage.id]: true }));
+            }}
           />
         ) : null}
         

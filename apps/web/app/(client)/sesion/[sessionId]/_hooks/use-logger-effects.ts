@@ -5,6 +5,7 @@ import type { SessionDetail } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef } from "../_components/_types";
 
 export function useLoggerEffects({
+  sessionId,
   session,
   currentExIdx,
   loggerOpen,
@@ -19,6 +20,8 @@ export function useLoggerEffects({
   setActiveTimerRow,
   timerSecondsLeft,
   setTimerSecondsLeft,
+  timerEndsAtMs,
+  setTimerEndsAtMs,
   restSeconds,
   setRestSeconds,
   restFromLogger,
@@ -28,6 +31,7 @@ export function useLoggerEffects({
   setPrefillExId,
   setEffortMode,
 }: {
+  sessionId: string;
   session: SessionDetail | null;
   currentExIdx: number;
   loggerOpen: boolean;
@@ -42,6 +46,8 @@ export function useLoggerEffects({
   setActiveTimerRow: (v: number | null) => void;
   timerSecondsLeft: number;
   setTimerSecondsLeft: (v: number | ((prev: number) => number)) => void;
+  timerEndsAtMs: number | null;
+  setTimerEndsAtMs: (v: number | null) => void;
   restSeconds: number | null;
   setRestSeconds: (v: number | null | ((prev: number | null) => number | null)) => void;
   restFromLogger: boolean;
@@ -51,6 +57,9 @@ export function useLoggerEffects({
   setPrefillExId: (v: string | null) => void;
   setEffortMode: (v: EffortMode) => void;
 }) {
+  const currentExercise = session?.exercises[currentExIdx] ?? null;
+  const timerStorageKey = currentExercise ? `regen_set_timer_${sessionId}_${currentExercise.id}` : null;
+
   // Pre-fill effort mode from exercise target
   useEffect(() => {
     if (!session) return;
@@ -109,24 +118,61 @@ export function useLoggerEffects({
     return () => clearTimeout(id);
   }, [loggerOpen, session, currentExIdx, effortMode, lastRef, sheetRows.length, setSheetRows]);
 
-  // Per-set timer countdown
+  // Restore an active per-set timer when returning from background / lock screen.
   useEffect(() => {
-    if (activeTimerRow === null || timerSecondsLeft <= 0) return;
-    const id = setTimeout(() => setTimerSecondsLeft((t) => t - 1), 1000);
-    return () => clearTimeout(id);
-  }, [activeTimerRow, timerSecondsLeft, setTimerSecondsLeft]);
+    if (!loggerOpen || currentExercise == null || activeTimerRow !== null || timerStorageKey == null) return;
+    try {
+      const raw = localStorage.getItem(timerStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { row: number; endsAtMs: number };
+      if (typeof parsed.row !== "number" || typeof parsed.endsAtMs !== "number") return;
+      if (parsed.endsAtMs <= Date.now()) {
+        localStorage.removeItem(timerStorageKey);
+        return;
+      }
+      setActiveTimerRow(parsed.row);
+      setTimerEndsAtMs(parsed.endsAtMs);
+      setTimerSecondsLeft(Math.max(0, Math.ceil((parsed.endsAtMs - Date.now()) / 1000)));
+    } catch {}
+  }, [loggerOpen, currentExercise, activeTimerRow, timerStorageKey, setActiveTimerRow, setTimerEndsAtMs, setTimerSecondsLeft]);
+
+  // Per-set timer countdown based on a deadline timestamp, so it stays accurate across background / lock.
+  useEffect(() => {
+    if (activeTimerRow === null || timerEndsAtMs == null) return;
+
+    const sync = () => {
+      const next = Math.max(0, Math.ceil((timerEndsAtMs - Date.now()) / 1000));
+      setTimerSecondsLeft(next);
+    };
+
+    sync();
+    const id = setInterval(sync, 250);
+    return () => clearInterval(id);
+  }, [activeTimerRow, timerEndsAtMs, setTimerSecondsLeft]);
+
+  useEffect(() => {
+    if (timerStorageKey == null) return;
+    try {
+      if (activeTimerRow != null && timerEndsAtMs != null && timerSecondsLeft > 0) {
+        localStorage.setItem(timerStorageKey, JSON.stringify({ row: activeTimerRow, endsAtMs: timerEndsAtMs }));
+      } else {
+        localStorage.removeItem(timerStorageKey);
+      }
+    } catch {}
+  }, [activeTimerRow, timerEndsAtMs, timerSecondsLeft, timerStorageKey]);
 
   useEffect(() => {
     if (activeTimerRow === null || timerSecondsLeft > 0) return;
-    const targetSec = session?.exercises[currentExIdx]?.target?.durationSeconds ?? 30;
+    const targetSec = currentExercise?.target?.durationSeconds ?? 30;
     const t = setTimeout(() => {
       setSheetRows((prev) =>
         prev.map((r) => r.setNumber === activeTimerRow ? { ...r, duration: String(targetSec) } : r),
       );
       setActiveTimerRow(null);
+      setTimerEndsAtMs(null);
     }, 0);
     return () => clearTimeout(t);
-  }, [activeTimerRow, timerSecondsLeft, session, currentExIdx, setSheetRows, setActiveTimerRow]);
+  }, [activeTimerRow, timerSecondsLeft, currentExercise, setSheetRows, setActiveTimerRow, setTimerEndsAtMs]);
 
   // Fetch last set reference when logger opens
   useEffect(() => {

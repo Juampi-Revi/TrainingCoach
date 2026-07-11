@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button, Icon, Tabs } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef } from "./_types";
 import { LoggerSheetRepsRow } from "./logger-sheet-reps-row";
 import { LoggerCardioTimer } from "./logger-cardio-timer";
 import { LoggerHeader, LoggerFooter } from "./logger-parts";
+import { useSounds } from "../_hooks/use-sounds";
+
+function formatSeconds(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return mins > 0 ? `${mins}:${String(secs).padStart(2, "0")}` : String(secs);
+}
 
 export function LoggerSheet({
   ex,
@@ -21,6 +29,8 @@ export function LoggerSheet({
   setActiveTimerRow,
   timerSecondsLeft,
   setTimerSecondsLeft,
+  timerEndsAtMs,
+  setTimerEndsAtMs,
   lastRef,
   sheetSaving,
   saveSheet,
@@ -39,6 +49,8 @@ export function LoggerSheet({
   setActiveTimerRow: React.Dispatch<React.SetStateAction<number | null>>;
   timerSecondsLeft: number;
   setTimerSecondsLeft: React.Dispatch<React.SetStateAction<number>>;
+  timerEndsAtMs: number | null;
+  setTimerEndsAtMs: React.Dispatch<React.SetStateAction<number | null>>;
   lastRef: LastRef | null;
   sheetSaving: boolean;
   saveSheet: (opts?: { startRest?: boolean; rows?: SheetRow[] }) => Promise<void>;
@@ -47,12 +59,115 @@ export function LoggerSheet({
 }) {
   const isCardioPure = !!ex.target?.durationSeconds && !ex.target?.reps && !ex.target?.sets;
   const [cardioTimerSeconds, setCardioTimerSeconds] = useState(0);
+  const [hiddenTechniqueUrls, setHiddenTechniqueUrls] = useState<Record<string, boolean>>({});
+  const wakeLockRef = useRef<{ release?: () => Promise<void> } | null>(null);
+  const lastCountdownRef = useRef<number | null>(null);
+  const { playCountdown, playComplete, playStart } = useSounds();
+  const techniqueImageUrl = useMemo(() => {
+    const img = ex.media.find((m) => m.mediaType === "image");
+    return img?.url ?? ex.exercise.thumbnailUrl ?? null;
+  }, [ex.exercise.thumbnailUrl, ex.media]);
+
+  useEffect(() => {
+    if (activeTimerRow == null) {
+      lastCountdownRef.current = null;
+      return;
+    }
+    if (timerSecondsLeft > 0 && timerSecondsLeft <= 5 && lastCountdownRef.current !== timerSecondsLeft) {
+      lastCountdownRef.current = timerSecondsLeft;
+      playCountdown(timerSecondsLeft, 5);
+    }
+    if (timerSecondsLeft === 0 && lastCountdownRef.current !== 0) {
+      lastCountdownRef.current = 0;
+      playComplete();
+    }
+  }, [activeTimerRow, timerSecondsLeft, playCountdown, playComplete]);
+
+  useEffect(() => {
+    if (activeTimerRow == null) return;
+    const nav = navigator as Navigator & {
+      wakeLock?: { request: (type: "screen") => Promise<{ release?: () => Promise<void> }> };
+    };
+    if (!nav.wakeLock?.request) return;
+
+    let mounted = true;
+    const requestWakeLock = async () => {
+      try {
+        wakeLockRef.current = await nav.wakeLock!.request("screen");
+      } catch {}
+    };
+
+    void requestWakeLock();
+    const onVisibility = () => {
+      if (!mounted || document.visibilityState !== "visible" || activeTimerRow == null) return;
+      void requestWakeLock();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      mounted = false;
+      document.removeEventListener("visibilitychange", onVisibility);
+      const lock = wakeLockRef.current;
+      wakeLockRef.current = null;
+      void lock?.release?.();
+    };
+  }, [activeTimerRow]);
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1300 }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", flexDirection: "column", justifyContent: "flex-end", zIndex: 1300 }}
       onClick={onClose}
     >
+      {techniqueImageUrl && !hiddenTechniqueUrls[techniqueImageUrl] && (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "16px 16px 10px", pointerEvents: "none" }}>
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 320,
+              aspectRatio: "16 / 9",
+              position: "relative",
+              borderRadius: 16,
+              overflow: "hidden",
+              border: "1px solid var(--line-2)",
+              background: "linear-gradient(135deg, rgba(20,20,24,.95), rgba(11,11,12,.9))",
+              boxShadow: "0 14px 40px rgba(0,0,0,.35)",
+            }}
+          >
+            <Image
+              src={techniqueImageUrl}
+              alt={`Técnica de ${ex.exercise.name}`}
+              fill
+              sizes="(max-width: 540px) calc(100vw - 32px), 320px"
+              style={{ objectFit: "cover" }}
+              unoptimized
+              onError={() => {
+                setHiddenTechniqueUrls((prev) => ({ ...prev, [techniqueImageUrl]: true }));
+              }}
+            />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.28))" }} />
+            <div
+              style={{
+                position: "absolute",
+                top: 10,
+                left: 10,
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: "rgba(11,11,12,.72)",
+                border: "1px solid var(--line-2)",
+                color: "var(--text)",
+                fontSize: 11,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Icon name="image" size={12} color="var(--text)" />
+              Técnica
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -130,7 +245,7 @@ export function LoggerSheet({
                     <div style={{ position: "relative" }}>
                       {isTimingThis ? (
                         <div style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--lime)", borderRadius: 10, padding: "10px 0", fontSize: 22, fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--lime)", width: "100%" }}>
-                          {timerSecondsLeft}
+                          {formatSeconds(timerSecondsLeft)}
                         </div>
                       ) : (
                         <input
@@ -154,7 +269,7 @@ export function LoggerSheet({
                       style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
                     />
                     {isTimingThis ? (
-                      <button onClick={() => setActiveTimerRow(null)} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--lime)", background: "rgba(215,255,58,.1)", color: "var(--lime)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+                      <button onClick={() => { setActiveTimerRow(null); setTimerEndsAtMs(null); setTimerSecondsLeft(0); }} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--lime)", background: "rgba(215,255,58,.1)", color: "var(--lime)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
                         Parar
                       </button>
                     ) : row.isSaved ? (
@@ -162,7 +277,13 @@ export function LoggerSheet({
                         Borrar
                       </button>
                     ) : (
-                      <button onClick={() => { setActiveTimerRow(row.setNumber); setTimerSecondsLeft(ex.target!.durationSeconds!); }} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
+                      <button onClick={() => {
+                        const duration = ex.target?.durationSeconds ?? 0;
+                        setActiveTimerRow(row.setNumber);
+                        setTimerSecondsLeft(duration);
+                        setTimerEndsAtMs(Date.now() + duration * 1000);
+                        playStart();
+                      }} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
                         <Icon name="timer" size={14} />
                       </button>
                     )}

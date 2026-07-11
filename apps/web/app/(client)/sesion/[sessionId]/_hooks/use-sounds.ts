@@ -70,9 +70,8 @@ export function useSounds() {
     playTone(440, 0.2, "sine");
   }, [playTone]);
 
-  const playCountdown = useCallback((secondsLeft: number) => {
-    // Beep for last 3 seconds
-    if (secondsLeft <= 3 && secondsLeft > 0) {
+  const playCountdown = useCallback((secondsLeft: number, threshold: number = 3) => {
+    if (secondsLeft <= threshold && secondsLeft > 0) {
       playBeep(1);
     }
   }, [playBeep]);

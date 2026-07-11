@@ -13,6 +13,15 @@ const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
 type Ctx = { params: Promise<{ exerciseId: string }> };
 
+function isHttpUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest, { params }: Ctx) {
   return withHandler(async () => {
     const auth = requireRole(req, "coach");
@@ -37,6 +46,9 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       if (m.mediaType === "image" && m.publicId) {
         thumbnailUrl = cloudinaryImageThumb(m.publicId);
         previewUrl = cloudinaryImagePreview(m.publicId);
+      } else if (m.mediaType === "image") {
+        thumbnailUrl = m.url;
+        previewUrl = m.url;
       } else if (m.mediaType === "video") {
         if (m.publicId && isYouTubeUrl(m.url)) {
           thumbnailUrl = youTubeThumb(m.publicId);
@@ -80,6 +92,50 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     });
     if (!ex) return notFound("Ejercicio no encontrado");
 
+    const [imageCount, videoCount, maxOrder] = await Promise.all([
+      prisma.exerciseMedia.count({ where: { exerciseId, mediaType: "image" } }),
+      prisma.exerciseMedia.count({ where: { exerciseId, mediaType: "video" } }),
+      prisma.exerciseMedia.aggregate({ where: { exerciseId }, _max: { displayOrder: true } }),
+    ]);
+
+    const contentType = req.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await req.json().catch(() => null)) as { url?: string } | null;
+      const imageUrl = body?.url?.trim() ?? "";
+      if (!imageUrl) return err("url requerida", 400);
+      if (!isHttpUrl(imageUrl)) return err("URL inválida", 400);
+      if (imageCount >= MAX_IMAGES) return err(`Máximo ${MAX_IMAGES} imágenes por ejercicio`, 400);
+
+      const saved = await prisma.exerciseMedia.create({
+        data: {
+          exerciseId,
+          mediaType: "image",
+          url: imageUrl,
+          publicId: null,
+          width: null,
+          height: null,
+          fileSize: null,
+          duration: null,
+          isPrimary: imageCount === 0,
+          displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
+        },
+      });
+
+      return ok(
+        {
+          id: saved.id,
+          mediaType: saved.mediaType,
+          url: saved.url,
+          publicId: saved.publicId,
+          isPrimary: saved.isPrimary,
+          displayOrder: saved.displayOrder,
+          thumbnailUrl: saved.url,
+          previewUrl: saved.url,
+        },
+        201,
+      );
+    }
+
     const form = await req.formData().catch(() => null);
     if (!form) return err("Form inválido", 400);
 
@@ -90,12 +146,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (!isImage && !isVideo) return err("Formato inválido", 400);
     if (isImage && file.size > MAX_IMAGE_SIZE) return err(`Imagen demasiado grande (máx ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`, 400);
     if (isVideo && file.size > MAX_VIDEO_SIZE) return err(`Video demasiado grande (máx ${MAX_VIDEO_SIZE / 1024 / 1024}MB)`, 400);
-
-    const [imageCount, videoCount, maxOrder] = await Promise.all([
-      prisma.exerciseMedia.count({ where: { exerciseId, mediaType: "image" } }),
-      prisma.exerciseMedia.count({ where: { exerciseId, mediaType: "video" } }),
-      prisma.exerciseMedia.aggregate({ where: { exerciseId }, _max: { displayOrder: true } }),
-    ]);
     if (isImage && imageCount >= MAX_IMAGES) return err(`Máximo ${MAX_IMAGES} imágenes por ejercicio`, 400);
     if (isVideo && videoCount >= MAX_VIDEOS) return err(`Máximo ${MAX_VIDEOS} video por ejercicio`, 400);
 

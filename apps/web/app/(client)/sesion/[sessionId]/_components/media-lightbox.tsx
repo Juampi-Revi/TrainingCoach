@@ -30,6 +30,7 @@ export function MediaLightbox({
 }: MediaLightboxProps) {
   const [idx, setIdx] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [failedImageIds, setFailedImageIds] = useState<Record<string, boolean>>({});
   const m = media[idx];
 
   // Keyboard navigation
@@ -216,7 +217,7 @@ export function MediaLightbox({
                 allowFullScreen
               />
             </div>
-          ) : (
+          ) : !failedImageIds[m.id] ? (
             <div
               style={{
                 position: "relative",
@@ -236,6 +237,7 @@ export function MediaLightbox({
                   borderRadius: 12,
                 }}
                 unoptimized
+                onError={() => setFailedImageIds((prev) => ({ ...prev, [m.id]: true }))}
               />
               {!isZoomed && (
                 <div
@@ -254,7 +256,8 @@ export function MediaLightbox({
                 </div>
               )}
             </div>
-          )}
+          ) : null
+          }
         </div>
       </div>
 

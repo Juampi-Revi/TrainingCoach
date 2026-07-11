@@ -50,6 +50,7 @@ export default function SessionInProgressPage() {
     equipmentType, setEquipmentType,
     activeTimerRow, setActiveTimerRow,
     timerSecondsLeft, setTimerSecondsLeft,
+    timerEndsAtMs, setTimerEndsAtMs,
     restSeconds, setRestSeconds,
     restTotal,
     lastRef,
@@ -272,13 +273,9 @@ export default function SessionInProgressPage() {
         warmupDone={warmupDone}
         loggerOpen={loggerOpen}
         ex={ex}
-        prevRealIdx={prevRealIdx}
-        nextRealIdx={nextRealIdx}
         completedExs={completedExs}
         workExercises={workExercises}
         completing={completing}
-        onPrev={() => { if (prevRealIdx != null) goToEx(prevRealIdx); }}
-        onNext={() => { if (nextRealIdx != null) goToEx(nextRealIdx); }}
         onOpenLogger={openLogger}
         onComplete={completeSession}
         onReset={() => setShowReset(true)}
@@ -293,6 +290,7 @@ export default function SessionInProgressPage() {
           equipmentType={equipmentType} setEquipmentType={setEquipmentType}
           activeTimerRow={activeTimerRow} setActiveTimerRow={setActiveTimerRow}
           timerSecondsLeft={timerSecondsLeft} setTimerSecondsLeft={setTimerSecondsLeft}
+          timerEndsAtMs={timerEndsAtMs} setTimerEndsAtMs={setTimerEndsAtMs}
           lastRef={lastRef} sheetSaving={sheetSaving}
           saveSheet={saveSheet} deleteSet={deleteSet}
           onClose={() => setLoggerOpen(false)}
