@@ -20,7 +20,7 @@ export function useOfflineQueue({
   const flushQueue = useCallback(async () => {
     try {
       const queue: OfflineItem[] = JSON.parse(localStorage.getItem(queueKey) ?? "[]");
-      if (!queue.length) return;
+      if (!queue.length) return 0;
       const remaining: OfflineItem[] = [];
       for (const item of queue) {
         try {
@@ -30,7 +30,10 @@ export function useOfflineQueue({
       localStorage.setItem(queueKey, JSON.stringify(remaining));
       setOfflineCount(remaining.length);
       if (remaining.length < queue.length) load();
-    } catch {}
+      return remaining.length;
+    } catch {
+      return Number.POSITIVE_INFINITY;
+    }
   }, [queueKey, sessionId, load, api, setOfflineCount]);
 
   useEffect(() => {

@@ -25,9 +25,11 @@ import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
 import { useBlockExecution } from "./_hooks/use-block-execution";
 import { isSessionExerciseExtra } from "@/lib/workout-labels";
+import { useToast } from "@/lib/toast";
 
 export default function SessionInProgressPage() {
   const { api } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const { sessionId } = useParams<{ sessionId: string }>();
 
@@ -126,10 +128,18 @@ export default function SessionInProgressPage() {
   async function completeSession() {
     setCompleting(true);
     try {
+      const remaining = await flushQueue();
+      if (remaining > 0) {
+        toast.error("Todavía hay series pendientes de sincronizar antes de cerrar la sesión");
+        setCompleting(false);
+        return;
+      }
+      load();
       await api.patch(`/client/sessions/${sessionId}`, { status: "completed" });
       router.replace(`/sesion/${sessionId}/completada`);
     } catch (e) {
       console.error(e);
+      toast.error(e instanceof Error ? e.message : "No se pudo cerrar la sesión");
       setCompleting(false);
     }
   }
@@ -214,9 +224,13 @@ export default function SessionInProgressPage() {
 
   const hasMedia = (ex?.media?.length ?? 0) > 0;
   const activeBlockId = currentBlockId ?? currentBlock?.block.id ?? null;
+  const bottomBarVisible = !(warmupExists && !warmupDone) && !loggerOpen;
+  const bottomBarPadding = bottomBarVisible
+    ? keyboardOffset + (completedExs === requiredExercises.length ? 176 : 236)
+    : 120;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 120 }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: bottomBarPadding }}>
       <SessionHeader
         exNum={headerExNum} exTotal={headerExTotal}
         title={ex?.exercise.name ?? "—"} subtitle={exSubtitle}
