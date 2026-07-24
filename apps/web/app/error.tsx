@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { recoverFromDeployMismatch, shouldRecoverFromDeployMismatch } from "@/lib/deploy-recovery";
 
 export default function RootError({
   error,
@@ -11,14 +12,19 @@ export default function RootError({
 }) {
   useEffect(() => {
     console.error(error);
+    void recoverFromDeployMismatch(error);
   }, [error]);
+
+  const isDeployMismatch = shouldRecoverFromDeployMismatch(error);
 
   return (
     <div style={{ minHeight: "100dvh", background: "#0B0B0C", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}>
       <div style={{ fontSize: 32 }}>😵</div>
       <div style={{ fontSize: 17, fontWeight: 700, color: "#fff", textAlign: "center" }}>Algo salió mal</div>
       <div style={{ fontSize: 13, color: "#888", textAlign: "center", maxWidth: 300, lineHeight: 1.5 }}>
-        Ocurrió un error inesperado.
+        {isDeployMismatch
+          ? "Estamos actualizando la app. Vamos a recargarla para sincronizar la nueva versión."
+          : "Ocurrió un error inesperado."}
       </div>
       <button
         onClick={reset}
