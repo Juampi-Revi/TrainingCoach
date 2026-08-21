@@ -79,22 +79,16 @@ export default function SemanaPage() {
     data.workouts.find((w) => !w.session) ??
     null;
   const remaining = today ? data.workouts.filter((w) => w !== today) : data.workouts;
-  const completed = data.workouts.filter((w) => w.session?.status === "completed");
-  const completedCount = completed.length;
+  const finished = data.workouts.filter((w) => w.session?.status === "completed" || w.session?.status === "partial");
+  const completedCount = finished.length;
   const inProgressCount = data.workouts.filter((w) => w.session?.status === "in_progress").length;
   const doneCount = completedCount;
 
   const inProgress = remaining.filter((w) => w.session?.status === "in_progress");
   const pending = remaining.filter((w) => !w.session);
   const totalCount = data.workouts.length;
-  const partialCount = completed.filter((w) => {
-    const s = w.session;
-    if (!s) return false;
-    if (s.targetSetsCount == null || s.setsCount == null) return false;
-    if (s.targetSetsCount <= 0) return false;
-    return s.setsCount < s.targetSetsCount;
-  }).length;
-  const fullCompletedCount = Math.max(0, completedCount - partialCount);
+  const partialCount = finished.filter((w) => w.session?.status === "partial").length;
+  const fullCompletedCount = finished.filter((w) => w.session?.status === "completed").length;
 
   const workoutHref = (w: ClientWeekResponse["workouts"][number]) =>
     `/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`;
@@ -237,14 +231,14 @@ export default function SemanaPage() {
         )}
 
         {/* Después de hoy — colapsable */}
-        {(pending.length > 0 || completed.length > 0) && (
-          <AfterTodaySection pending={pending} completed={completed} workoutHref={workoutHref} />
+        {(pending.length > 0 || finished.length > 0) && (
+          <AfterTodaySection pending={pending} completed={finished} workoutHref={workoutHref} />
         )}
 
         {/* Next step */}
         <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: 12, background: "var(--bg-1)", border: "1px solid var(--line)" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-mute)", letterSpacing: ".05em" }}>
-            {nextWorkoutMessage(pending, completed)}
+            {nextWorkoutMessage(pending, finished)}
           </div>
         </div>
       </div>

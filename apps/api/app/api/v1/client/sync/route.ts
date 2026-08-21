@@ -4,10 +4,9 @@ import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
 import { getProviderIds, getProvider } from "@/lib/health/registry";
 import { syncUserProvider } from "@/lib/health/sync-engine";
-import { getApiBaseUrl, getWebBaseUrl } from "@/lib/public-urls";
-import { randomBytes } from "crypto";
-
-const WEB_BASE = getWebBaseUrl();
+import { createHealthOauthState } from "@/lib/health/oauth-state";
+import { getApiBaseUrl } from "@/lib/public-urls";
+import type { HealthProviderId } from "@regen/types";
 
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
@@ -111,7 +110,7 @@ export async function POST(req: NextRequest) {
       return err("Proveedor no disponible", 400);
     }
 
-    const state = randomBytes(16).toString("hex");
+    const state = createHealthOauthState(auth.user.sub, provider as HealthProviderId);
     const providerPath = provider === "google_health" ? "google-health" : provider;
     const redirectUri = `${getApiBaseUrl()}/api/v1/client/sync/${providerPath}/callback`;
 

@@ -20,7 +20,7 @@ function isAssignmentStatus(val: string): val is AssignmentStatus {
 }
 
 function isSessionStatus(val: string): val is SessionStatus {
-  return val === "in_progress" || val === "completed" || val === "discarded";
+  return val === "in_progress" || val === "partial" || val === "completed" || val === "discarded";
 }
 
 export async function GET(req: NextRequest) {

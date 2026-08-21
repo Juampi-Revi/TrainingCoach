@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, forbidden, withHandler } from "@/lib/api-response";
+import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
 
 // GET /api/v1/client/sessions — history list
 export async function GET(req: NextRequest) {
@@ -39,17 +40,17 @@ export async function GET(req: NextRequest) {
     });
 
     const items = sessions.map((s) => {
-      const workExercises = s.exercises.filter((e) => e.workoutExercise?.workoutBlock?.type !== "warmup");
+      const summary = summarizeSessionProgress(s.exercises);
       return {
         id: s.id,
-        status: s.status,
+        status: resolveSessionStatus(s.status, summary),
         performedAt: s.performedAt,
         completedAt: s.completedAt,
         energyRating: s.energyRating,
         sessionNotes: s.sessionNotes,
         workoutTemplate: s.workoutTemplate,
-        setsCount: workExercises.flatMap((e) => e.sets).length,
-        targetSetsCount: workExercises.reduce((acc, e) => acc + (e.workoutExercise?.targetSets ?? 0), 0),
+        setsCount: summary.setsCount,
+        targetSetsCount: summary.targetSetsCount,
       };
     });
 

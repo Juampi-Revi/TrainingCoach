@@ -75,14 +75,11 @@ export function AfterTodaySection({
           {hasCompleted && (
             <>
               <div style={{ fontSize: 11, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, margin: "16px 0 8px" }}>
-                Completadas
+                Hechas
               </div>
               {completed.map((w) => {
                 const s = w.session;
-                const setsCount = s?.setsCount ?? null;
-                const targetSetsCount = s?.targetSetsCount ?? null;
-                const isPartial =
-                  setsCount != null && targetSetsCount != null && targetSetsCount > 0 && setsCount < targetSetsCount;
+                const isPartial = s?.status === "partial";
 
                 return (
                   <WeekWorkoutCard
@@ -95,8 +92,8 @@ export function AfterTodaySection({
                     progressionNote={w.progressionNote}
                     variant="completed"
                     badge={
-                      isPartial && setsCount != null && targetSetsCount != null
-                        ? { text: `Parcial ${setsCount}/${targetSetsCount}`, tone: "warn" }
+                      isPartial && s?.setsCount != null && s?.targetSetsCount != null
+                        ? { text: `Parcial ${s.setsCount}/${s.targetSetsCount}`, tone: "warn" }
                         : { text: "Lista", tone: "success" }
                     }
                   />

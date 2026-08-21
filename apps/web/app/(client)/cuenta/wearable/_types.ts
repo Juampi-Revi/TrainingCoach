@@ -36,6 +36,7 @@ export const PROVIDER_ERROR_MESSAGES: Record<string, string> = {
   google_denied: "Conexión con Google Health cancelada",
   strava_denied: "Conexión con Strava cancelada",
   no_connection: "Error: conexión no encontrada",
+  invalid_state: "La autorización venció o no corresponde a tu sesión actual",
   provider_not_found: "Error: proveedor no disponible",
   garmin_failed: "Error al conectar con Garmin",
   google_failed: "Error al conectar con Google Health",

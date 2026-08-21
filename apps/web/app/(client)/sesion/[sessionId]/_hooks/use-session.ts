@@ -39,7 +39,9 @@ export function useSession(sessionId: string) {
           const firstWorkIdx = s.exercises.findIndex((e) => e.block?.type !== "warmup");
           if (firstWorkIdx >= 0) setCurrentExIdx(firstWorkIdx);
         }
-        if (s.status === "completed") router.replace(`/sesion/${sessionId}/completada`);
+        if (s.status === "completed" || s.status === "partial") {
+          router.replace(`/sesion/${sessionId}/completada`);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));

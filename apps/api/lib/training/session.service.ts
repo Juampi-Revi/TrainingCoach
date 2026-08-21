@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { notify } from "@/lib/notify";
 
 export async function createSession(clientUserId: string, data: { workoutTemplateId?: string; performedAt?: string }) {
   if (data.workoutTemplateId) {
@@ -9,34 +8,36 @@ export async function createSession(clientUserId: string, data: { workoutTemplat
     if (active) return { error: "Ya hay una sesión activa para este entrenamiento", existing: active };
   }
 
-  const session = await prisma.workoutSession.create({
-    data: {
-      clientUserId,
-      workoutTemplateId: data.workoutTemplateId,
-      performedAt: data.performedAt ? new Date(data.performedAt) : new Date(),
-      status: "in_progress",
-    },
-  });
-
-  if (data.workoutTemplateId) {
-    const workoutExercises = await prisma.workoutExercise.findMany({
-      where: { workoutTemplateId: data.workoutTemplateId },
-      orderBy: { sortOrder: "asc" },
+  return prisma.$transaction(async (tx) => {
+    const session = await tx.workoutSession.create({
+      data: {
+        clientUserId,
+        workoutTemplateId: data.workoutTemplateId,
+        performedAt: data.performedAt ? new Date(data.performedAt) : new Date(),
+        status: "in_progress",
+      },
     });
-    for (const we of workoutExercises) {
-      await prisma.workoutSessionExercise.create({
-        data: {
-          workoutSessionId: session.id,
-          workoutExerciseId: we.id,
-          plannedExerciseId: we.exerciseId,
-          performedExerciseId: we.exerciseId,
-          sortOrder: we.sortOrder,
-        },
-      });
-    }
-  }
 
-  return session;
+    if (data.workoutTemplateId) {
+      const workoutExercises = await tx.workoutExercise.findMany({
+        where: { workoutTemplateId: data.workoutTemplateId },
+        orderBy: { sortOrder: "asc" },
+      });
+      for (const we of workoutExercises) {
+        await tx.workoutSessionExercise.create({
+          data: {
+            workoutSessionId: session.id,
+            workoutExerciseId: we.id,
+            plannedExerciseId: we.exerciseId,
+            performedExerciseId: we.exerciseId,
+            sortOrder: we.sortOrder,
+          },
+        });
+      }
+    }
+
+    return session;
+  });
 }
 
 export function getSessionDetail(sessionId: string, clientUserId: string) {
@@ -61,21 +62,6 @@ export async function updateSessionStatus(sessionId: string, clientUserId: strin
       completedAt: status === "completed" ? new Date() : undefined,
     },
   });
-
-  if (status === "completed") {
-    const coachLink = await prisma.coachClient.findFirst({
-      where: { clientUserId, status: "active" },
-    });
-    if (coachLink) {
-      notify({
-        userId: coachLink.coachUserId,
-        type: "session_completed",
-        title: "Sesión completada",
-        body: "Tu alumno completó una sesión",
-        linkUrl: `/coach/alumnos/${clientUserId}/sesiones/${sessionId}`,
-      });
-    }
-  }
 
   return session;
 }

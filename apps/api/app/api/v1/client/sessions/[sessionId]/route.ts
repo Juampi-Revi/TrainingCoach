@@ -8,6 +8,7 @@ import { updateWorkoutStreak } from "@/lib/gamification/streaks.service";
 import { awardXpFromSource, XP_REWARDS } from "@/lib/gamification/xp.service";
 import { checkMultipleMetrics } from "@/lib/badge-checker";
 import { mapWorkoutBlockStep } from "@/lib/training/endurance";
+import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
 
 // Helper function to get user's total workout count
 async function getUserWorkoutCount(userId: string): Promise<number> {
@@ -112,9 +113,12 @@ export async function GET(
 
     if (!session) return notFound("Session not found");
 
+    const progressSummary = summarizeSessionProgress(session.exercises);
+    const resolvedStatus = resolveSessionStatus(session.status, progressSummary);
+
     return ok({
       id: session.id,
-      status: session.status,
+      status: resolvedStatus,
       performedAt: session.performedAt,
       completedAt: session.completedAt ?? null,
       energyRating: session.energyRating,
@@ -309,22 +313,44 @@ export async function PATCH(
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, clientUserId: auth.user.sub },
       select: {
-        id: true, status: true,
+        id: true,
+        status: true,
+        performedAt: true,
         workoutTemplate: { select: { title: true } },
+        exercises: {
+          select: {
+            _count: { select: { sets: true } },
+            workoutExercise: {
+              select: {
+                targetSets: true,
+                workoutBlock: { select: { type: true } },
+              },
+            },
+          },
+        },
       },
     });
     if (!session) return notFound("Session not found");
 
+    const progressSummary = summarizeSessionProgress(session.exercises);
+    const nextStatus =
+      body.status === undefined
+        ? undefined
+        : body.status === "completed"
+          ? resolveSessionStatus("completed", progressSummary)
+          : body.status;
+
     const now = new Date();
     const finalCompletedAt =
-      body.status === "completed"
+      nextStatus === "completed" || nextStatus === "partial"
         ? body.completedAt === undefined
           ? now
           : body.completedAt
         : body.completedAt;
 
-    if (body.performedAt && finalCompletedAt) {
-      const performedAtDate = new Date(body.performedAt);
+    const nextPerformedAt = body.performedAt ?? session.performedAt;
+    if (nextPerformedAt && finalCompletedAt) {
+      const performedAtDate = new Date(nextPerformedAt);
       const completedAtDate = new Date(finalCompletedAt);
       if (completedAtDate.getTime() < performedAtDate.getTime()) {
         return err("completedAt must be after performedAt", 400);
@@ -334,7 +360,7 @@ export async function PATCH(
     const updated = await prisma.workoutSession.update({
       where: { id: sessionId },
       data: {
-        ...(body.status !== undefined && { status: body.status }),
+        ...(nextStatus !== undefined && { status: nextStatus }),
         ...(body.energyRating !== undefined && { energyRating: body.energyRating }),
         ...(body.sessionNotes !== undefined && { sessionNotes: body.sessionNotes }),
         ...(body.performedAt !== undefined && { performedAt: body.performedAt }),
@@ -344,7 +370,7 @@ export async function PATCH(
     });
 
     // Handle gamification when session is completed
-    if (body.status === "completed") {
+    if (nextStatus === "completed") {
       const gamificationResults: {
         streak?: { currentStreak: number; longestStreak: number };
         xp?: { xpEarned: number; newTotal: number; newLevel: number; leveledUp: boolean };

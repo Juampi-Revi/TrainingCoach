@@ -153,76 +153,72 @@ export async function createSelfGuidedPlan(
 ): Promise<{ planId: string; workouts: string[] }> {
   // Generate workouts
   const recommendations = generateWorkoutRecommendations(data);
-  
-  // Create plan
-  const planResult = await prisma.$queryRaw<Array<{ id: string }>>`
-    INSERT INTO "Plan" (
-      id, "coachUserId", title, goal, "weeksCount", "periodDays", 
-      status, "planType", "isPublic", "createdAt", "updatedAt"
-    )
-    VALUES (
-      gen_random_uuid(), ${userId}, 'Mi Plan Personalizado', ${data.goal}, 
-      4, 28, 'published', 'self_guided', false, NOW(), NOW()
-    )
-    RETURNING id
-  `;
 
-  const planId = planResult[0].id;
-  const workoutIds: string[] = [];
-
-  // Create workouts for each day
-  for (let week = 1; week <= 4; week++) {
-    await prisma.$executeRaw`
-      INSERT INTO "PlanWeek" (id, "planId", "weekNumber", title, notes)
-      VALUES (gen_random_uuid(), ${planId}, ${week}, 'Semana ${week}', 
-        'Semana ${week} de tu plan personalizado')
+  return prisma.$transaction(async (tx) => {
+    const planResult = await tx.$queryRaw<Array<{ id: string }>>`
+      INSERT INTO "Plan" (
+        id, "coachUserId", title, goal, "weeksCount", "periodDays", 
+        status, "planType", "isPublic", "createdAt", "updatedAt"
+      )
+      VALUES (
+        gen_random_uuid(), ${userId}, 'Mi Plan Personalizado', ${data.goal}, 
+        4, 28, 'published', 'self_guided', false, NOW(), NOW()
+      )
+      RETURNING id
     `;
 
-    for (let day = 0; day < Math.min(data.daysPerWeek, recommendations.length); day++) {
-      const rec = recommendations[day];
-      
-      // Create workout template
-      const workoutResult = await prisma.$queryRaw<Array<{ id: string }>>`
-        INSERT INTO "WorkoutTemplate" (
-          id, "planWeekId", type, title, description, tags, "sortOrder", "createdAt", "updatedAt"
-        )
-        VALUES (
-          gen_random_uuid(), 
-          (SELECT id FROM "PlanWeek" WHERE "planId" = ${planId} AND "weekNumber" = ${week}),
-          'strength',
-          ${rec.workoutType},
-          'Workout generado automáticamente basado en tus preferencias',
-          ARRAY['self_guided', ${data.goal}],
-          ${day},
-          NOW(),
-          NOW()
-        )
-        RETURNING id
+    const planId = planResult[0].id;
+    const workoutIds: string[] = [];
+
+    for (let week = 1; week <= 4; week++) {
+      await tx.$executeRaw`
+        INSERT INTO "PlanWeek" (id, "planId", "weekNumber", title, notes)
+        VALUES (gen_random_uuid(), ${planId}, ${week}, 'Semana ${week}', 
+          'Semana ${week} de tu plan personalizado')
       `;
 
-      workoutIds.push(workoutResult[0].id);
+      for (let day = 0; day < Math.min(data.daysPerWeek, recommendations.length); day++) {
+        const rec = recommendations[day];
+        const workoutResult = await tx.$queryRaw<Array<{ id: string }>>`
+          INSERT INTO "WorkoutTemplate" (
+            id, "planWeekId", type, title, description, tags, "sortOrder", "createdAt", "updatedAt"
+          )
+          VALUES (
+            gen_random_uuid(), 
+            (SELECT id FROM "PlanWeek" WHERE "planId" = ${planId} AND "weekNumber" = ${week}),
+            'strength',
+            ${rec.workoutType},
+            'Workout generado automáticamente basado en tus preferencias',
+            ARRAY['self_guided', ${data.goal}],
+            ${day},
+            NOW(),
+            NOW()
+          )
+          RETURNING id
+        `;
 
-      // Create blocks and exercises (simplified)
-      await prisma.$executeRaw`
-        INSERT INTO "WorkoutBlock" (
-          id, "workoutTemplateId", "sortOrder", type, label, "restAfterSeconds"
-        )
-        VALUES (
-          gen_random_uuid(), ${workoutResult[0].id}, 0, 'strength', 'Bloque Principal', ${rec.restSeconds}
-        )
-      `;
+        workoutIds.push(workoutResult[0].id);
+
+        await tx.$executeRaw`
+          INSERT INTO "WorkoutBlock" (
+            id, "workoutTemplateId", "sortOrder", type, label, "restAfterSeconds"
+          )
+          VALUES (
+            gen_random_uuid(), ${workoutResult[0].id}, 0, 'strength', 'Bloque Principal', ${rec.restSeconds}
+          )
+        `;
+      }
     }
-  }
 
-  // Create plan assignment
-  await prisma.$executeRaw`
-    INSERT INTO "PlanAssignment" (
-      id, "planId", "clientUserId", "startDate", status, "createdAt", "updatedAt"
-    )
-    VALUES (
-      gen_random_uuid(), ${planId}, ${userId}, CURRENT_DATE, 'active', NOW(), NOW()
-    )
-  `;
+    await tx.$executeRaw`
+      INSERT INTO "PlanAssignment" (
+        id, "planId", "clientUserId", "startDate", status, "createdAt", "updatedAt"
+      )
+      VALUES (
+        gen_random_uuid(), ${planId}, ${userId}, CURRENT_DATE, 'active', NOW(), NOW()
+      )
+    `;
 
-  return { planId, workouts: workoutIds };
+    return { planId, workouts: workoutIds };
+  });
 }

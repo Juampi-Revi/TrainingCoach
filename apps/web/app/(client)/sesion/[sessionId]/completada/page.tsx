@@ -119,6 +119,7 @@ export default function SessionCompletadaPage() {
     { distance: 0, duration: 0, steps: 0 },
   );
   const linked = session.activities[0] ?? null;
+  const isPartial = session.status === "partial";
 
   // Find top sets for highlights (heaviest weight per exercise)
   const highlights = workExercises
@@ -145,7 +146,7 @@ export default function SessionCompletadaPage() {
         borderBottom: "1px solid var(--line)",
       }}>
         <div className="ta-mono" style={{ fontSize: 9, color: "var(--lime)", letterSpacing: ".15em", fontWeight: 700 }}>
-          SESIÓN COMPLETADA
+          {isPartial ? "SESIÓN PARCIAL" : "SESIÓN COMPLETADA"}
         </div>
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-.02em", marginTop: 4, lineHeight: 1.1 }}>
           {titleStr}
@@ -230,7 +231,7 @@ export default function SessionCompletadaPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 16 }}>
           <StatCard label="VOLUMEN" value={Math.round(totalVol).toLocaleString("es")} unit="kg" />
           <StatCard label="SERIES" value={`${totalSets}${targetSets > 0 ? `/${targetSets}` : ""}`} />
-          <StatCard label="EJERCICIOS" value={String(workExercises.length)} />
+          <StatCard label={isPartial ? "ESTADO" : "EJERCICIOS"} value={isPartial ? "PARCIAL" : String(workExercises.length)} />
         </div>
       </div>
 

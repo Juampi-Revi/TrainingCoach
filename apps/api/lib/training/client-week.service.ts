@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ClientWeekResponse, SessionStatus, WeekWorkout } from "@regen/types";
+import { resolveSessionStatus, summarizeSessionProgress } from "./session-status";
 
 function startOfDayUTC(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -10,18 +11,6 @@ function periodFromStart(startDate: Date, now: Date, periodDays: number) {
   const current = startOfDayUTC(now).getTime();
   const diffDays = Math.floor((current - start) / 86_400_000);
   return Math.floor(diffDays / Math.max(1, periodDays)) + 1;
-}
-
-function summarizeSessionSets(session: {
-  exercises: Array<{
-    _count: { sets: number };
-    workoutExercise: { targetSets: number | null; workoutBlock: { type: string } } | null;
-  }>;
-}) {
-  const workExercises = session.exercises.filter((e) => e.workoutExercise?.workoutBlock?.type !== "warmup");
-  const setsCount = workExercises.reduce((acc, e) => acc + (e._count.sets ?? 0), 0);
-  const targetSetsCount = workExercises.reduce((acc, e) => acc + (e.workoutExercise?.targetSets ?? 0), 0);
-  return { setsCount, targetSetsCount };
 }
 
 export async function getClientWeek(args: { clientUserId: string; now?: Date }): Promise<ClientWeekResponse> {
@@ -128,7 +117,8 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
     const templateSessions = sessionsByTemplate.get(tpl.id) ?? [];
     const fallback = templateSessions.shift() ?? null;
     const session = direct ?? fallback;
-    const summary = session ? summarizeSessionSets(session) : null;
+    const summary = session ? summarizeSessionProgress(session.exercises) : null;
+    const resolvedStatus = session && summary ? resolveSessionStatus(session.status, summary) : null;
 
     return {
       pwwId: pw.id,
@@ -141,7 +131,7 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
       session: session
         ? {
             id: session.id,
-            status: session.status as SessionStatus,
+            status: resolvedStatus as SessionStatus,
             performedAt: session.performedAt.toISOString(),
             setsCount: summary?.setsCount,
             targetSetsCount: summary?.targetSetsCount,

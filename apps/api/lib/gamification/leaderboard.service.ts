@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type LeaderboardPeriod = "weekly" | "monthly" | "allTime";
@@ -17,6 +18,10 @@ export interface LeaderboardResult {
   currentUserRank: number | null;
   currentUserValue: number | null;
   totalParticipants: number;
+}
+
+function userIdList(userIds: string[]) {
+  return Prisma.join(userIds);
 }
 
 interface DateRange {
@@ -240,7 +245,7 @@ async function getWorkoutsLeaderboardForUsers(
       AND ws.status = 'completed'
       AND ws."completedAt" >= ${start}
       AND ws."completedAt" <= ${end}
-    WHERE u.id IN (${userIds.join(',')})
+    WHERE u.id IN (${userIdList(userIds)})
     GROUP BY u.id, u."displayName", u."avatarUrl"
   `;
 }
@@ -297,7 +302,7 @@ async function getVolumeLeaderboardForUsers(
     LEFT JOIN "WorkoutSet" wset ON wset."workoutSessionExerciseId" = wse.id
       AND wset.weight IS NOT NULL
       AND wset.reps IS NOT NULL
-    WHERE u.id IN (${userIds.join(',')})
+    WHERE u.id IN (${userIdList(userIds)})
     GROUP BY u.id, u."displayName", u."avatarUrl"
   `;
 }
@@ -330,7 +335,7 @@ async function getXpLeaderboardForUsers(
       u."avatarUrl",
       u.xp as value
     FROM "User" u
-    WHERE u.id IN (${userIds.join(',')})
+    WHERE u.id IN (${userIdList(userIds)})
     ORDER BY u.xp DESC
   `;
 }
@@ -381,7 +386,7 @@ async function getStreakLeaderboardForUsers(
         AND "completedAt" >= CURRENT_DATE - INTERVAL '30 days'
       GROUP BY "clientUserId"
     ) streak_data ON streak_data."clientUserId" = u.id
-    WHERE u.id IN (${userIds.join(',')})
+    WHERE u.id IN (${userIdList(userIds)})
   `;
 }
 

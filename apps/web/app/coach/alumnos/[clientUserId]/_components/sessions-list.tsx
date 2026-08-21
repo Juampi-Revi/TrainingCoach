@@ -23,9 +23,24 @@ interface SessionsListProps {
 const STATUS_OPTIONS = [
   { value: "", label: "Todas" },
   { value: "completed", label: "Completadas" },
+  { value: "partial", label: "Parciales" },
   { value: "in_progress", label: "En curso" },
   { value: "discarded", label: "Descartadas" },
 ] as const;
+
+function statusTone(status: SessionSummary["status"]) {
+  if (status === "completed") return "var(--lime)";
+  if (status === "partial" || status === "in_progress") return "#FFB547";
+  return "var(--bg-2)";
+}
+
+function statusLabel(status: SessionSummary["status"]) {
+  if (status === "completed") return "OK";
+  if (status === "partial") return "PARCIAL";
+  if (status === "in_progress") return "EN CURSO";
+  if (status === "pending") return "PENDIENTE";
+  return "DESCARTADA";
+}
 
 export function SessionsList({
   sessions,
@@ -107,8 +122,8 @@ export function SessionsList({
             {showStatus && (
               <div style={{
                 width: 10, height: 10, borderRadius: 5,
-                background: s.status === "completed" ? "var(--lime)" : s.status === "in_progress" ? "#FFB547" : "var(--bg-2)",
-                border: `2px solid ${s.status === "completed" ? "var(--lime)" : s.status === "in_progress" ? "#FFB547" : "var(--line-2)"}`,
+                background: statusTone(s.status),
+                border: `2px solid ${s.status === "discarded" ? "var(--line-2)" : statusTone(s.status)}`,
                 flexShrink: 0,
               }} />
             )}
@@ -123,7 +138,7 @@ export function SessionsList({
                       {s.workoutTemplate?.title ?? "Sesión libre"}
                     </div>
                     <div className="ta-mono" style={{ fontSize: 11, color: s.status === "discarded" ? "var(--text-dim)" : "var(--text-mute)" }}>
-                      {s.status === "completed" ? "OK" : s.status === "in_progress" ? "EN CURSO" : "DESCARTADA"}
+                      {statusLabel(s.status)}
                     </div>
                   </div>
                   <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
@@ -138,7 +153,7 @@ export function SessionsList({
                     {s.workoutTemplate?.title ?? "Sesión libre"}
                   </div>
                   <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
-                    {s.status === "completed" ? `${s.setsCount != null ? s.setsCount : 0} series` : "En curso"}
+                    {s.status === "completed" || s.status === "partial" ? `${s.setsCount != null ? s.setsCount : 0} series` : "En curso"}
                     {d ? ` · ${d}` : ""}
                     {e ? ` · Energía ${e}/5` : ""}
                   </div>

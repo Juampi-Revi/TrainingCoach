@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, hashRefreshToken } from "@/lib/jwt";
+import { createRefreshToken } from "@/lib/auth/refresh-token.service";
 import { ok, err, withValidatedHandler, ValidationError } from "@/lib/api-response";
 import { z } from "zod";
 
@@ -45,7 +46,9 @@ export async function POST(req: NextRequest) {
       return err("Refresh token inválido", 401);
     }
 
-    // Generate new access token
+    const nextRefreshToken = await createRefreshToken(user.id);
+
+    // Rotate refresh token and generate a new access token
     const accessToken = signToken({
       sub: user.id,
       email: user.email,
@@ -55,6 +58,8 @@ export async function POST(req: NextRequest) {
 
     return ok({
       token: accessToken,
+      refreshToken: nextRefreshToken.token,
+      refreshTokenExpiresAt: nextRefreshToken.expiresAt.toISOString(),
       user: {
         id: user.id,
         email: user.email,

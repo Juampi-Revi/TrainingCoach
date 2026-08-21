@@ -144,7 +144,7 @@ export default function CoachSessionDetailPage() {
           </span>
         </span>
       }
-      subtitle={`${session.status === "completed" ? "Completada" : "En curso"}${duration ? ` · ${duration}` : ""}`}
+      subtitle={`${session.status === "completed" ? "Completada" : session.status === "partial" ? "Parcial" : "En curso"}${duration ? ` · ${duration}` : ""}`}
       coachName={user?.name ?? "Coach"}
       actions={
         <Button
@@ -175,6 +175,9 @@ export default function CoachSessionDetailPage() {
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
             {session.status === "completed" && (
               <Badge tone="success" icon="check">Completa</Badge>
+            )}
+            {session.status === "partial" && (
+              <Badge tone="warn" icon="alert">Parcial</Badge>
             )}
           {improved && (
             <Badge tone="limeSoft" icon="trendingUp">Más carga que anterior</Badge>

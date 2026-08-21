@@ -70,7 +70,7 @@ export const twoFactorVerifySchema = z.object({
 // Session Schemas
 // ═════════════════════════════════════════════════════════════
 
-export const sessionStatusSchema = z.enum(["in_progress", "completed", "discarded", "pending"]);
+export const sessionStatusSchema = z.enum(["in_progress", "partial", "completed", "discarded", "pending"]);
 
 export const sessionPatchSchema = z.object({
   status: sessionStatusSchema.optional(),

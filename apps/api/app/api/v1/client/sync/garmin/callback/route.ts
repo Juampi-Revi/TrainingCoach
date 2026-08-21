@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProvider } from "@/lib/health/registry";
+import { verifyHealthOauthState } from "@/lib/health/oauth-state";
 import { syncUserProvider } from "@/lib/health/sync-engine";
 import { getApiBaseUrl, getWebBaseUrl } from "@/lib/public-urls";
 
@@ -16,15 +17,9 @@ export async function GET(req: NextRequest) {
     if (error || !code) {
       return NextResponse.redirect(`${WEB_BASE}/cuenta/wearable?error=garmin_denied`);
     }
-
-    // Find pending connection
-    const pendingConnection = await prisma.healthProviderConnection.findFirst({
-      where: { provider: "garmin" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!pendingConnection) {
-      return NextResponse.redirect(`${WEB_BASE}/cuenta/wearable?error=no_connection`);
+    const oauthState = verifyHealthOauthState(state, "garmin");
+    if (!oauthState) {
+      return NextResponse.redirect(`${WEB_BASE}/cuenta/wearable?error=invalid_state`);
     }
 
     const provider = getProvider("garmin");
@@ -44,11 +39,22 @@ export async function GET(req: NextRequest) {
       // Profile endpoint may not be available, use default ID
     }
 
-    await prisma.healthProviderConnection.update({
+    await prisma.healthProviderConnection.upsert({
       where: {
-        userId_provider: { userId: pendingConnection.userId, provider: "garmin" },
+        userId_provider: { userId: oauthState.userId, provider: "garmin" },
       },
-      data: {
+      update: {
+        isActive: true,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        tokenExpiresAt: tokens.expiresAt,
+        providerUserId: profileId,
+        lastSyncAt: new Date(),
+        lastSyncStatus: "pending",
+      },
+      create: {
+        userId: oauthState.userId,
+        provider: "garmin",
         isActive: true,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
@@ -60,7 +66,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Trigger initial sync
-    await syncUserProvider(pendingConnection.userId, "garmin");
+    await syncUserProvider(oauthState.userId, "garmin");
 
     return NextResponse.redirect(`${WEB_BASE}/cuenta/wearable?connected=garmin`);
   } catch (err) {

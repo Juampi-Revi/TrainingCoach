@@ -73,11 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const refreshed = await refreshAccessToken(state.refreshToken);
             setState({ 
               token: refreshed.token, 
-              refreshToken: state.refreshToken,
+              refreshToken: refreshed.refreshToken,
               user: refreshed.user, 
               ready: true 
             });
             window.localStorage.setItem(TOKEN_KEY, refreshed.token);
+            window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshed.refreshToken);
             return;
           } catch {
             // Refresh failed, clear tokens
@@ -154,8 +155,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Try to refresh token
           try {
             const refreshed = await refreshAccessToken(state.refreshToken);
-            setState(prev => ({ ...prev, token: refreshed.token }));
+            setState(prev => ({
+              ...prev,
+              token: refreshed.token,
+              refreshToken: refreshed.refreshToken,
+              user: refreshed.user,
+            }));
             window.localStorage.setItem(TOKEN_KEY, refreshed.token);
+            window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshed.refreshToken);
             
             // Retry original request with new token
             const retryClient = createClient(refreshed.token);

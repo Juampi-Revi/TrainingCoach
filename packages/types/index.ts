@@ -16,7 +16,7 @@ export type UserType = "athlete" | "gym_member" | "coach" | "gym_admin";
  * futuro: gym (gimnasio con admin), online_platform (plataforma tipo ClassPass).
  */
 export type BusinessType = "solo_coach" | "gym" | "online_platform";
-export type SessionStatus = "in_progress" | "completed" | "discarded";
+export type SessionStatus = "pending" | "in_progress" | "partial" | "completed" | "discarded";
 export type PlanStatus = "draft" | "published" | "archived";
 export type AssignmentStatus = "active" | "paused" | "finished";
 export type BlockType = "warmup" | "strength" | "intervals" | "cardio" | "cooldown";
@@ -128,6 +128,8 @@ export interface RefreshTokenRequest {
 
 export interface RefreshTokenResponse {
   token: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
   user: AuthUser;
 }
 
@@ -312,7 +314,7 @@ export interface MuscleStats {
   items: Array<{ muscle: string; sets: number; exercises: number }>;
 }
 
-export interface ExerciseSummary {
+export interface ExerciseAnalyticsSummary {
   id: string;
   name: string;
   primaryMuscle: string | null;
@@ -320,7 +322,7 @@ export interface ExerciseSummary {
 
 export interface ExerciseListSummary {
   range: { start: string; end: string; days: number };
-  items: ExerciseSummary[];
+  items: ExerciseAnalyticsSummary[];
 }
 
 export interface ExerciseProgressionPoint {
@@ -332,7 +334,7 @@ export interface ExerciseProgressionPoint {
 
 export interface ExerciseProgression {
   range: { start: string; end: string; days: number };
-  exercise: ExerciseSummary;
+  exercise: ExerciseAnalyticsSummary;
   points: ExerciseProgressionPoint[];
 }
 

@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     const status = sp.get("status") ?? undefined;
     const take = Math.min(50, Math.max(1, parseInt(sp.get("take") ?? "20", 10) || 20));
 
-    if (status && !["completed", "in_progress", "discarded"].includes(status)) {
+    if (status && !["completed", "partial", "in_progress", "discarded"].includes(status)) {
       return err("status inválido", 400);
     }
 

@@ -13,8 +13,18 @@ export async function notify(params: {
 }) {
   try {
     await prisma.notification.create({ data: params });
-    if (!isPushConfigured()) return;
+  } catch (error) {
+    console.error("[notify] failed to create notification", {
+      userId: params.userId,
+      type: params.type,
+      error,
+    });
+    return;
+  }
 
+  if (!isPushConfigured()) return;
+
+  try {
     const cached = pushEnabledCache.get(params.userId);
     const now = Date.now();
     if (!cached || now - cached.fetchedAt > PUSH_CACHE_TTL_MS) {
@@ -34,5 +44,11 @@ export async function notify(params: {
       tag: params.type,
       data: { url: params.linkUrl ?? undefined, type: params.type },
     });
-  } catch {}
+  } catch (error) {
+    console.error("[notify] failed to send push notification", {
+      userId: params.userId,
+      type: params.type,
+      error,
+    });
+  }
 }

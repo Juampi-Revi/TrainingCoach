@@ -294,7 +294,7 @@ export default function HistorialPage() {
     }
   };
 
-  const completed = sessions.filter((s) => s.status === "completed");
+    const completed = sessions.filter((s) => s.status === "completed" || s.status === "partial");
   const filtered =
     filter === "Mes" && nowMs != null
       ? completed.filter((s) => {
@@ -375,8 +375,8 @@ export default function HistorialPage() {
                 const durationStr = durationMinutes != null ? fmtMinutes(durationMinutes) : null;
                 const isManual = !s.workoutTemplate && (manualMeta.title || manualMeta.type);
                 const energy = normalizeEnergyRating(s.energyRating);
-                const isComplete = s.targetSetsCount > 0 && s.setsCount >= s.targetSetsCount;
-                const isPartial = s.targetSetsCount > 0 && s.setsCount < s.targetSetsCount;
+                const isComplete = s.status === "completed";
+                const isPartial = s.status === "partial";
                 const metaParts: string[] = [];
                 if (isManual) {
                   if (manualMeta.type) metaParts.push(manualMeta.type);

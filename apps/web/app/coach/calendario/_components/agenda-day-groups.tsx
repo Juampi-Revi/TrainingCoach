@@ -7,6 +7,7 @@ import type { CoachCalendarItem, SessionStatus } from "@regen/types";
 function labelForStatus(status: SessionStatus | null) {
   if (!status) return "Pendiente";
   if (status === "in_progress") return "En curso";
+  if (status === "partial") return "Parcial";
   if (status === "completed") return "Completado";
   return "Descartado";
 }
@@ -14,6 +15,7 @@ function labelForStatus(status: SessionStatus | null) {
 function toneForStatus(status: SessionStatus | null) {
   if (!status) return "neutral" as const;
   if (status === "completed") return "success" as const;
+  if (status === "partial") return "warn" as const;
   if (status === "in_progress") return "warn" as const;
   return "neutral" as const;
 }

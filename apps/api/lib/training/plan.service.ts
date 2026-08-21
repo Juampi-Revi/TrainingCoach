@@ -57,18 +57,20 @@ export async function assignWorkoutToCell(
   sortOrder: number = 0,
   progressionNote?: string
 ) {
-  const week = await prisma.planWeek.upsert({
-    where: { planId_weekNumber: { planId, weekNumber } },
-    create: { planId, weekNumber },
-    update: {},
-  });
+  const entry = await prisma.$transaction(async (tx) => {
+    const week = await tx.planWeek.upsert({
+      where: { planId_weekNumber: { planId, weekNumber } },
+      create: { planId, weekNumber },
+      update: {},
+    });
 
-  await prisma.planWeekWorkout.deleteMany({
-    where: { planWeekId: week.id, sortOrder },
-  });
+    await tx.planWeekWorkout.deleteMany({
+      where: { planWeekId: week.id, sortOrder },
+    });
 
-  const entry = await prisma.planWeekWorkout.create({
-    data: { planWeekId: week.id, workoutTemplateId, sortOrder, progressionNote },
+    return tx.planWeekWorkout.create({
+      data: { planWeekId: week.id, workoutTemplateId, sortOrder, progressionNote },
+    });
   });
 
   const assignments = await prisma.planAssignment.findMany({
