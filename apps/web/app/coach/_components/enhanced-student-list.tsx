@@ -4,12 +4,11 @@ import { useState } from "react";
 import { Avatar, Icon, Badge } from "@/components/ui";
 import { StudentQuickView } from "./student-quick-view";
 import type { CoachClientSummary } from "@regen/types";
+import { AVATAR_TONES } from "@/lib/constants";
 
 interface EnhancedStudentListProps {
   students: CoachClientSummary[];
 }
-
-const AVATAR_TONES = ["#FF5B5B", "#FFB547", "#7AB8FF", "var(--lime)", "#6EE7A8"];
 
 export function EnhancedStudentList({ students }: EnhancedStudentListProps) {
   const [selectedStudent, setSelectedStudent] = useState<CoachClientSummary | null>(null);

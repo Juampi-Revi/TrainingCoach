@@ -43,6 +43,15 @@ export const GROUP_COLORS: Record<string, string> = {
 
 export const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
+/** Avatar palette for coach lists (cycles by index). */
+export const AVATAR_TONES = [
+  "#FF5B5B",
+  "#FFB547",
+  "#7AB8FF",
+  "var(--lime)",
+  "#6EE7A8",
+] as const;
+
 export function groupLabel(size: number): string {
   if (size === 2) return "Biserie";
   if (size === 3) return "Triserie";

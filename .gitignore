@@ -42,3 +42,12 @@ backups/
 .agents
 .trae
 skills-lock.json
+
+# Design archaeology (never re-commit)
+panel-mockups*
+Training App*/
+docs/assets/
+
+# Accidental nested app copies (not real Prisma migrations)
+apps/web/apps/
+apps/api/apps/

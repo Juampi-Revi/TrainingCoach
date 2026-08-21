@@ -7,8 +7,7 @@ import { useToast } from "@/lib/toast";
 import { Avatar, Badge, Button, ConfirmModal, Icon, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { PlanSummary } from "@regen/types";
-
-const AVATAR_TONES = ["#7AB8FF", "#FFB547", "#FF5B5B"];
+import { AVATAR_TONES } from "@/lib/constants";
 
 export default function PlanesPage() {
   const { api, user } = useAuth();

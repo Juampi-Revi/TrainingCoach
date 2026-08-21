@@ -8,9 +8,9 @@ import { DesktopShell } from "@/components/layout/desktop-shell";
 import { StudentFilters } from "./_components/student-filters";
 import { EnhancedStudentList } from "./_components/enhanced-student-list";
 import type { CoachClientSummary } from "@regen/types";
+import { AVATAR_TONES } from "@/lib/constants";
 
 const DAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
-const AVATAR_TONES = ["#FF5B5B", "#FFB547", "#7AB8FF", "var(--lime)", "#6EE7A8"];
 
 export default function CoachDashboardPage() {
   const { api, user } = useAuth();

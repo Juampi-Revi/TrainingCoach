@@ -3,14 +3,13 @@
 import { useRouter } from "next/navigation";
 import { Avatar, Icon, Button, Badge } from "@/components/ui";
 import type { CoachClientSummary } from "@regen/types";
+import { AVATAR_TONES } from "@/lib/constants";
 
 interface StudentQuickViewProps {
   student: CoachClientSummary | null;
   isOpen: boolean;
   onClose: () => void;
 }
-
-const AVATAR_TONES = ["#FF5B5B", "#FFB547", "#7AB8FF", "var(--lime)", "#6EE7A8"];
 
 export function StudentQuickView({ student, isOpen, onClose }: StudentQuickViewProps) {
   const router = useRouter();

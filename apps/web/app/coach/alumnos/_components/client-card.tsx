@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Avatar, Badge, Icon } from "@/components/ui";
 import type { CoachClientSummary } from "@regen/types";
-
-const AVATAR_TONES = ["#FF5B5B", "#FFB547", "#7AB8FF", "var(--lime)", "#6EE7A8"];
+import { AVATAR_TONES } from "@/lib/constants";
 
 function daysSince(iso: string | undefined): number | null {
   if (!iso) return null;
