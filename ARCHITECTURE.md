@@ -152,7 +152,7 @@ apps/api/
 │       ├── threads/         # Chat threads
 │       └── messages/        # Mensajes con soporte SSE
 ├── lib/messaging/
-│   └── chat.service.ts      # Lógica de chat
+│   └── chat.service.ts      # Texto + referencias (sin adjuntos de archivo)
 └── prisma/
     └── models: ChatThread, ChatMessage
 
@@ -168,6 +168,8 @@ apps/web/
     ├── message-input.tsx
     └── reference-modal.tsx
 ```
+
+> Chat es **solo texto** (+ referencias a sesión/workout). Los adjuntos se removieron por no usarse.
 
 **Interfaces públicas** (`packages/types/index.ts`):
 - `ChatMessageItem`
@@ -205,7 +207,35 @@ apps/web/
 
 ---
 
-### 5. Users Module — Usuarios y Auth
+### 5. Gym Module — Experimental / futuro
+
+> **Estado**: código presente y usable en desarrollo, **no es el producto principal** hoy.
+> Conservar para crecer después (clases grupales + modo televisor). No invertir features nuevas aquí hasta priorizarlo explícitamente.
+
+**Responsabilidad**: clases de gym, modo tele (pantalla grande) y shell de admin gym.
+
+```
+apps/api/
+├── app/api/v1/gym/
+│   └── classes/                 # CRUD + tele state
+└── prisma/
+    └── models: GymClass, CoachGroup, CoachGroupMember
+
+apps/web/
+├── app/gym/                     # Shell gym (clases, settings, notificaciones)
+├── app/tele/[classId]/           # TV público (sin controles locales)
+└── components/features/gym/
+    └── tele-class-screen.tsx    # UI compartida (controls on/off)
+```
+
+**Notas**:
+- `/gym/tele/:id` = operador (timer + prev/next)
+- `/tele/:id` = display público (sigue poll del coach)
+- Documentado aquí para encontrarlo cuando retomemos el módulo
+
+---
+
+### 6. Users Module — Usuarios y Auth
 
 **Responsabilidad**: Auth, perfiles, y relaciones coach-cliente.
 

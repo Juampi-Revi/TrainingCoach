@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Avatar, Icon } from "@/components/ui";
 import type { ChatMessageItem, RefPayload } from "./chat-types";
 
@@ -17,7 +16,6 @@ export function CoachChatMessage({
 }) {
   const isMe = message.author.id === currentUserId;
   const authorName = isMe ? "Vos" : (message.author.name ?? message.author.role);
-  const hasText = !!message.text?.trim();
   const refLabel =
     message.reference?.kind === "session"
       ? `Alumnos / ${clientName} / ${message.reference.label ?? "Sesión"}`
@@ -61,46 +59,7 @@ export function CoachChatMessage({
           </button>
         )}
 
-        {message.media?.type === "image" && (
-          <a
-            href={message.media.url}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: "block",
-              overflow: "hidden",
-              borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-              border: isMe ? "none" : "1px solid var(--line)",
-              background: isMe ? "var(--lime)" : "var(--bg-1)",
-              marginBottom: hasText ? 6 : 0,
-            }}
-          >
-            <Image
-              src={message.media.url}
-              alt="Foto"
-              width={Math.min(420, Math.max(220, message.media.width ?? 320))}
-              height={Math.min(420, Math.max(160, message.media.height ?? 240))}
-              style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
-              unoptimized
-            />
-          </a>
-        )}
-
-        {message.media?.type === "video" && (
-          <div
-            style={{
-              overflow: "hidden",
-              borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-              border: isMe ? "none" : "1px solid var(--line)",
-              background: isMe ? "var(--lime)" : "var(--bg-1)",
-              marginBottom: hasText ? 6 : 0,
-            }}
-          >
-            <video src={message.media.url} controls playsInline style={{ width: "100%", display: "block" }} />
-          </div>
-        )}
-
-        {hasText && (
+        {!!message.text?.trim() && (
           <div
             style={{
               padding: "10px 12px",

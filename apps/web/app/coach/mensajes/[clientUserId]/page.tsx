@@ -10,7 +10,7 @@ import { CoachChatMessage } from "./_components/coach-chat-message";
 import { CoachChatComposer } from "./_components/coach-chat-composer";
 import { RefPickerModal } from "./_components/ref-picker-modal";
 import { RefDetailDrawer } from "./_components/ref-detail-drawer";
-import type { ChatMessageItem, ChatResponse, ClientDetailResponse, RefPayload, UploadedChatMedia } from "./_components/chat-types";
+import type { ChatMessageItem, ChatResponse, ClientDetailResponse, RefPayload } from "./_components/chat-types";
 
 export default function CoachChatPage() {
   const { api, user } = useAuth();
@@ -25,8 +25,6 @@ export default function CoachChatPage() {
   const [newMsg, setNewMsg] = useState("");
   const [sending, setSending] = useState(false);
   const [ref, setRef] = useState<RefPayload | null>(null);
-  const [attachment, setAttachment] = useState<UploadedChatMedia | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [refPickerOpen, setRefPickerOpen] = useState(false);
   const [recentSessions, setRecentSessions] = useState<ClientDetailResponse["recentSessions"]>([]);
   const [refDetail, setRefDetail] = useState<RefPayload | null>(null);
@@ -63,7 +61,7 @@ export default function CoachChatPage() {
         setClientName(r.client.name ?? "Alumno");
         setMessages(r.messages);
       })
-      .catch((e) => {
+      .catch(() => {
         if (loading) toast.error("No se pudo cargar el chat");
       })
       .finally(() => {
@@ -129,22 +127,8 @@ export default function CoachChatPage() {
       .catch(() => {});
   }, [api, clientUserId, recentSessions.length, refPickerOpen]);
 
-  const pickFile = useCallback(async (file: File) => {
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.set("file", file);
-      const uploaded = await api.postForm<UploadedChatMedia>(`/coach/chat/${clientUserId}/media`, fd);
-      setAttachment(uploaded);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo subir el archivo");
-    } finally {
-      setUploading(false);
-    }
-  }, [api, clientUserId, toast]);
-
   const send = useCallback(async () => {
-    if (!newMsg.trim() && !attachment) return;
+    if (!newMsg.trim()) return;
     const text = newMsg.trim();
     const reference = ref ? { kind: ref.kind, id: ref.id, label: ref.label } as RefPayload : null;
     const tempId = `temp-${Date.now()}`;
@@ -155,21 +139,10 @@ export default function CoachChatPage() {
       createdAt: new Date().toISOString(),
       author: { id: user!.id, name: user!.name, role: "coach" },
       reference,
-      media: attachment
-        ? {
-            type: attachment.kind,
-            url: attachment.url,
-            width: attachment.width,
-            height: attachment.height,
-            bytes: attachment.bytes,
-            durationSeconds: attachment.durationSeconds,
-          }
-        : null,
     };
 
     setNewMsg("");
     setRef(null);
-    setAttachment(null);
     setSending(true);
     stickToBottomRef.current = true;
     setMessages((prev) => [...prev, optimistic]);
@@ -178,26 +151,15 @@ export default function CoachChatPage() {
       const saved = await api.post<ChatMessageItem>(`/coach/chat/${clientUserId}`, {
         text,
         reference: reference ? { kind: reference.kind, id: reference.id, label: reference.label } : undefined,
-        media: attachment
-          ? {
-              type: attachment.kind,
-              url: attachment.url,
-              publicId: attachment.publicId,
-              width: attachment.width,
-              height: attachment.height,
-              bytes: attachment.bytes,
-              durationSeconds: attachment.durationSeconds,
-            }
-          : undefined,
       });
       setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
-    } catch (e) {
+    } catch {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error("No se pudo enviar el mensaje");
     } finally {
       setSending(false);
     }
-  }, [api, attachment, clientUserId, newMsg, ref, toast, user]);
+  }, [api, clientUserId, newMsg, ref, toast, user]);
 
   const coachName = user?.name ?? "Coach";
 
@@ -257,10 +219,6 @@ export default function CoachChatPage() {
             onChange={setNewMsg}
             onSend={send}
             sending={sending}
-            uploading={uploading}
-            attachment={attachment}
-            onPickFile={pickFile}
-            onClearAttachment={() => setAttachment(null)}
             reference={ref}
             onClearRef={() => setRef(null)}
             onOpenRefPicker={() => setRefPickerOpen(true)}

@@ -6,32 +6,12 @@ export interface RefPayload {
   label?: string;
 }
 
-export type ChatMedia = {
-  type: "image" | "video";
-  url: string;
-  width?: number | null;
-  height?: number | null;
-  bytes?: number | null;
-  durationSeconds?: number | null;
-};
-
-export type UploadedChatMedia = {
-  kind: "image" | "video";
-  url: string;
-  publicId: string;
-  bytes: number;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
-};
-
 export interface ChatMessageItem {
   id: string;
   text: string;
   createdAt: string;
   author: { id: string; name: string | null; role: string };
   reference?: RefPayload | null;
-  media?: ChatMedia | null;
 }
 
 export interface ChatData {

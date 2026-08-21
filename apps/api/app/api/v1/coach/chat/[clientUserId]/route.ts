@@ -12,21 +12,6 @@ type RefPayload = {
   label?: string;
 };
 
-type MediaPayload = {
-  type: "image" | "video";
-  url: string;
-  publicId?: string;
-  width?: number | null;
-  height?: number | null;
-  bytes?: number | null;
-  durationSeconds?: number | null;
-};
-
-function isAllowedPublicIdForClient(clientUserId: string, publicId: string | undefined) {
-  if (!publicId) return true;
-  return publicId.startsWith(`chat/${clientUserId}/`);
-}
-
 async function verifyAccess(coachUserId: string, clientUserId: string) {
   const rel = await prisma.coachClient.findFirst({
     where: { coachUserId, clientUserId, status: "active" },
@@ -85,17 +70,6 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         createdAt: m.createdAt,
         author: { id: m.author.id, name: m.author.displayName, role: m.author.role },
         reference: m.refKind && m.refId ? { kind: m.refKind, id: m.refId, label: m.refLabel, meta: m.refMeta } : null,
-        media:
-          m.mediaType && m.mediaUrl
-            ? {
-                type: m.mediaType === "video" ? "video" : "image",
-                url: m.mediaUrl,
-                width: m.mediaWidth,
-                height: m.mediaHeight,
-                bytes: m.mediaBytes,
-                durationSeconds: m.mediaDurationSeconds,
-              }
-            : null,
       })),
     });
   });
@@ -112,11 +86,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const body = await req.json().catch(() => ({}));
     const text = String(body?.text ?? "").trim();
     const reference = body?.reference as RefPayload | undefined;
-    const media = body?.media as MediaPayload | undefined;
 
-    const hasMedia = !!(media?.type && media?.url);
-    if (!text && !hasMedia) return err("text or media required", 400);
-    if (hasMedia && !isAllowedPublicIdForClient(clientUserId, media?.publicId)) return err("invalid media publicId", 400);
+    if (!text) return err("text required", 400);
 
     const thread = await prisma.chatThread.upsert({
       where: { coachUserId_clientUserId: { coachUserId: auth.user.sub, clientUserId } },
@@ -134,13 +105,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         refId: reference?.id ?? null,
         refLabel: reference?.label ?? null,
         refMeta: undefined,
-        mediaType: hasMedia ? media!.type : null,
-        mediaUrl: hasMedia ? media!.url : null,
-        mediaPublicId: hasMedia ? media!.publicId ?? null : null,
-        mediaWidth: hasMedia ? (media!.width ?? null) : null,
-        mediaHeight: hasMedia ? (media!.height ?? null) : null,
-        mediaBytes: hasMedia ? (media!.bytes ?? null) : null,
-        mediaDurationSeconds: hasMedia ? (media!.durationSeconds ?? null) : null,
       },
       include: { author: { select: { id: true, displayName: true, role: true } } },
     });
@@ -149,7 +113,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       userId: clientUserId,
       type: "new_message",
       title: "Nuevo mensaje de tu coach",
-      body: text ? text.slice(0, 120) : msg.mediaType === "video" ? "Video" : "Foto",
+      body: text.slice(0, 120),
       linkUrl: "/mensajes",
     });
 
@@ -160,17 +124,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         createdAt: msg.createdAt,
         author: { id: msg.author.id, name: msg.author.displayName, role: msg.author.role },
         reference: msg.refKind && msg.refId ? { kind: msg.refKind, id: msg.refId, label: msg.refLabel } : null,
-        media:
-          msg.mediaType && msg.mediaUrl
-            ? {
-                type: msg.mediaType === "video" ? "video" : "image",
-                url: msg.mediaUrl,
-                width: msg.mediaWidth,
-                height: msg.mediaHeight,
-                bytes: msg.mediaBytes,
-                durationSeconds: msg.mediaDurationSeconds,
-              }
-            : null,
       },
       201,
     );

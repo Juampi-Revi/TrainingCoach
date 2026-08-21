@@ -1,37 +1,25 @@
 # Docs — índice canónico
 
-Fuente de verdad del producto en producción. Evitar volver a acumular reviews/mockups sueltos en el repo.
+Fuente de verdad del producto en producción. Evitar acumular reviews/mockups sueltos.
 
 ## Reglas del proyecto (raíz)
 
 | Doc | Para qué |
 |-----|----------|
-| [`CLAUDE.md`](../CLAUDE.md) | Límites de archivos, patrones API/FE, checklist de commit |
+| [`CLAUDE.md`](../CLAUDE.md) | Límites de archivos, patrones API/FE, checklist |
 | [`AGENTS.md`](../AGENTS.md) | Guías multi-agente y módulos |
-| [`ARCHITECTURE.md`](../ARCHITECTURE.md) | Estructura de módulos y boundaries |
-| [`DESIGN.md`](../DESIGN.md) | Tokens CSS y sistema visual |
+| [`ARCHITECTURE.md`](../ARCHITECTURE.md) | Módulos (incluye **Gym experimental**) |
+| [`DESIGN.md`](../DESIGN.md) | Tokens CSS |
 
-## Producto y roadmap
-
-| Doc | Para qué |
-|-----|----------|
-| [`architecture-diagram.md`](./architecture-diagram.md) | Diagrama / mapa visual |
-| [`feature-roadmap.md`](./feature-roadmap.md) | Ideas de crecimiento |
-| [`ideas-mejoras.md`](./ideas-mejoras.md) | Backlog de mejoras |
-
-## Audits activos
+## Producto y backlog
 
 | Doc | Para qué |
 |-----|----------|
-| [`audit-full.md`](./audit-full.md) | Audit técnico (seguridad, estructura, calidad) |
-| [`audit-tasklist.md`](./audit-tasklist.md) | Tareas priorizadas derivadas del audit |
-| [`audit-ux.md`](./audit-ux.md) | Audit UX |
+| [`architecture-diagram.md`](./architecture-diagram.md) | Mapa visual |
+| [`feature-roadmap.md`](./feature-roadmap.md) | Ideas de crecimiento (largo plazo) |
+| [`ideas-mejoras.md`](./ideas-mejoras.md) | Backlog de UX/profundidad del core |
+| [`tech-debt.md`](./tech-debt.md) | Deuda técnica priorizada (ex audit-tasklist) |
 
-## Qué no va en `docs/`
+## Qué no va aquí
 
-- Mockups HTML/PNG de exploración
-- Series `review-ux-passN`
-- Screenshots temporales (`assets/`)
-- Discovery/MVP histórico (`organization/` ya removido)
-
-Si necesitás archivar material de diseño, usá un branch o un drive externo — no el árbol principal.
+Mockups, series `review-ux-passN`, screenshots temporales, discovery MVP histórico.

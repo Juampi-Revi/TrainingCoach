@@ -57,6 +57,7 @@
 | **Health** | `lib/health/`, providers en `health/providers/` | `panel/`, `account/wearable/`, `account/metas/` |
 | **Messaging** | `lib/messaging/chat.service.ts`, routes en `messaging/` | `mensajes/`, `coach/mensajes/` |
 | **Notifications** | `lib/notify.ts`, `lib/push-notifications.ts` | `notificaciones/` |
+| **Gym** (experimental) | `lib` vía rutas `gym/`, `GymClass` | `app/gym/`, `app/tele/`, `components/features/gym/` |
 | **Users** | `lib/api-auth.ts`, `lib/jwt.ts` | `login/`, `account/perfil/`, `coach/alumnos/` |
 
 ---

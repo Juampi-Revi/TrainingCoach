@@ -19,7 +19,7 @@
 
 ### Pendiente inmediato (Loop A — fortalecer core)
 
-Este roadmap sigue siendo el backlog largo. Para ejecución ordenada, ver: `docs/loop-a.md`.
+Este roadmap sigue siendo el backlog largo. Para ejecución ordenada, ver: `docs/tech-debt.md` e `docs/ideas-mejoras.md`.
 
 ---
 
@@ -32,7 +32,7 @@ Este roadmap sigue siendo el backlog largo. Para ejecución ordenada, ver: `docs
 - [ ] **Loop A (core sólido antes de expandir)**
   - Consistencia Semana vs Historial (definir reglas de “parcial” y contadores).
   - Entrenamiento en vivo: guardado por serie (UX explícita) + estados claros.
-  - Comunicación: adjuntar fotos + referencias dentro del chat.
+  - Comunicación: referencias dentro del chat (adjuntos removidos; no prioritarios).
   - Notificaciones: push/in-app útiles (sin spam).
 
 - [ ] **Editor de planes mejorado**
@@ -70,8 +70,7 @@ Este roadmap sigue siendo el backlog largo. Para ejecución ordenada, ver: `docs
   - Zona cardíaca objetivo
   - Frecuencia cardíaca en reposo (tendencia)
 
-- [ ] **Chat enriquecido**
-  - Envío de fotos
+- [ ] **Chat enriquecido** (bajo prioridad; adjuntos removidos del producto actual)
   - Notas de voz
   - Stickers/reacciones
   - Mensajes programados

@@ -62,7 +62,6 @@ model User {
   notifications         Notification[]
   pushSubscriptions     PushSubscription[]
   badges                UserBadge[]
-  healthDataSyncs       HealthDataSync[]
   healthProviderConnections HealthProviderConnection[]
   notificationSettings      NotificationSettings?
   exerciseFavorites         CoachExerciseFavorite[]
@@ -578,13 +577,6 @@ model ChatMessage {
   refId       String?
   refLabel    String?
   refMeta     Json?
-  mediaType   String?  // 'image' | 'video'
-  mediaUrl    String?
-  mediaPublicId String?
-  mediaWidth  Int?
-  mediaHeight Int?
-  mediaBytes  Int?
-  mediaDurationSeconds Float?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -765,24 +757,6 @@ model UserBadge {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
-  @@index([userId])
-}
-
-model HealthDataSync {
-  id              String   @id @default(uuid())
-  userId          String
-  provider        String   // 'google_fit' | 'apple_health' | 'garmin' | 'fitbit'
-  providerUserId  String?
-  accessToken     String?
-  refreshToken    String?
-  tokenExpiresAt  DateTime?
-  lastSyncAt      DateTime?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, provider])
   @@index([userId])
 }
 
