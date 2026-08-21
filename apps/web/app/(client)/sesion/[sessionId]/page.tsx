@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Button, Icon, StateBlock } from "@/components/ui";
+import { Button, Icon, StateBlock, ConfirmModal } from "@/components/ui";
 import { groupLabel, fmtDuration } from "@/lib/constants";
 import { BlockRunner } from "./block-runner";
 import { SessionHeader } from "./_components/session-header";
@@ -87,6 +87,7 @@ export default function SessionInProgressPage() {
   const [completing, setCompleting] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const [showEarlyFinish, setShowEarlyFinish] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [preSelectExIdx, setPreSelectExIdx] = useState<number | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
@@ -317,6 +318,7 @@ export default function SessionInProgressPage() {
         completing={completing}
         onOpenLogger={openLogger}
         onComplete={completeSession}
+        onRequestEarlyFinish={() => setShowEarlyFinish(true)}
         onReset={() => setShowReset(true)}
         onStartBlock={(blockId) => { setCurrentBlockId(blockId); setBlockRunnerOpen(true); }}
       />
@@ -342,6 +344,7 @@ export default function SessionInProgressPage() {
           exercises={warmupExercises}
           running={warmupTimer.runningSince != null}
           onToggle={toggleWarmup} onReset={resetWarmup} onDone={finishWarmup}
+          onSkip={finishWarmup}
         />
       )}
 
@@ -404,6 +407,20 @@ export default function SessionInProgressPage() {
           resetting={resetting}
           onCancel={() => setShowReset(false)}
           onConfirm={() => { setShowReset(false); void resetSession(); }}
+        />
+      )}
+
+      {showEarlyFinish && (
+        <ConfirmModal
+          message="Todavía hay series pendientes. ¿Terminar la sesión incompleta?"
+          confirmLabel="Terminar incompleto"
+          cancelLabel="Seguir entrenando"
+          destructive
+          onCancel={() => setShowEarlyFinish(false)}
+          onConfirm={() => {
+            setShowEarlyFinish(false);
+            void completeSession();
+          }}
         />
       )}
 

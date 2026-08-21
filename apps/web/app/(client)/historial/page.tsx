@@ -393,77 +393,90 @@ export default function HistorialPage() {
                   <div key={s.id}>
                     {/* Session row */}
                     <div
-                      onClick={() => toggleExpand(s.id)}
                       style={{
                         display: "flex", gap: 12, padding: "12px 0",
-                        alignItems: "center", cursor: "pointer",
+                        alignItems: "center",
                       }}
                     >
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                        background: isExpanded ? "var(--lime)" : "var(--bg-2)",
-                        border: `1px solid ${isExpanded ? "var(--lime)" : "var(--line)"}`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: isExpanded ? "#0B0B0C" : "var(--lime)",
-                        transition: "background .15s, border-color .15s",
-                      }}>
-                        <Icon name="check" size={18} />
-                      </div>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="ta-mono" style={{
-                          fontSize: 10, color: "var(--text-mute)",
-                          textTransform: "uppercase", letterSpacing: ".08em",
+                      <button
+                        type="button"
+                        aria-expanded={isExpanded}
+                        onClick={() => toggleExpand(s.id)}
+                        style={{
+                          display: "flex", gap: 12, flex: 1, minWidth: 0,
+                          alignItems: "center", cursor: "pointer",
+                          background: "none", border: "none", padding: 0,
+                          color: "inherit", textAlign: "left", font: "inherit",
+                        }}
+                      >
+                        <div style={{
+                          width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                          background: isExpanded ? "var(--lime)" : "var(--bg-2)",
+                          border: `1px solid ${isExpanded ? "var(--lime)" : "var(--line)"}`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: isExpanded ? "var(--bg)" : "var(--lime)",
+                          transition: "background .15s, border-color .15s",
                         }}>
-                          {dateStr}
+                          <Icon name="check" size={18} />
                         </div>
-                        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 1 }}>
-                          {title}
-                        </div>
-                        <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
-                          {metaParts.join(" · ")}
-                        </div>
-                      </div>
 
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-                        {energy === 5 && (
-                          <Badge tone="limeSoft" size="sm"><Icon name="star" size={11} /> Top</Badge>
-                        )}
-                        {isComplete && <Badge tone="limeSoft" size="sm">Completado</Badge>}
-                        {isPartial && <Badge tone="neutral" size="sm">Parcial {s.setsCount}/{s.targetSetsCount}</Badge>}
-                      </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="ta-mono" style={{
+                            fontSize: 10, color: "var(--text-mute)",
+                            textTransform: "uppercase", letterSpacing: ".08em",
+                          }}>
+                            {dateStr}
+                          </div>
+                          <div style={{ fontSize: 15, fontWeight: 600, marginTop: 1 }}>
+                            {title}
+                          </div>
+                          <div className="ta-mono" style={{ fontSize: 11, color: "var(--text-mute)", marginTop: 2 }}>
+                            {metaParts.join(" · ")}
+                          </div>
+                        </div>
 
-                      {/* Chevron */}
-                      <div style={{
-                        width: 20, height: 20, flexShrink: 0,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                        transition: "transform .2s",
-                        color: "var(--text-mute)",
-                      }}>
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                          {energy === 5 && (
+                            <Badge tone="limeSoft" size="sm"><Icon name="star" size={11} /> Top</Badge>
+                          )}
+                          {isComplete && <Badge tone="limeSoft" size="sm">Completado</Badge>}
+                          {isPartial && <Badge tone="neutral" size="sm">Parcial {s.setsCount}/{s.targetSetsCount}</Badge>}
+                        </div>
+
+                        {/* Chevron */}
+                        <div style={{
+                          width: 20, height: 20, flexShrink: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform .2s",
+                          color: "var(--text-mute)",
+                        }}>
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </button>
 
                       {/* Delete button */}
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <button
-                          disabled={isDeleting}
-                          onClick={() => setConfirmDelete({ id: s.id, title })}
-                          title="Eliminar del historial"
-                          style={{
-                            width: 32, height: 32, borderRadius: 10,
-                            background: "transparent", border: "1px solid var(--line-2)",
-                            color: "var(--text-mute)", display: "flex",
-                            alignItems: "center", justifyContent: "center",
-                            cursor: isDeleting ? "not-allowed" : "pointer",
-                            opacity: isDeleting ? 0.5 : 1,
-                          }}
-                        >
-                          <Icon name="trash" size={14} color="var(--text-mute)" />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDelete({ id: s.id, title });
+                        }}
+                        title="Eliminar del historial"
+                        style={{
+                          width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                          background: "transparent", border: "1px solid var(--line-2)",
+                          color: "var(--text-mute)", display: "flex",
+                          alignItems: "center", justifyContent: "center",
+                          cursor: isDeleting ? "not-allowed" : "pointer",
+                          opacity: isDeleting ? 0.5 : 1,
+                        }}
+                      >
+                        <Icon name="trash" size={14} color="var(--text-mute)" />
+                      </button>
                     </div>
 
                     {/* Expanded detail */}

@@ -6,11 +6,12 @@ import { DesktopShell } from "@/components/layout/desktop-shell";
 import { Button, StateBlock, Tabs } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import type { AssignmentStatus, CoachCalendarItem, CoachCalendarResponse, CoachClientSummary, PlanSummary, SessionStatus } from "@regen/types";
+import type { CoachCalendarItem, CoachCalendarResponse, CoachClientSummary, PlanSummary } from "@regen/types";
 import { AgendaWeekOverview } from "./_components/agenda-week-overview";
 import { AgendaDayGroups } from "./_components/agenda-day-groups";
 import { AgendaPlanTimeline } from "./_components/agenda-plan-timeline";
 import { AgendaActionableIssues } from "./_components/agenda-actionable-issues";
+import { AgendaFilters } from "./_components/agenda-filters";
 import { useAgendaUrlState } from "./_hooks/use-agenda-url-state";
 import { useAgendaProgressionNoteEditor } from "./_hooks/use-agenda-progression-note-editor";
 
@@ -41,6 +42,7 @@ export default function CoachCalendarPage() {
 
   const [clients, setClients] = useState<CoachClientSummary[]>([]);
   const [plans, setPlans] = useState<PlanSummary[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [data, setData] = useState<CoachCalendarResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,8 +98,8 @@ export default function CoachCalendarPage() {
 
   return (
     <DesktopShell
-      active="athletes"
-      title="Alumnos · Agenda"
+      active="calendar"
+      title="Agenda"
       subtitle={mode === "Semana" ? `Semana desde ${startStr}` : mode === "Día" ? startStr : `Mes desde ${startStr}`}
       coachName={user?.name ?? "Coach"}
       actions={
@@ -156,207 +158,143 @@ export default function CoachCalendarPage() {
       }
     >
       <div className="coach-pad">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <Tabs
-              tabs={["Semana", "Día", "Mes"]}
-              active={mode}
-              onChange={(t) => {
-                const next = t as "Semana" | "Día" | "Mes";
-                setLoading(next === "Mes" ? false : true);
-                setMode(next);
-                if (next === "Semana") setAnchor(startOfWeekUTC(anchor));
-                if (next === "Día") setAnchor(startOfDayUTC(anchor));
-                if (next === "Mes") setAnchor(startOfMonthUTC(anchor));
-              }}
-              variant="pills"
-            />
-            {mode !== "Mes" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <Tabs
-                tabs={["Flexible", "Plan fijo"]}
-                active={calendarMode === "flex" ? "Flexible" : "Plan fijo"}
+                tabs={["Semana", "Día", "Mes"]}
+                active={mode}
                 onChange={(t) => {
-                  setLoading(true);
-                  setCalendarMode(t === "Plan fijo" ? "fixed" : "flex");
+                  const next = t as "Semana" | "Día" | "Mes";
+                  setLoading(next === "Mes" ? false : true);
+                  setMode(next);
+                  if (next === "Semana") setAnchor(startOfWeekUTC(anchor));
+                  if (next === "Día") setAnchor(startOfDayUTC(anchor));
+                  if (next === "Mes") setAnchor(startOfMonthUTC(anchor));
                 }}
                 variant="pills"
               />
-            )}
-            {mode === "Mes" && (
-              <>
+              {mode !== "Mes" && (
                 <Tabs
-                  tabs={["1 mes", "2 meses", "3 meses"]}
-                  active={monthsSpan === 1 ? "1 mes" : monthsSpan === 2 ? "2 meses" : "3 meses"}
+                  tabs={["Flexible", "Plan fijo"]}
+                  active={calendarMode === "flex" ? "Flexible" : "Plan fijo"}
                   onChange={(t) => {
-                    setLoading(false);
-                    if (t === "1 mes") setMonthsSpan(1);
-                    if (t === "2 meses") setMonthsSpan(2);
-                    if (t === "3 meses") setMonthsSpan(3);
+                    setLoading(true);
+                    setCalendarMode(t === "Plan fijo" ? "fixed" : "flex");
                   }}
                   variant="pills"
                 />
+              )}
+              {mode === "Mes" && (
+                <>
+                  <Tabs
+                    tabs={["1 mes", "2 meses", "3 meses"]}
+                    active={monthsSpan === 1 ? "1 mes" : monthsSpan === 2 ? "2 meses" : "3 meses"}
+                    onChange={(t) => {
+                      setLoading(false);
+                      if (t === "1 mes") setMonthsSpan(1);
+                      if (t === "2 meses") setMonthsSpan(2);
+                      if (t === "3 meses") setMonthsSpan(3);
+                    }}
+                    variant="pills"
+                  />
 
-                <select
-                  value={monthsSpan > 3 ? String(monthsSpan) : ""}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (!v) return;
-                    setLoading(false);
-                    setMonthsSpan(v as 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12);
-                  }}
-                  style={{
-                    height: 34,
-                    minWidth: 128,
-                    background: "var(--bg-1)",
-                    border: "1px solid var(--line-2)",
-                    borderRadius: 10,
-                    padding: "0 10px",
-                    fontSize: 13,
-                    color: "var(--text)",
-                    outline: "none",
-                  }}
-                  title="Rango personalizado"
-                >
-                  <option value="">Más…</option>
-                  <option value="4">4 meses</option>
-                  <option value="5">5 meses</option>
-                  <option value="6">6 meses</option>
-                  <option value="7">7 meses</option>
-                  <option value="8">8 meses</option>
-                  <option value="9">9 meses</option>
-                  <option value="10">10 meses</option>
-                  <option value="11">11 meses</option>
-                  <option value="12">12 meses</option>
-                </select>
+                  <select
+                    value={monthsSpan > 3 ? String(monthsSpan) : ""}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (!v) return;
+                      setLoading(false);
+                      setMonthsSpan(v as 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12);
+                    }}
+                    style={{
+                      height: 34,
+                      minWidth: 128,
+                      background: "var(--bg-1)",
+                      border: "1px solid var(--line-2)",
+                      borderRadius: 10,
+                      padding: "0 10px",
+                      fontSize: 13,
+                      color: "var(--text)",
+                      outline: "none",
+                    }}
+                    title="Rango personalizado"
+                  >
+                    <option value="">Más…</option>
+                    <option value="4">4 meses</option>
+                    <option value="5">5 meses</option>
+                    <option value="6">6 meses</option>
+                    <option value="7">7 meses</option>
+                    <option value="8">8 meses</option>
+                    <option value="9">9 meses</option>
+                    <option value="10">10 meses</option>
+                    <option value="11">11 meses</option>
+                    <option value="12">12 meses</option>
+                  </select>
 
-                <input
-                  type="month"
-                  value={monthInputValue(anchor)}
-                  onChange={(e) => {
-                    const [y, m] = e.target.value.split("-").map((x) => Number(x));
-                    if (!y || !m) return;
-                    setLoading(false);
-                    setAnchor(new Date(Date.UTC(y, m - 1, 1)));
-                  }}
-                  style={{
-                    height: 34,
-                    minWidth: 150,
-                    background: "var(--bg-1)",
-                    border: "1px solid var(--line-2)",
-                    borderRadius: 10,
-                    padding: "0 10px",
-                    fontSize: 13,
-                    color: "var(--text)",
-                    outline: "none",
-                  }}
-                  title="Elegir mes de inicio"
-                />
-              </>
-            )}
+                  <input
+                    type="month"
+                    value={monthInputValue(anchor)}
+                    onChange={(e) => {
+                      const [y, m] = e.target.value.split("-").map((x) => Number(x));
+                      if (!y || !m) return;
+                      setLoading(false);
+                      setAnchor(new Date(Date.UTC(y, m - 1, 1)));
+                    }}
+                    style={{
+                      height: 34,
+                      minWidth: 150,
+                      background: "var(--bg-1)",
+                      border: "1px solid var(--line-2)",
+                      borderRadius: 10,
+                      padding: "0 10px",
+                      fontSize: 13,
+                      color: "var(--text)",
+                      outline: "none",
+                    }}
+                    title="Elegir mes de inicio"
+                  />
+                </>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              icon="filter"
+              onClick={() => setFiltersOpen((open) => !open)}
+              title={filtersOpen ? "Ocultar filtros" : "Mostrar filtros"}
+            >
+              Filtros
+            </Button>
           </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <select
-              value={clientId}
-              onChange={(e) => {
-                setLoading(true);
-                setClientId(e.target.value);
-              }}
-              style={{
-                height: 36,
-                minWidth: 220,
-                background: "var(--bg-1)",
-                border: "1px solid var(--line-2)",
-                borderRadius: 10,
-                padding: "0 10px",
-                fontSize: 13,
-                color: "var(--text)",
-                outline: "none",
-              }}
-            >
-              <option value="">Todos los alumnos</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name?.trim() || c.email}
-                </option>
-              ))}
-            </select>
 
-            <select
-              value={planId}
-              onChange={(e) => {
+          {filtersOpen && (
+            <AgendaFilters
+              clients={clients}
+              plans={plans}
+              clientId={clientId}
+              planId={planId}
+              assignmentStatus={assignmentStatus}
+              status={status}
+              showSessionStatus={mode !== "Mes"}
+              onClientChange={(value) => {
                 setLoading(true);
-                setPlanId(e.target.value);
+                setClientId(value);
               }}
-              style={{
-                height: 36,
-                minWidth: 220,
-                background: "var(--bg-1)",
-                border: "1px solid var(--line-2)",
-                borderRadius: 10,
-                padding: "0 10px",
-                fontSize: 13,
-                color: "var(--text)",
-                outline: "none",
-              }}
-            >
-              <option value="">Todos los planes</option>
-              {plans.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={assignmentStatus}
-              onChange={(e) => {
+              onPlanChange={(value) => {
                 setLoading(true);
-                setAssignmentStatus(e.target.value as "" | AssignmentStatus);
+                setPlanId(value);
               }}
-              style={{
-                height: 36,
-                minWidth: 180,
-                background: "var(--bg-1)",
-                border: "1px solid var(--line-2)",
-                borderRadius: 10,
-                padding: "0 10px",
-                fontSize: 13,
-                color: "var(--text)",
-                outline: "none",
+              onAssignmentStatusChange={(value) => {
+                setLoading(true);
+                setAssignmentStatus(value);
               }}
-            >
-              <option value="">Activos + pausados</option>
-              <option value="active">Activos</option>
-              <option value="paused">Pausados</option>
-              <option value="finished">Finalizados</option>
-            </select>
-
-            {mode !== "Mes" && (
-              <select
-                value={status}
-                onChange={(e) => {
-                  setLoading(true);
-                  setStatus(e.target.value as "" | "pending" | SessionStatus);
-                }}
-                style={{
-                  height: 36,
-                  minWidth: 190,
-                  background: "var(--bg-1)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: 10,
-                  padding: "0 10px",
-                  fontSize: 13,
-                  color: "var(--text)",
-                  outline: "none",
-                }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="pending">Pendiente</option>
-                <option value="in_progress">En curso</option>
-                <option value="completed">Completado</option>
-              </select>
-            )}
-          </div>
+              onStatusChange={(value) => {
+                setLoading(true);
+                setStatus(value);
+              }}
+            />
+          )}
         </div>
 
         {noteModal}

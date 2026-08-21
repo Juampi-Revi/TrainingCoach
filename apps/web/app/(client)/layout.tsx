@@ -15,7 +15,7 @@ const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string; mobil
   { id: "home",          icon: "home",    label: "Semana",    href: "/semana"    },
   { id: "panel",         icon: "chart",   label: "Mi panel",  href: "/panel"     },
   { id: "history",       icon: "history", label: "Historial", href: "/historial" },
-  // { id: "messages",      icon: "msg",     label: "Mensajes",  href: "/mensajes"  },
+  { id: "messages",      icon: "msg",     label: "Mensajes",  href: "/mensajes"  },
   { id: "notifications", icon: "bell",    label: "Notificaciones", href: "/notificaciones", mobileHide: true },
   { id: "me",            icon: "user",    label: "Cuenta",    href: "/cuenta"    },
 ];
@@ -25,7 +25,8 @@ function useActiveNav(): NavId {
   if (p.startsWith("/panel")) return "panel";
   if (p.startsWith("/comida")) return "panel";
   if (p.startsWith("/historial")) return "history";
-  if (p.startsWith("/mensajes") || p.startsWith("/comentarios")) return "home";
+  if (p.startsWith("/mensajes")) return "messages";
+  if (p.startsWith("/comentarios")) return "history";
   if (p.startsWith("/notificaciones")) return "notifications";
   if (p.startsWith("/cuenta")) return "me";
   return "home";
@@ -83,6 +84,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const active = useActiveNav();
   const { unreadCount: notifCount } = useNotifications();
+  const msgUnread = useUnreadMessages(token);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -101,12 +103,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     if (user?.role === "gym") { router.replace("/gym"); }
   }, [ready, token, user, router]);
 
-  // Request notification permission once
-  useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
+  // Notification permission is requested from the notifications screen / settings, not on mount.
 
   if (!ready) return null;
   if (!token) return null;
@@ -122,7 +119,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
       <aside className="client-sidebar">
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px 20px" }}>
           <div style={{ width: 28, height: 28, borderRadius: 7, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon name="logo" size={18} color="#0B0B0C" />
+            <Icon name="logo" size={18} color="var(--bg)" />
           </div>
           <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>
@@ -136,9 +133,11 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           const badge =
             n.id === "notifications"
               ? notifCount
-              : 0;
+              : n.id === "messages"
+                ? msgUnread
+                : 0;
           return (
-            <Link key={n.id} href={n.href} className="ta-nav-item" style={{
+            <Link key={n.id} href={n.href} aria-current={isActive ? "page" : undefined} className="ta-nav-item" style={{
               display: "flex", alignItems: "center", gap: 10,
               padding: "8px 10px", borderRadius: 8, marginBottom: 2,
               background: isActive ? "var(--bg-3)" : "transparent",
@@ -150,7 +149,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
                 <Icon name={n.icon} size={16} />
                 {badge > 0 && (
                   <div style={{ position: "absolute", top: -5, right: -6, minWidth: 14, height: 14, borderRadius: 7, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: "#0B0B0C" }}>{badge > 9 ? "9+" : badge}</span>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "var(--bg)" }}>{badge > 9 ? "9+" : badge}</span>
                   </div>
                 )}
               </div>
@@ -162,12 +161,12 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         <div style={{ flex: 1 }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, background: "var(--bg-2)" }}>
-          <Avatar name={name} size={28} tone="#7AB8FF" />
+          <Avatar name={name} size={28} tone="var(--info)" />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div className="ta-ellipsis" style={{ fontSize: 12, fontWeight: 600 }}>{name}</div>
             <div style={{ fontSize: 10, color: "var(--text-mute)" }}>Alumno</div>
           </div>
-          <Link href="/cuenta"><Icon name="settings" size={14} color="var(--text-mute)" /></Link>
+          <Link href="/cuenta" aria-label="Ajustes de cuenta"><Icon name="settings" size={14} color="var(--text-mute)" /></Link>
         </div>
       </aside>
 
@@ -176,7 +175,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       {!hideMobileNav && (
-        <nav className="client-tab-bar" style={{
+        <nav className="client-tab-bar" aria-label="Navegación alumno" style={{
           position: "fixed",
           left: 0,
           right: 0,
@@ -193,9 +192,11 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           const badge =
             item.id === "notifications"
               ? notifCount
-              : 0;
+              : item.id === "messages"
+                ? msgUnread
+                : 0;
           return (
-            <Link key={item.id} href={item.href} style={{
+            <Link key={item.id} href={item.href} aria-current={isActive ? "page" : undefined} style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
               color: isActive ? "var(--text)" : "var(--text-mute)",
               textDecoration: "none", position: "relative",
@@ -204,7 +205,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
                 <Icon name={item.icon} size={22} />
                 {badge > 0 && (
                   <div style={{ position: "absolute", top: -4, right: -6, minWidth: 16, height: 16, borderRadius: 8, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: "#0B0B0C" }}>{badge > 9 ? "9+" : badge}</span>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "var(--bg)" }}>{badge > 9 ? "9+" : badge}</span>
                   </div>
                 )}
               </div>

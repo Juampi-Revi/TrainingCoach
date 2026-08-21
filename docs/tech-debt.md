@@ -172,8 +172,17 @@ Pero conviene separar tres grupos:
 
 - [ ] `T017` Tipar bien `Icon` y eliminar `as any`
 
-- [ ] `T018` Centralizar colores hardcodeados
+- [x] `T018` Centralizar colores hardcodeados
   - mover tonos/avatar/status a constantes + variables CSS
+  - Nota 2026-08: AVATAR_TONES / GROUP_COLORS + nav badges usan tokens; quedan casos puntuales
+
+### P0 UX (sprint frontend 2026-08)
+
+- [x] Sesión: CTA único + confirm incompleto, skip warmup, toast en completada
+- [x] Nav: mensajes cliente/coach, agenda en shell, bottom nav con entrenos/mensajes, gym etiquetado experimental
+- [x] Coach mobile: builder responsive, filtros agenda colapsables, dashboard triage-only
+- [x] Pulido: resumen semana, empty semana→mensajes, historial a11y, barra planes falsa removida
+
 
 - [ ] `T019` Completar `.env.example`
   - agregar email, Garmin y variables operativas faltantes

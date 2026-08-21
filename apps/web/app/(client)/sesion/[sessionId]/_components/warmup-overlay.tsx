@@ -5,7 +5,7 @@ import type { SessionExercise } from "@regen/types";
 import { fmtDuration } from "@/lib/constants";
 
 export function WarmupOverlay({
-  elapsedMs, targetMs, notes, exercises, running, onToggle, onReset, onDone,
+  elapsedMs, targetMs, notes, exercises, running, onToggle, onReset, onDone, onSkip,
 }: {
   elapsedMs: number;
   targetMs: number | null;
@@ -15,6 +15,7 @@ export function WarmupOverlay({
   onToggle: () => void;
   onReset: () => void;
   onDone: () => void;
+  onSkip: () => void;
 }) {
   const display = fmtDuration(elapsedMs);
   const circumference = 2 * Math.PI * 92;
@@ -32,7 +33,7 @@ export function WarmupOverlay({
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 20 }}>
         <div className="ta-mono" style={{ fontSize: 10, color: "var(--lime)", letterSpacing: ".15em", fontWeight: 700 }}>CALENTAMIENTO</div>
         <div style={{ fontSize: 12, color: "var(--text-mute)", textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
-          Opcional · no cuenta para el entreno · no hace falta registrar series
+          Recomendado · no cuenta para el entreno · no hace falta registrar series
         </div>
 
         <div style={{ position: "relative", width: 200, height: 200 }}>
@@ -94,10 +95,27 @@ export function WarmupOverlay({
           <Button size="md" variant="secondary" onClick={onReset}>Reiniciar</Button>
         </div>
 
-        <div style={{ width: "100%", maxWidth: 340 }}>
+        <div style={{ width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 8 }}>
           <Button size="xl" icon="check" onClick={onDone} style={{ width: "100%" }}>
             Terminé el calentamiento
           </Button>
+          <button
+            type="button"
+            onClick={onSkip}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "10px 0",
+              color: "var(--text-mute)",
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            Saltar e ir al entreno
+          </button>
         </div>
       </div>
     </div>

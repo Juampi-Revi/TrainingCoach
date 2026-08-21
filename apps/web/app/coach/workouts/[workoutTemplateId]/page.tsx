@@ -7,8 +7,8 @@ import { useToast } from "@/lib/toast";
 import { Button, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { WorkoutTemplateDetail } from "@regen/types";
-import { GROUP_COLORS, GROUP_LETTERS, groupLabel, blockTypeLabel } from "@/lib/constants";
-import { blockCoachSummary, blockPatternLabel, estimateWorkoutDurationSeconds, formatBlockDurationShort } from "@/lib/training-blocks";
+import { GROUP_COLORS, GROUP_LETTERS, groupLabel } from "@/lib/constants";
+import { estimateWorkoutDurationSeconds, formatBlockDurationShort } from "@/lib/training-blocks";
 import type { WE } from "./_components/_types";
 import { ExercisePicker } from "./_components/exercise-picker";
 import { ExerciseRow } from "./_components/exercise-row";
@@ -19,6 +19,7 @@ import { WorkoutBlockHeader } from "./_components/workout-block-header";
 import { Icon } from "@/components/ui";
 import type { WorkoutSport } from "@regen/types";
 import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
+import "./_styles.css";
 
 export default function TemplateEditorPage() {
   const { api, user } = useAuth();
@@ -201,10 +202,10 @@ export default function TemplateEditorPage() {
           </>
         }
       >
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", height: "calc(100vh - 74px)" }}>
+        <div className="workout-builder-layout">
 
           {/* ── Exercise list ── */}
-          <div style={{ overflow: "auto" }}>
+          <div className="workout-builder-list">
             <div style={{ padding: "20px 24px 12px" }}>
               <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>{data.title}</div>
               {data.description && <div style={{ fontSize: 13, color: "var(--text-mute)", marginTop: 4 }}>{data.description}</div>}
@@ -235,8 +236,6 @@ export default function TemplateEditorPage() {
                   .filter((e) => e.workoutBlockId === b.id)
                   .sort((a, c) => a.sortOrder - c.sortOrder);
                 const isLast = bIdx === blocksSorted.length - 1;
-                const canMoveUp = bIdx > 0;
-                const canMoveDown = bIdx < blocksSorted.length - 1;
                 return (
                   <div key={b.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--line)" }}>
                     <WorkoutBlockHeader
@@ -336,7 +335,7 @@ export default function TemplateEditorPage() {
           </div>
 
           {/* ── Right panel: inspector or properties ── */}
-          <div style={{ background: "var(--bg-1)", borderLeft: "1px solid var(--line)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div className="workout-builder-panel">
             {selectedWe ? (
               <ExerciseInspector
                 we={selectedWe}

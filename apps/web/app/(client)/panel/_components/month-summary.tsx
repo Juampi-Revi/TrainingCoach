@@ -27,7 +27,7 @@ export function MonthSummary({
       <div className="month-summary-header">
         <div className="month-summary-title">
           <Icon name="calendar" size={16} color="var(--text-mute)" />
-          Resumen del mes
+          Resumen de la semana
         </div>
       </div>
 

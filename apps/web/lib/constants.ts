@@ -34,22 +34,22 @@ export const EXERCISE_OBJECTIVE_LABEL: Record<string, string> = {
 
 export const GROUP_COLORS: Record<string, string> = {
   A: "var(--lime)",
-  B: "#7AB8FF",
-  C: "#FFB547",
+  B: "var(--info)",
+  C: "var(--warn)",
   D: "#FF8B8B",
   E: "#C084FC",
-  F: "#6EE7B7",
+  F: "var(--success)",
 };
 
 export const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 /** Avatar palette for coach lists (cycles by index). */
 export const AVATAR_TONES = [
-  "#FF5B5B",
-  "#FFB547",
-  "#7AB8FF",
+  "var(--danger)",
+  "var(--warn)",
+  "var(--info)",
   "var(--lime)",
-  "#6EE7A8",
+  "var(--success)",
 ] as const;
 
 export function groupLabel(size: number): string {

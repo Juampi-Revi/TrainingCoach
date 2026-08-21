@@ -25,7 +25,7 @@ export function CoachChatMessage({
 
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexDirection: isMe ? "row-reverse" : "row" }}>
-      <Avatar name={authorName} size={28} tone={isMe ? "var(--lime)" : "#7AB8FF"} />
+      <Avatar name={authorName} size={28} tone={isMe ? "var(--lime)" : "var(--info)"} />
       <div style={{ maxWidth: 420 }}>
         <div style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 3, display: "flex", gap: 6, justifyContent: isMe ? "flex-end" : "flex-start" }}>
           <span style={{ fontWeight: 600 }}>{authorName}</span>
@@ -64,7 +64,7 @@ export function CoachChatMessage({
             style={{
               padding: "10px 12px",
               background: isMe ? "var(--lime)" : "var(--bg-1)",
-              color: isMe ? "#0B0B0C" : "var(--text)",
+              color: isMe ? "var(--bg)" : "var(--text)",
               border: isMe ? "none" : "1px solid var(--line)",
               borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
               fontSize: 14,

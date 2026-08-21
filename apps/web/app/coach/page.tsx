@@ -1,33 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { Avatar, Badge, Button, Card, Icon, KPI, Progress, StateBlock, Table } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
-import { StudentFilters } from "./_components/student-filters";
-import { EnhancedStudentList } from "./_components/enhanced-student-list";
 import type { CoachClientSummary } from "@regen/types";
 import { AVATAR_TONES } from "@/lib/constants";
 
-const DAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
-
 export default function CoachDashboardPage() {
   const { api, user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const [clients, setClients] = useState<CoachClientSummary[]>([]);
-  const [filteredClients, setFilteredClients] = useState<CoachClientSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"alerts" | "all">("alerts");
   const today = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
 
   useEffect(() => {
     api
       .get<CoachClientSummary[]>("/coach/clients")
       .then(setClients)
-      .catch(console.error)
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "No se pudo cargar alumnos"))
       .finally(() => setLoading(false));
-  }, [api]);
+  }, [api, toast]);
 
   const activeClients = clients.filter((c) => c.assignment?.status === "active");
   const inactiveClients = clients.filter((c) => {
@@ -42,13 +39,13 @@ export default function CoachDashboardPage() {
       : null;
     return {
       name: (
-        <div
-          style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-          onClick={() => router.push(`/coach/alumnos/${c.id}`)}
+        <Link
+          href={`/coach/alumnos/${c.id}`}
+          style={{ display: "flex", alignItems: "center", gap: 10, color: "inherit", textDecoration: "none" }}
         >
           <Avatar name={c.name ?? c.email} size={30} tone={AVATAR_TONES[i % AVATAR_TONES.length]} />
           <span style={{ fontWeight: 600 }}>{c.name ?? c.email}</span>
-        </div>
+        </Link>
       ),
       plan: (
         <span style={{ color: "var(--text-mute)" }}>
@@ -93,79 +90,66 @@ export default function CoachDashboardPage() {
             hint="requieren atención"
           />
           <KPI label="Total alumnos" value={String(clients.length)} hint="en tu cuenta" />
-          <KPI label="Adherencia" value="—" hint="próximamente" />
         </div>
 
         {loading ? (
           <StateBlock kind="loading" title="Cargando alumnos…" />
         ) : (
           <div className="coach-two-col">
-            {/* Main content area */}
             <div>
-              {/* Tabs */}
-              <div className="dashboard-tabs">
-                <button
-                  className={`tab ${activeTab === "alerts" ? "active" : ""}`}
-                  onClick={() => setActiveTab("alerts")}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 16,
+                }}
+              >
+                <Icon name="alert" size={16} color="var(--text)" />
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    letterSpacing: "-.01em",
+                  }}
                 >
-                  <Icon name="alert" size={16} color={activeTab === "alerts" ? "var(--text)" : "var(--text-mute)"} />
-                  Alertas
-                  {inactiveClients.length > 0 && (
-                    <span className="tab-badge">{inactiveClients.length}</span>
-                  )}
-                </button>
-                <button
-                  className={`tab ${activeTab === "all" ? "active" : ""}`}
-                  onClick={() => setActiveTab("all")}
-                >
-                  <Icon name="users" size={16} color={activeTab === "all" ? "var(--text)" : "var(--text-mute)"} />
-                  Todos los alumnos
-                </button>
+                  Requieren atención
+                </h2>
+                {inactiveClients.length > 0 && (
+                  <Badge tone="danger">{inactiveClients.length}</Badge>
+                )}
               </div>
 
-              {/* Tab content */}
-              {activeTab === "alerts" ? (
-                <div>
-                  {alertRows.length === 0 ? (
-                    <div
-                      style={{
-                        padding: 24,
-                        textAlign: "center",
-                        color: "var(--text-mute)",
-                        fontSize: 13,
-                        background: "var(--bg-1)",
-                        border: "1px solid var(--line)",
-                        borderRadius: 12,
-                      }}
-                    >
-                      Todos tus alumnos están al día
-                    </div>
-                  ) : (
-                    <Table
-                      cols={[
-                        { key: "name", label: "Alumno", w: "2fr" },
-                        { key: "plan", label: "Plan", w: "2fr" },
-                        { key: "last", label: "Última ses.", w: "1.2fr", mono: true, mute: true },
-                        { key: "alert", label: "Alerta", w: "1.4fr" },
-                      ]}
-                      rows={alertRows}
-                      onRowClick={(i) => router.push(`/coach/alumnos/${inactiveClients[i]?.id}`)}
-                    />
-                  )}
+              {alertRows.length === 0 ? (
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: "var(--text-mute)",
+                    fontSize: 13,
+                    background: "var(--bg-1)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 12,
+                  }}
+                >
+                  Todos tus alumnos están al día
                 </div>
               ) : (
-                <div>
-                  <StudentFilters students={clients} onFilterChange={setFilteredClients} />
-                  <div style={{ marginTop: 20 }}>
-                    <EnhancedStudentList students={filteredClients} />
-                  </div>
-                </div>
+                <Table
+                  cols={[
+                    { key: "name", label: "Alumno", w: "2fr" },
+                    { key: "plan", label: "Plan", w: "2fr" },
+                    { key: "last", label: "Última ses.", w: "1.2fr", mono: true, mute: true },
+                    { key: "alert", label: "Alerta", w: "1.4fr" },
+                  ]}
+                  rows={alertRows}
+                  onRowClick={(i) => router.push(`/coach/alumnos/${inactiveClients[i]?.id}`)}
+                />
               )}
             </div>
 
-            {/* Side column */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* Adherence bar chart */}
               <Card pad={16}>
                 <div
                   style={{
@@ -239,7 +223,6 @@ export default function CoachDashboardPage() {
                 </div>
               </Card>
 
-              {/* Quick links */}
               <Card pad={16}>
                 <div
                   style={{
@@ -256,20 +239,23 @@ export default function CoachDashboardPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {[
                     { icon: "users" as const, t: "Lista de alumnos", href: "/coach/alumnos" },
+                    { icon: "calendar" as const, t: "Agenda", href: "/coach/calendario" },
+                    { icon: "msg" as const, t: "Mensajes", href: "/coach/mensajes" },
                     { icon: "calendar" as const, t: "Planes", href: "/coach/planes" },
                     { icon: "book" as const, t: "Entrenamientos", href: "/coach/workouts" },
                     { icon: "dumbbell" as const, t: "Ejercicios", href: "/coach/ejercicios" },
                   ].map((it) => (
-                    <div
+                    <Link
                       key={it.href}
-                      onClick={() => router.push(it.href)}
+                      href={it.href}
                       style={{
                         display: "flex",
                         gap: 10,
                         padding: "10px 4px",
                         borderBottom: "1px solid var(--line)",
                         alignItems: "center",
-                        cursor: "pointer",
+                        color: "inherit",
+                        textDecoration: "none",
                       }}
                       className="ta-row"
                     >
@@ -288,7 +274,7 @@ export default function CoachDashboardPage() {
                       </div>
                       <div style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{it.t}</div>
                       <Icon name="chevR" size={14} color="var(--text-mute)" />
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </Card>
@@ -296,63 +282,6 @@ export default function CoachDashboardPage() {
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        .dashboard-tabs {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 20px;
-          border-bottom: 1px solid var(--line);
-          padding-bottom: 12px;
-        }
-
-        .tab {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 16px;
-          background: transparent;
-          border: none;
-          border-radius: 8px;
-          color: var(--text-mute);
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .tab:hover {
-          background: var(--bg-1);
-          color: var(--text);
-        }
-
-        .tab.active {
-          background: var(--bg-1);
-          color: var(--text);
-        }
-
-        .tab-badge {
-          background: var(--danger);
-          color: white;
-          font-size: 11px;
-          font-weight: 700;
-          padding: 2px 8px;
-          border-radius: 10px;
-          margin-left: 4px;
-        }
-
-        @media (min-width: 768px) {
-          .dashboard-tabs {
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-          }
-
-          .tab {
-            padding: 12px 20px;
-            font-size: 15px;
-          }
-        }
-      `}</style>
     </DesktopShell>
   );
 }

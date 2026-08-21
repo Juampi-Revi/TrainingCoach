@@ -68,6 +68,13 @@ export default function SemanaPage() {
             kind="empty"
             title="Tu plan todavía no está listo"
             body="Tu coach está armando tu programa. Te avisamos cuando esté activo."
+            cta={
+              <Link href="/mensajes" style={{ textDecoration: "none" }}>
+                <Button size="sm" icon="msg">
+                  Escribir al coach
+                </Button>
+              </Link>
+            }
           />
         </div>
       </div>

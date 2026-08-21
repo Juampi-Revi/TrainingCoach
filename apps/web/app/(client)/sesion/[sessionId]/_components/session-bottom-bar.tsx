@@ -14,6 +14,8 @@ interface SessionBottomBarProps {
   completing: boolean;
   onOpenLogger: (ex: SessionExercise) => void;
   onComplete: () => void;
+  /** Called when user wants to finish with pending sets — parent should confirm. */
+  onRequestEarlyFinish: () => void;
   onReset: () => void;
   onStartBlock: (blockId: string) => void;
 }
@@ -29,11 +31,14 @@ export function SessionBottomBar({
   completing,
   onOpenLogger,
   onComplete,
+  onRequestEarlyFinish,
   onReset,
   onStartBlock,
 }: SessionBottomBarProps) {
   if (warmupExists && !warmupDone) return null;
   if (loggerOpen) return null;
+
+  const allDone = workExercises.length > 0 && completedExs === workExercises.length;
 
   return (
     <div
@@ -51,6 +56,7 @@ export function SessionBottomBar({
     >
       <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
         <button
+          type="button"
           onClick={onReset}
           style={{
             background: "none",
@@ -66,7 +72,7 @@ export function SessionBottomBar({
         </button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {completedExs === workExercises.length ? (
+        {allDone ? (
           <Button size="xl" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={onComplete}>
             {completing ? "Completando…" : "Finalizar sesión"}
           </Button>
@@ -89,16 +95,24 @@ export function SessionBottomBar({
             >
               {ex?.block?.type === "intervals" ? "Iniciar bloque" : "Registrar series"}
             </Button>
-            <Button
-              size="lg"
-              block
-              variant="secondary"
-              icon="check"
+            <button
+              type="button"
               disabled={completing}
-              onClick={onComplete}
+              onClick={onRequestEarlyFinish}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: completing ? "default" : "pointer",
+                padding: "8px 0",
+                color: "var(--text-mute)",
+                fontSize: 13,
+                fontWeight: 600,
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
             >
-              {completing ? "Completando…" : "Terminar entrenamiento"}
-            </Button>
+              {completing ? "Completando…" : "Terminar incompleto…"}
+            </button>
           </>
         )}
       </div>

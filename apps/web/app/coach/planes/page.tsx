@@ -182,22 +182,6 @@ export default function PlanesPage() {
                   </div>
                 </div>
 
-                {/* Progress bar (weeks) */}
-                <div style={{ display: "flex", gap: 3 }}>
-                  {Array.from({ length: Math.min(p.weeksCount, 12) }).map((_, wi) => (
-                    <div
-                      key={wi}
-                      style={{
-                        flex: 1,
-                        height: 18,
-                        background: wi < 3 ? "var(--lime)" : "var(--bg-3)",
-                        borderRadius: 3,
-                        opacity: wi < 3 ? 1 : 0.6,
-                      }}
-                    />
-                  ))}
-                </div>
-
                 <div
                   style={{
                     display: "flex",

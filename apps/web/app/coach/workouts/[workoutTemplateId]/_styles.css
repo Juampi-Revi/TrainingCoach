@@ -1,0 +1,38 @@
+.workout-builder-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  height: auto;
+}
+
+.workout-builder-list {
+  overflow: auto;
+  min-width: 0;
+}
+
+.workout-builder-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  border-top: 1px solid var(--line);
+  overflow: hidden;
+  min-height: 280px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: var(--shadow-md);
+}
+
+@media (min-width: 900px) {
+  .workout-builder-layout {
+    grid-template-columns: 1fr 380px;
+    height: calc(100vh - 74px);
+  }
+
+  .workout-builder-panel {
+    border-top: none;
+    border-left: 1px solid var(--line);
+    min-height: 0;
+    position: static;
+    box-shadow: none;
+  }
+}

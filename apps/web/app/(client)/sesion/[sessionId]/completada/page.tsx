@@ -3,11 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { Button, Icon, StateBlock } from "@/components/ui";
 import type { SessionDetail } from "@regen/types";
 import { formatSecondsShort, summarizeEnduranceSteps } from "@/lib/constants";
 
-const ENERGY_LABELS: Record<number, string> = { 1: "BAJA", 3: "MEDIA", 5: "ALTA" };
+const ENERGY_LABELS: Record<number, string> = {
+  1: "BAJA",
+  2: "BAJA+",
+  3: "MEDIA",
+  4: "ALTA-",
+  5: "ALTA",
+};
 
 function fmtDuration(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -39,6 +46,7 @@ function parseManualMeta(sessionNotes: string | null) {
 
 export default function SessionCompletadaPage() {
   const { api } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const { sessionId } = useParams<{ sessionId: string }>();
   const [session, setSession] = useState<SessionDetail | null>(null);
@@ -61,17 +69,19 @@ export default function SessionCompletadaPage() {
         setPerformedAtInput(toLocalInputValue(new Date(s.performedAt)));
         setCompletedAtInput(s.completedAt ? toLocalInputValue(new Date(s.completedAt)) : "");
       })
-      .catch(console.error)
+      .catch(() => {
+        toast.error("No se pudo cargar la sesión");
+      })
       .finally(() => setLoading(false));
-  }, [api, sessionId]);
+  }, [api, sessionId, toast]);
 
   async function save() {
     setSaving(true);
     try {
       const perf = performedAtInput ? new Date(performedAtInput) : null;
       const comp = completedAtInput ? new Date(completedAtInput) : null;
-      if (!perf || !Number.isFinite(perf.getTime())) throw new Error("performedAt inválido");
-      if (comp && !Number.isFinite(comp.getTime())) throw new Error("completedAt inválido");
+      if (!perf || !Number.isFinite(perf.getTime())) throw new Error("Hora de inicio inválida");
+      if (comp && !Number.isFinite(comp.getTime())) throw new Error("Hora de fin inválida");
       if (comp && comp.getTime() < perf.getTime()) throw new Error("La hora de fin no puede ser anterior al inicio");
 
       await api.patch(`/client/sessions/${sessionId}`, {
@@ -82,7 +92,7 @@ export default function SessionCompletadaPage() {
       });
       router.replace("/semana");
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "No se pudo guardar");
       setSaving(false);
     }
   }

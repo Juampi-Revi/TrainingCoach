@@ -26,7 +26,7 @@ function timeAgo(iso: string): string {
   return `Hace ${Math.floor(diff / 86400)}d`;
 }
 
-const TONES = ["#FF5B5B", "#FFB547", "#7AB8FF", "var(--lime)", "#6EE7A8"];
+const TONES = ["var(--danger)", "var(--warn)", "var(--info)", "var(--lime)", "var(--success)"];
 
 export default function MensajesPage() {
   const { api, user } = useAuth();
@@ -156,7 +156,7 @@ export default function MensajesPage() {
                         flexShrink: 0,
                       }}
                     >
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#0B0B0C" }}>•</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--bg)" }}>•</span>
                     </div>
                   )}
                 </div>
