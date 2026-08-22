@@ -12,6 +12,7 @@ import { useOverviewData } from "./_hooks/use-overview-data";
 import { useProgressData } from "./_hooks/use-progress-data";
 import { AssignPlanModal } from "./_components/assign-plan-modal";
 import { ClientHeader } from "./_components/client-header";
+import { DiagnosisHero } from "./_components/diagnosis-hero";
 import { OverviewTab } from "./_components/overview-tab";
 import { SessionsList } from "./_components/sessions-list";
 import { useSessionsData } from "./_hooks/use-sessions-data";
@@ -22,7 +23,7 @@ import { MetricsTab } from "./_components/metrics-tab";
 import { ProgressTab } from "./_components/progress-tab";
 import { RightSidebar } from "./_components/right-sidebar";
 
-const TABS = ["Resumen", "Entrenos", "Actividad", "Progreso", "Privado"] as const;
+const TABS = ["Entrenos", "Resumen", "Actividad", "Progreso", "Privado"] as const;
 
 export default function AthleteDetailPage() {
   const { api, user } = useAuth();
@@ -46,7 +47,7 @@ export default function AthleteDetailPage() {
   const overview = useOverviewData(clientUserId);
   const progressData = useProgressData(clientUserId);
 
-  const [tab, setTab] = useState("Resumen");
+  const [tab, setTab] = useState("Entrenos");
   const [showAssign, setShowAssign] = useState(false);
   const [removingPlan, setRemovingPlan] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
@@ -173,8 +174,15 @@ export default function AthleteDetailPage() {
       >
         <div className="coach-pad" style={{ paddingTop: 0, paddingBottom: 0 }}>
           <ClientHeader client={client} />
+          <DiagnosisHero
+            client={client}
+            clientUserId={clientUserId}
+            week={overview.week}
+            onMessage={() => router.push(`/coach/mensajes/${clientUserId}`)}
+            onAssignPlan={() => setShowAssign(true)}
+          />
 
-          <div style={{ display: "flex", gap: 20, padding: "18px 0 0" }}>
+          <div style={{ display: "flex", gap: 20, padding: "14px 0 0" }}>
             <Tabs tabs={[...TABS]} active={tab} onChange={handleTabChange} />
           </div>
 

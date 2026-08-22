@@ -22,6 +22,7 @@ interface PlanEditorState {
   confirmDialog: { message: string; onConfirm: () => void } | null;
   noteEditor: { week: number; day: number; pwwId: string; title: string; value: string } | null;
   noteSaving: boolean;
+  saveStatus: "idle" | "saving" | "saved" | "error";
 }
 
 export function usePlanEditor(planId: string) {
@@ -47,6 +48,7 @@ export function usePlanEditor(planId: string) {
     confirmDialog: null,
     noteEditor: null,
     noteSaving: false,
+    saveStatus: "idle",
   });
 
   function patch<K extends keyof PlanEditorState>(key: K, value: PlanEditorState[K]) {
@@ -93,21 +95,39 @@ export function usePlanEditor(planId: string) {
   useEffect(() => { load(); }, [load]);
 
   const savePlanField = useCallback(async (field: Record<string, unknown>) => {
+    patch("saveStatus", "saving");
     try {
       await api.patch(`/coach/plans/${planId}`, field);
-    } catch (e) { console.error(e); }
-  }, [api, planId]);
+      patch("saveStatus", "saved");
+      window.setTimeout(() => {
+        setState((s) => (s.saveStatus === "saved" ? { ...s, saveStatus: "idle" } : s));
+      }, 1800);
+    } catch (e) {
+      console.error(e);
+      patch("saveStatus", "error");
+      toast.error("No se pudo guardar el plan");
+    }
+  }, [api, planId, toast]);
 
   const saveWeekMeta = useCallback(async (weekNumber: number) => {
     const meta = state.weekMeta[weekNumber] ?? { title: "", notes: "" };
+    patch("saveStatus", "saving");
     try {
       const payload: Record<string, unknown> = {
         title: meta.title || null,
         notes: meta.notes || null,
       };
       await api.patch(`/coach/plans/${planId}/weeks/${weekNumber}`, payload);
-    } catch (e) { console.error(e); }
-  }, [api, planId, state.weekMeta]);
+      patch("saveStatus", "saved");
+      window.setTimeout(() => {
+        setState((s) => (s.saveStatus === "saved" ? { ...s, saveStatus: "idle" } : s));
+      }, 1800);
+    } catch (e) {
+      console.error(e);
+      patch("saveStatus", "error");
+      toast.error("No se pudo guardar la semana");
+    }
+  }, [api, planId, state.weekMeta, toast]);
 
   const togglePublish = useCallback(async () => {
     if (!state.plan) return;

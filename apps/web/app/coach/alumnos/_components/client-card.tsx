@@ -22,9 +22,11 @@ interface ClientCardProps {
   client: CoachClientSummary;
   index: number;
   onAction: (action: string, client: CoachClientSummary) => void;
+  selected?: boolean;
+  onToggleSelect?: (clientId: string) => void;
 }
 
-export function ClientCard({ client, index, onAction }: ClientCardProps) {
+export function ClientCard({ client, index, onAction, selected = false, onToggleSelect }: ClientCardProps) {
   const router = useRouter();
   const days = daysSince(client.lastSession?.performedAt ?? undefined);
   const { label, tone, action } = clientStatus(client);
@@ -35,17 +37,28 @@ export function ClientCard({ client, index, onAction }: ClientCardProps) {
     <div
       style={{
         background: "var(--bg-1)",
-        border: "1px solid var(--line)",
+        border: `1px solid ${selected ? "var(--lime)" : "var(--line)"}`,
         borderRadius: 12,
         padding: "14px 16px",
         display: "flex",
         flexDirection: "column",
         gap: 10,
         transition: "border-color 0.15s",
+        boxShadow: selected ? "0 0 0 1px color-mix(in srgb, var(--lime) 35%, transparent)" : undefined,
       }}
     >
       {/* Header: avatar + name + status */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect(client.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Seleccionar ${name}`}
+            style={{ width: 16, height: 16, accentColor: "var(--lime)", cursor: "pointer", flexShrink: 0 }}
+          />
+        )}
         <Avatar name={name} size={36} tone={AVATAR_TONES[index % AVATAR_TONES.length]} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <button

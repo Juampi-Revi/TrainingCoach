@@ -16,6 +16,7 @@ export default function AlumnosPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     api.get<CoachClientSummary[]>("/coach/clients")
@@ -42,6 +43,21 @@ export default function AlumnosPage() {
       return an.localeCompare(bn);
     });
   }, [clients, search]);
+
+  function toggleSelect(clientId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  const selectedList = clients.filter((c) => selectedIds.has(c.id));
 
   const handleClientAction = (action: string, client: CoachClientSummary) => {
     if (action === "Asignar plan") {
@@ -90,6 +106,48 @@ export default function AlumnosPage() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar alumno…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text)" }} />
           </div>
 
+          {selectedIds.size > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                marginBottom: 14,
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid color-mix(in srgb, var(--lime) 35%, transparent)",
+                background: "color-mix(in srgb, var(--lime) 8%, transparent)",
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 700 }}>
+                {selectedIds.size} seleccionado{selectedIds.size === 1 ? "" : "s"}
+              </span>
+              <div style={{ flex: 1 }} />
+              {selectedList.length === 1 && (
+                <>
+                  <Button size="sm" variant="secondary" icon="msg" onClick={() => router.push(`/coach/mensajes?client=${selectedList[0]!.id}`)}>
+                    Mensaje
+                  </Button>
+                  <Button size="sm" variant="secondary" icon="calendar" onClick={() => router.push(`/coach/alumnos/${selectedList[0]!.id}?tab=plan`)}>
+                    Asignar plan
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => router.push(`/coach/alumnos/${selectedList[0]!.id}`)}>
+                    Abrir
+                  </Button>
+                </>
+              )}
+              {selectedList.length > 1 && (
+                <span style={{ fontSize: 12, color: "var(--text-mute)" }}>
+                  Acciones masivas de plan/mensaje: elegí de a uno por ahora
+                </span>
+              )}
+              <Button size="sm" variant="ghost" onClick={clearSelection}>
+                Limpiar
+              </Button>
+            </div>
+          )}
+
           {loading ? (
             <StateBlock kind="loading" title="Cargando alumnos…" />
           ) : filtered.length === 0 && !search ? (
@@ -104,6 +162,8 @@ export default function AlumnosPage() {
                   client={c}
                   index={i}
                   onAction={handleClientAction}
+                  selected={selectedIds.has(c.id)}
+                  onToggleSelect={toggleSelect}
                 />
               ))}
             </div>

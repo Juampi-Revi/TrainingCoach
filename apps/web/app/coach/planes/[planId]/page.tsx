@@ -39,6 +39,32 @@ export default function PlanDetailPage() {
         coachName={user?.name ?? "Coach"}
         actions={
           <>
+            <span
+              className="ta-mono"
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: ".06em",
+                color:
+                  state.saveStatus === "error"
+                    ? "var(--danger)"
+                    : state.saveStatus === "saving"
+                      ? "var(--text-mute)"
+                      : state.saveStatus === "saved"
+                        ? "var(--lime)"
+                        : "var(--text-dim)",
+                minWidth: 88,
+                textAlign: "right",
+              }}
+            >
+              {state.saveStatus === "saving"
+                ? "Guardando…"
+                : state.saveStatus === "saved"
+                  ? "Guardado ✓"
+                  : state.saveStatus === "error"
+                    ? "Error al guardar"
+                    : "Autoguardado"}
+            </span>
             <Button variant="outline" size="sm" icon="chevL" onClick={() => router.push("/coach/planes")}>
               Planes
             </Button>
