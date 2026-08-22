@@ -7,18 +7,16 @@ import { useToast } from "@/lib/toast";
 import { Button, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import type { WorkoutTemplateDetail } from "@regen/types";
-import { GROUP_COLORS, GROUP_LETTERS, groupLabel } from "@/lib/constants";
+import { GROUP_LETTERS } from "@/lib/constants";
 import { estimateWorkoutDurationSeconds, formatBlockDurationShort } from "@/lib/training-blocks";
 import type { WE } from "./_components/_types";
 import { ExercisePicker } from "./_components/exercise-picker";
-import { ExerciseRow } from "./_components/exercise-row";
 import { ExerciseInspector } from "./_components/exercise-inspector";
 import { WorkoutProperties } from "./_components/workout-properties";
 import { BlockModal } from "./_components/block-modal";
-import { WorkoutBlockHeader } from "./_components/workout-block-header";
-import { Icon } from "@/components/ui";
 import type { WorkoutSport } from "@regen/types";
-import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
+import { WorkoutBuilderBlocks } from "./_components/workout-builder-blocks";
+import { WorkoutStudentPreview } from "./_components/workout-student-preview";
 import "./_styles.css";
 
 export default function TemplateEditorPage() {
@@ -41,6 +39,7 @@ export default function TemplateEditorPage() {
   const [selectedWeId, setSelectedWeId] = useState<string | null>(null);
   const [blockModalOpen, setBlockModalOpen] = useState(false);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"edit" | "preview">("edit");
 
   const load = useCallback(() => {
     api.get<WorkoutTemplateDetail>(`/coach/workouts/${workoutTemplateId}`)
@@ -188,10 +187,49 @@ export default function TemplateEditorPage() {
             <span style={{ color: "var(--text)", fontWeight: 700 }}>{data.title}</span>
           </span>
         }
-        subtitle={saved ? "✓ Guardado" : "editando"}
+        subtitle={saved ? "✓ Guardado" : mode === "preview" ? "Vista alumno" : "editando"}
         coachName={user?.name ?? "Coach"}
         actions={
           <>
+            <div
+              role="tablist"
+              aria-label="Modo del builder"
+              style={{
+                display: "inline-flex",
+                gap: 2,
+                padding: 3,
+                borderRadius: 10,
+                border: "1px solid var(--line-2)",
+                background: "var(--bg-2)",
+              }}
+            >
+              {([{ id: "edit" as const, label: "Editar" }, { id: "preview" as const, label: "Vista alumno" }]).map((opt) => {
+                const active = mode === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setMode(opt.id)}
+                    style={{
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      fontFamily: "var(--font-sans)",
+                      background: active ? "var(--bg-1)" : "transparent",
+                      color: active ? "var(--text)" : "var(--text-mute)",
+                      boxShadow: active ? "var(--shadow-sm)" : "none",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
             <Button variant="outline" size="sm" onClick={() => router.push("/coach/workouts")}>Volver</Button>
             <Button variant="outline" size="sm" icon="repeat" disabled={duplicating || saving} onClick={duplicateTemplate}>
               {duplicating ? "Duplicando…" : "Duplicar"}
@@ -203,136 +241,37 @@ export default function TemplateEditorPage() {
         }
       >
         <div className="workout-builder-layout">
-
-          {/* ── Exercise list ── */}
-          <div className="workout-builder-list">
-            <div style={{ padding: "20px 24px 12px" }}>
-              <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>{data.title}</div>
-              {data.description && <div style={{ fontSize: 13, color: "var(--text-mute)", marginTop: 4 }}>{data.description}</div>}
-              <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 11, color: "var(--text-mute)" }}>
-                <span>{exercises.length} ejercicios</span>
-                <span>·</span>
-                <span>{blocksSorted.length} bloques</span>
-                {totalEstimated !== "—" && <><span>·</span><span>{totalEstimated} estimados</span></>}
-                {usedGroups.length > 0 && <><span>·</span><span>{usedGroups.length} grupo{usedGroups.length > 1 ? "s" : ""}</span></>}
-              </div>
-            </div>
-
-            <div style={{ margin: "0 24px 24px", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
-
-              {blocksSorted.length === 0 && exercises.length === 0 && (
-                <div style={{ padding: "40px 24px", textAlign: "center" }}>
-                  <div style={{ fontSize: 14, color: "var(--text-mute)", marginBottom: 16 }}>
-                    Este entrenamiento no tiene bloques todavía.
-                  </div>
-                  <Button variant="outline" size="sm" icon="plus" onClick={() => { setEditingBlockId(null); setBlockModalOpen(true); }}>
-                    Crear primer bloque
-                  </Button>
-                </div>
-              )}
-
-              {blocksSorted.map((b, bIdx) => {
-                const blockExercises = exercises
-                  .filter((e) => e.workoutBlockId === b.id)
-                  .sort((a, c) => a.sortOrder - c.sortOrder);
-                const isLast = bIdx === blocksSorted.length - 1;
-                return (
-                  <div key={b.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--line)" }}>
-                    <WorkoutBlockHeader
-                      b={b}
-                      bIdx={bIdx}
-                      blocksSorted={blocksSorted}
-                      exercises={exercises}
-                      onReorder={reorderBlocks}
-                      onEdit={() => { setEditingBlockId(b.id); setBlockModalOpen(true); }}
-                      onLibrary={() =>
-                        router.push(
-                          `/coach/ejercicios?templateId=${encodeURIComponent(workoutTemplateId)}&blockId=${encodeURIComponent(b.id)}&context=workout&returnTo=${encodeURIComponent(`/coach/workouts/${workoutTemplateId}`)}`,
-                        )
-                      }
-                      onAddExercise={() => { setPickerBlockId(b.id); setShowPicker(true); }}
-                    />
-
-                    {/* Exercises in block */}
-                    {blockExercises.length === 0 && (
-                      <div style={{ padding: "14px 14px", borderBottom: "1px solid var(--line)", background: "var(--bg-1)" }}>
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                          <div style={{
-                            width: 28, height: 28, borderRadius: 8,
-                            background: "var(--bg-2)", border: "1px solid var(--line-2)",
-                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                          }}>
-                            <Icon name="plus" size={14} color="var(--text-mute)" />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700 }}>
-                              Este bloque todavía no tiene ejercicios
-                            </div>
-                            <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2, lineHeight: 1.35 }}>
-                              Agregá ejercicios para que el bloque tenga contenido. Si es EMOM, los ejercicios se alternan por minuto.
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {blockExercises.map((we) => {
-                      const secIdx = blockExercises.findIndex((e) => e.id === we.id);
-                      const gc = we.supersetGroup ? (GROUP_COLORS[we.supersetGroup] ?? null) : null;
-                      const isGroupStart = we.supersetGroup !== null && blockExercises.findIndex((e) => e.supersetGroup === we.supersetGroup) === secIdx;
-                      return (
-                        <div key={we.id}>
-                          {isGroupStart && we.supersetGroup && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 14px 3px 17px", background: "var(--bg-2)", borderBottom: "1px solid var(--line)", borderLeft: `3px solid ${gc}` }}>
-                              <div style={{ width: 8, height: 8, borderRadius: 2, background: gc ?? "transparent" }} />
-                              <span style={{ fontSize: 10, fontWeight: 700, color: gc ?? "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".1em" }}>
-                                {groupLabel(blockExercises.filter((x) => x.supersetGroup === we.supersetGroup).length)} {we.supersetGroup}
-                              </span>
-                              <span style={{ fontSize: 10, color: "var(--text-dim)", marginLeft: 4 }}>
-                                · {blockExercises.filter((x) => x.supersetGroup === we.supersetGroup).length} ejercicios
-                              </span>
-                              {we.groupNote && (
-                                <span style={{ fontSize: 10, color: gc ?? "var(--text-mute)", opacity: 0.85, marginLeft: 4, fontStyle: "italic" }}>
-                                  · {we.groupNote}
-                                </span>
-                              )}
-                              <div style={{ marginLeft: "auto" }}>
-                                <WorkoutLabelChips labels={we.groupLabels} isExtra={we.groupIsExtra} compact />
-                              </div>
-                            </div>
-                          )}
-                          <ExerciseRow
-                            we={we}
-                            blockType={b.type}
-                            intervalType={b.intervalType}
-                            selected={selectedWeId === we.id}
-                            onSelect={() => setSelectedWeId((id) => id === we.id ? null : we.id)}
-                            onMoveUp={secIdx > 0 ? () => moveExerciseInSection(we.id, "up", b.id) : null}
-                            onMoveDown={secIdx < blockExercises.length - 1 ? () => moveExerciseInSection(we.id, "down", b.id) : null}
-                            onDelete={() => deleteExercise(we.id)}
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {/* Add exercise button */}
-                    <div style={{ padding: "8px 14px", display: "flex", gap: 8, justifyContent: "flex-start", background: "var(--bg-1)" }}>
-                      <Button variant="ghost" size="sm" icon="plus" onClick={() => { setPickerBlockId(b.id); setShowPicker(true); }}>
-                        Agregar ejercicio al bloque
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {blocksSorted.length > 0 && (
-                <div style={{ padding: 10, borderTop: "1px solid var(--line)", display: "flex", gap: 8, justifyContent: "center" }}>
-                  <Button variant="ghost" size="sm" icon="plus" onClick={() => { setEditingBlockId(null); setBlockModalOpen(true); }}>
-                    Agregar bloque
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+          {mode === "preview" ? (
+            <WorkoutStudentPreview
+              title={data.title}
+              description={data.description ?? null}
+              blocksSorted={blocksSorted}
+              exercises={exercises}
+            />
+          ) : (
+            <>
+              <WorkoutBuilderBlocks
+                title={data.title}
+                description={data.description ?? null}
+                exercises={exercises}
+                blocksSorted={blocksSorted}
+                totalEstimated={totalEstimated}
+                usedGroups={usedGroups}
+                selectedWeId={selectedWeId}
+                onSelectWe={(id) => setSelectedWeId((cur) => (cur === id ? null : id))}
+                onReorderBlocks={reorderBlocks}
+                onEditBlock={(id) => { setEditingBlockId(id); setBlockModalOpen(true); }}
+                onLibrary={(blockId) =>
+                  router.push(
+                    `/coach/ejercicios?templateId=${encodeURIComponent(workoutTemplateId)}&blockId=${encodeURIComponent(blockId)}&context=workout&returnTo=${encodeURIComponent(`/coach/workouts/${workoutTemplateId}`)}`,
+                  )
+                }
+                onAddExercise={(blockId) => { setPickerBlockId(blockId); setShowPicker(true); }}
+                onCreateFirstBlock={() => { setEditingBlockId(null); setBlockModalOpen(true); }}
+                onAddBlock={() => { setEditingBlockId(null); setBlockModalOpen(true); }}
+                onMoveExercise={moveExerciseInSection}
+                onDeleteExercise={deleteExercise}
+              />
 
           {/* ── Right panel: inspector or properties ── */}
           <div className="workout-builder-panel">
@@ -365,6 +304,8 @@ export default function TemplateEditorPage() {
               />
             )}
           </div>
+            </>
+          )}
         </div>
       </DesktopShell>
 

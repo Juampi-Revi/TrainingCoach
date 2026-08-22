@@ -33,6 +33,7 @@ export function PlanGridWeekRow({
   onPasteWeek,
   onClearWeek,
   onDuplicateWeek,
+  compact = false,
 }: {
   wi: number;
   week: Array<CellData | null>;
@@ -60,6 +61,7 @@ export function PlanGridWeekRow({
   onPasteWeek: (weekNumber: number) => void;
   onClearWeek: (weekNumber: number) => void;
   onDuplicateWeek: (fromWeekNumber: number, toWeekNumber: number) => void;
+  compact?: boolean;
 }) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionsPos, setActionsPos] = useState<{ top: number; left: number } | null>(null);
@@ -225,6 +227,7 @@ export function PlanGridWeekRow({
           onViewWorkout={() => onViewWorkout(cell?.templateId ?? "")}
           onOpenLibrary={() => onOpenLibrary(cell?.templateId ?? "")}
           onMoveCell={onMoveCell}
+          compact={compact}
         />
       ))}
     </div>

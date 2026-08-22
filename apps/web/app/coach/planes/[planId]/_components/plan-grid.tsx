@@ -2,6 +2,8 @@
 
 import type { CellData, WeekMetaState } from "./types";
 import { PlanGridWeekRow } from "./plan-grid-week-row";
+import { PlanZoomToggle, type PlanZoom } from "./plan-zoom-toggle";
+import { PlanStudentWeeks } from "./plan-student-weeks";
 
 const WEEK_COL_WIDTH = 160;
 const CELL_MIN_WIDTH = 120;
@@ -45,6 +47,9 @@ export function PlanGrid({
   onPasteWeek,
   onClearWeek,
   onDuplicateWeek,
+  zoom,
+  onZoomChange,
+  onOpenFullPreview,
 }: {
   cols: number;
   weeksCount: number;
@@ -69,7 +74,12 @@ export function PlanGrid({
   onPasteWeek: (weekNumber: number) => void;
   onClearWeek: (weekNumber: number) => void;
   onDuplicateWeek: (fromWeekNumber: number, toWeekNumber: number) => void;
+  zoom: PlanZoom;
+  onZoomChange: (next: PlanZoom) => void;
+  onOpenFullPreview: () => void;
 }) {
+  const compact = zoom === "structure";
+
   return (
     <>
       <div
@@ -83,95 +93,109 @@ export function PlanGrid({
           flexWrap: "wrap",
         }}
       >
-        {Object.entries({
-          accum: "Acumulación",
-          intens: "Intensificación",
-          deload: "Deload",
-          test: "Test",
-        }).map(([key, label]) => {
-          const c = PHASE_COLORS[key as keyof typeof PHASE_COLORS];
-          return (
-            <div key={key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: 3, background: c.t, opacity: 0.8 }} />
-              {label}
-            </div>
-          );
-        })}
-        <div style={{ flex: 1 }} />
-        <div style={{ fontSize: 11, color: "var(--text-mute)" }}>
-          Click para asignar · Arrastrá para mover
-        </div>
-      </div>
-
-      <div style={{ overflowX: "auto" }}>
-        <div style={{ minWidth: cols * CELL_MIN_WIDTH + WEEK_COL_WIDTH }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `${WEEK_COL_WIDTH}px repeat(${cols}, minmax(${CELL_MIN_WIDTH}px, 1fr))`,
-              gap: 6,
-              marginBottom: 6,
-            }}
-          >
-            <div />
-            {Array.from({ length: cols }, (_, i) => (
-              <div
-                key={i}
-                className="ta-mono"
-                style={{
-                  fontSize: 10,
-                  color: "var(--text-mute)",
-                  textAlign: "center",
-                  textTransform: "uppercase",
-                  letterSpacing: ".1em",
-                  fontWeight: 600,
-                  padding: "6px 0",
-                }}
-              >
-                D{i + 1}
-              </div>
-            ))}
-          </div>
-
-          {grid.map((week, wi) => {
-            const phase = getPhase(wi, weeksCount);
-            const phaseLabel = { accum: "Acum.", intens: "Intens.", deload: "Deload", test: "Test" }[phase];
-            const colors = PHASE_COLORS[phase];
-
+        {zoom !== "preview" &&
+          Object.entries({
+            accum: "Acumulación",
+            intens: "Intensificación",
+            deload: "Deload",
+            test: "Test",
+          }).map(([key, label]) => {
+            const c = PHASE_COLORS[key as keyof typeof PHASE_COLORS];
             return (
-              <PlanGridWeekRow
-                key={wi}
-                wi={wi}
-                week={week}
-                cols={cols}
-                weeksCount={weeksCount}
-                colors={colors}
-                phaseLabel={phaseLabel}
-                expandedWeek={expandedWeek}
-                weekMeta={weekMeta}
-                onToggleWeekExpand={onToggleWeekExpand}
-                onWeekMetaChange={onWeekMetaChange}
-                onWeekMetaBlur={onWeekMetaBlur}
-                cellMenu={cellMenu}
-                onCellMenuToggle={onCellMenuToggle}
-                onCellMenuClose={onCellMenuClose}
-                onEmptyCellClick={onEmptyCellClick}
-                onCellChangeWorkout={onCellChangeWorkout}
-                onCellEditProgressionNote={onCellEditProgressionNote}
-                onCellClear={onCellClear}
-                onViewWorkout={onViewWorkout}
-          onOpenLibrary={onOpenLibrary}
-                onMoveCell={onMoveCell}
-                canPasteWeek={canPasteWeek}
-                onCopyWeek={onCopyWeek}
-                onPasteWeek={onPasteWeek}
-                onClearWeek={onClearWeek}
-                onDuplicateWeek={onDuplicateWeek}
-              />
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: c.t, opacity: 0.8 }} />
+                {label}
+              </div>
             );
           })}
-        </div>
+        <div style={{ flex: 1 }} />
+        <PlanZoomToggle value={zoom} onChange={onZoomChange} />
+        {zoom !== "preview" && (
+          <div style={{ fontSize: 11, color: "var(--text-mute)" }}>
+            {compact ? "Solo títulos" : "Click para asignar · Arrastrá para mover"}
+          </div>
+        )}
       </div>
+
+      {zoom === "preview" ? (
+        <PlanStudentWeeks
+          grid={grid}
+          weekMeta={weekMeta}
+          onOpenFullPreview={onOpenFullPreview}
+          onOpenWorkout={onViewWorkout}
+        />
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <div style={{ minWidth: cols * CELL_MIN_WIDTH + WEEK_COL_WIDTH }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `${WEEK_COL_WIDTH}px repeat(${cols}, minmax(${CELL_MIN_WIDTH}px, 1fr))`,
+                gap: 6,
+                marginBottom: 6,
+              }}
+            >
+              <div />
+              {Array.from({ length: cols }, (_, i) => (
+                <div
+                  key={i}
+                  className="ta-mono"
+                  style={{
+                    fontSize: 10,
+                    color: "var(--text-mute)",
+                    textAlign: "center",
+                    textTransform: "uppercase",
+                    letterSpacing: ".1em",
+                    fontWeight: 600,
+                    padding: "6px 0",
+                  }}
+                >
+                  D{i + 1}
+                </div>
+              ))}
+            </div>
+
+            {grid.map((week, wi) => {
+              const phase = getPhase(wi, weeksCount);
+              const phaseLabel = { accum: "Acum.", intens: "Intens.", deload: "Deload", test: "Test" }[phase];
+              const colors = PHASE_COLORS[phase];
+
+              return (
+                <PlanGridWeekRow
+                  key={wi}
+                  wi={wi}
+                  week={week}
+                  cols={cols}
+                  weeksCount={weeksCount}
+                  colors={colors}
+                  phaseLabel={phaseLabel}
+                  expandedWeek={expandedWeek}
+                  weekMeta={weekMeta}
+                  onToggleWeekExpand={onToggleWeekExpand}
+                  onWeekMetaChange={onWeekMetaChange}
+                  onWeekMetaBlur={onWeekMetaBlur}
+                  cellMenu={cellMenu}
+                  onCellMenuToggle={onCellMenuToggle}
+                  onCellMenuClose={onCellMenuClose}
+                  onEmptyCellClick={onEmptyCellClick}
+                  onCellChangeWorkout={onCellChangeWorkout}
+                  onCellEditProgressionNote={onCellEditProgressionNote}
+                  onCellClear={onCellClear}
+                  onViewWorkout={onViewWorkout}
+                  onOpenLibrary={onOpenLibrary}
+                  onMoveCell={onMoveCell}
+                  canPasteWeek={canPasteWeek}
+                  onCopyWeek={onCopyWeek}
+                  onPasteWeek={onPasteWeek}
+                  onClearWeek={onClearWeek}
+                  onDuplicateWeek={onDuplicateWeek}
+                  compact={compact}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 }

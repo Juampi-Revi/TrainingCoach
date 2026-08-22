@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Button, ConfirmModal, StateBlock } from "@/components/ui";
@@ -9,12 +10,14 @@ import { PlanProperties } from "./_components/plan-properties";
 import { PlanGrid } from "./_components/plan-grid";
 import { PlanAssignments } from "./_components/plan-assignments";
 import { PlanProgressionNoteModal } from "./_components/plan-progression-note-modal";
+import type { PlanZoom } from "./_components/plan-zoom-toggle";
 import { usePlanEditor } from "./_hooks/use-plan-editor";
 
 export default function PlanDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { planId } = useParams<{ planId: string }>();
+  const [zoom, setZoom] = useState<PlanZoom>("detail");
 
   const editor = usePlanEditor(planId);
   const { state } = editor;
@@ -145,6 +148,9 @@ export default function PlanDetailPage() {
             onPasteWeek={editor.pasteWeek}
             onClearWeek={editor.clearWeek}
             onDuplicateWeek={editor.duplicateWeek}
+            zoom={zoom}
+            onZoomChange={setZoom}
+            onOpenFullPreview={() => router.push(`/coach/planes/${planId}/preview`)}
           />
         </div>
       </DesktopShell>

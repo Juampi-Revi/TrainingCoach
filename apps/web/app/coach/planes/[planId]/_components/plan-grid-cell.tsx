@@ -18,6 +18,7 @@ export function PlanGridCell({
   onViewWorkout,
   onOpenLibrary,
   onMoveCell,
+  compact = false,
 }: {
   wi: number;
   di: number;
@@ -33,7 +34,9 @@ export function PlanGridCell({
   onViewWorkout: () => void;
   onOpenLibrary: () => void;
   onMoveCell: (fromWeekIndex: number, fromDayIndex: number, toWeekIndex: number, toDayIndex: number) => void;
+  compact?: boolean;
 }) {
+  const cellHeight = compact ? 36 : 52;
   if (!cell) {
     return (
       <div
@@ -45,7 +48,7 @@ export function PlanGridCell({
           onMoveCell(parsed.weekIndex, parsed.dayIndex, wi, di);
         }}
         style={{
-          height: 52,
+          height: cellHeight,
           background: "var(--bg)",
           border: "1px dashed var(--line)",
           borderRadius: 8,
@@ -79,25 +82,27 @@ export function PlanGridCell({
         }}
         onClick={onMenuToggle}
         style={{
-          height: 52,
-          padding: "6px 8px",
+          height: cellHeight,
+          padding: compact ? "4px 6px" : "6px 8px",
           borderRadius: 8,
           background: colors.bg,
           border: `1px solid ${colors.b}`,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: 2,
+          gap: compact ? 0 : 2,
           cursor: "pointer",
         }}
         title="Arrastrar para mover · Click para opciones"
       >
-        <div style={{ fontSize: 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: compact ? 10 : 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {cell.title}
         </div>
-        <div className="ta-mono ta-ellipsis" style={{ fontSize: 10, color: cell.progressionNote ? "var(--accent-text)" : "var(--text-mute)" }}>
-          {cell.exerciseCount} ej{cell.progressionNote ? ` · ${cell.progressionNote}` : ""}
-        </div>
+        {!compact && (
+          <div className="ta-mono ta-ellipsis" style={{ fontSize: 10, color: cell.progressionNote ? "var(--accent-text)" : "var(--text-mute)" }}>
+            {cell.exerciseCount} ej{cell.progressionNote ? ` · ${cell.progressionNote}` : ""}
+          </div>
+        )}
       </div>
 
       {isMenuOpen && (

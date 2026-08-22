@@ -453,9 +453,9 @@ Aplicar global en `globals.css`. Costo: 5 línas, impacto: enorme.
 
 ### Sprint B — Coach experience (2-3 semanas)
 
-- [ ] Builder con "Vista alumno" persistente (desktop split)
+- [x] Builder con "Vista alumno" (toggle Editar | Vista alumno)
 - [x] Alumno detail: diagnosis hero + tabs (Entrenos primero)
-- [ ] Plan editor: zoom levels (structure / detail / preview)
+- [x] Plan editor: zoom levels (estructura / detalle / vista alumno)
 - [ ] Undo/redo en builder + plan editor
 - [x] Autoguardado visible en plan editor (estado Guardando/Guardado)
 - [x] Batch select en alumnos list (selección + acciones 1:1)
