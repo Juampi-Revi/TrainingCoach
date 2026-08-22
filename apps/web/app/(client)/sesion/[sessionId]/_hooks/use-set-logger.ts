@@ -34,6 +34,7 @@ export function useSetLogger({
   const [timerEndsAtMs, setTimerEndsAtMs] = useState<number | null>(null);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(90);
+  const [restSuggestion, setRestSuggestion] = useState<string | null>(null);
   const [restFromLogger, setRestFromLogger] = useState(false);
   const [lastRefMap, setLastRefMap] = useState<Record<string, LastRef>>({});
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -86,6 +87,7 @@ export function useSetLogger({
     setRestSeconds,
     setRestTotal,
     setRestFromLogger,
+    setRestSuggestion,
     setLastSaved,
     setSheetSaving,
     lastRef,
@@ -94,6 +96,6 @@ export function useSetLogger({
   return {
     effortMode, setEffortMode, loggerOpen, setLoggerOpen, sheetRows, setSheetRows, sheetSaving,
     equipmentType, setEquipmentType, activeTimerRow, setActiveTimerRow, timerSecondsLeft, setTimerSecondsLeft, timerEndsAtMs, setTimerEndsAtMs,
-    restSeconds, setRestSeconds, restTotal, lastRef, lastSaved, openLogger, saveSheet, deleteSet,
+    restSeconds, setRestSeconds, restTotal, restSuggestion, lastRef, lastSaved, openLogger, saveSheet, deleteSet,
   };
 }

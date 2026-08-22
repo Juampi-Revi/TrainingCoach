@@ -23,7 +23,7 @@ export function SessionEnduranceView({
   onComplete,
   onExit,
 }: SessionEnduranceViewProps) {
-  const sessionEnduranceBlocks = session.blocks.filter((block) => block.steps.length > 0);
+  const sessionEnduranceBlocks = session.blocks.filter((block) => (block.steps?.length ?? 0) > 0);
   const workoutElapsedMs = workoutStartedAtMs != null ? Math.max(0, nowMs - workoutStartedAtMs) : 0;
 
   return (
@@ -38,7 +38,7 @@ export function SessionEnduranceView({
       />
       {sessionEnduranceBlocks.map((block) => (
         <div key={block.id} style={{ marginTop: 10 }}>
-          <EnduranceStepsCard title={block.label ? `Pasadas · ${block.label}` : "Pasadas"} steps={block.steps} />
+          <EnduranceStepsCard title={block.label ? `Pasadas · ${block.label}` : "Pasadas"} steps={block.steps ?? []} />
         </div>
       ))}
       <div style={{ padding: "16px", display: "flex", gap: 10 }}>

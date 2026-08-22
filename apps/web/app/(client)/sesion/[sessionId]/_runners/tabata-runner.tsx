@@ -6,6 +6,7 @@ import type { WorkoutBlockSummary, SessionExercise } from "@regen/types";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import { CircleTimer } from "./circle-timer";
 import { useSounds } from "../_hooks/use-sounds";
+import { PhaseLabel, phaseColor, type SessionPhase } from "../_components/phase-label";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,7 +204,8 @@ export function TabataRunner({
   const isWork = phase === "work";
   const isPrepare = phase === "prepare";
   const isSetRest = phase === "set_rest";
-  const phaseColor = isPrepare ? "var(--lime)" : isWork ? "#FF8E72" : "#7AB8FF";
+  const uiPhase: SessionPhase = isPrepare ? "prep" : isWork ? "work" : isSetRest ? "transition" : "rest";
+  const phaseTint = phaseColor(uiPhase);
   const muscle = currentEx.exercise.primaryMuscle;
 
   return (
@@ -213,31 +215,23 @@ export function TabataRunner({
         {/* Phase gradient */}
         <div style={{
           position: "absolute", inset: 0, pointerEvents: "none", transition: "background .6s",
-          background: isWork
-            ? "radial-gradient(ellipse at 50% -10%, rgba(255,142,114,.12) 0%, transparent 55%)"
-            : "radial-gradient(ellipse at 50% -10%, rgba(122,184,255,.08) 0%, transparent 55%)",
+          background: `radial-gradient(ellipse at 50% -10%, color-mix(in srgb, ${phaseTint} 14%, transparent) 0%, transparent 55%)`,
         }} />
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "0 24px 24px", position: "relative" }}>
 
           {/* Phase badge */}
           <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px",
-              borderRadius: 20, transition: "all .3s",
-              background: isWork ? "rgba(255,142,114,.15)" : "rgba(122,184,255,.12)",
-              border: `1px solid ${phaseColor}`,
-            }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: phaseColor, transition: "background .3s" }} />
-              <span className="ta-mono" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", color: phaseColor, transition: "color .3s" }}>
-                {isPrepare ? "PREP" : isWork ? "WORK" : isSetRest ? "SET REST" : "REST"}
-              </span>
-            </div>
+            <PhaseLabel
+              phase={uiPhase}
+              hint={isPrepare ? "Prepárate…" : isWork ? "¡Vamos!" : isSetRest ? "Siguiente serie" : "Respira…"}
+              large
+            />
           </div>
 
           {/* SVG ring + exercise name */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20 }}>
-            <CircleTimer seconds={seconds} total={isPrepare ? prepareSecs : isWork ? workSecs : isSetRest ? setRestSecs : restSecs} color={phaseColor} />
+            <CircleTimer seconds={seconds} total={isPrepare ? prepareSecs : isWork ? workSecs : isSetRest ? setRestSecs : restSecs} color={phaseTint} />
             <div style={{ textAlign: "center" }}>
               <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", letterSpacing: ".1em", marginBottom: 6 }}>
                 {isPrepare ? "PREPARATE" : isWork ? `EJERCICIO ${currentExercisePosition} / ${exercises.length}` : isSetRest ? `DESCANSO ENTRE SERIES` : "DESCANSA"}
@@ -262,8 +256,8 @@ export function TabataRunner({
               {Array.from({ length: totalRounds }).map((_, i) => (
                 <div key={i} style={{
                   width: 8, height: 8, borderRadius: "50%", transition: "background .3s",
-                  background: i < round - 1 ? phaseColor
-                    : i === round - 1 ? phaseColor + "80"
+                  background: i < round - 1 ? phaseTint
+                    : i === round - 1 ? `color-mix(in srgb, ${phaseTint} 50%, transparent)`
                     : "var(--bg-2)",
                 }} />
               ))}
@@ -285,8 +279,8 @@ export function TabataRunner({
 
           {/* Action button */}
           {!started ? (
-            <button onClick={() => setStarted(true)} style={primaryButtonStyle(phaseColor, "#000")}>
-              <Icon name="play" size={18} color="#000" />
+            <button onClick={() => setStarted(true)} style={primaryButtonStyle(phaseTint, "var(--bg-1)")}>
+              <Icon name="play" size={18} color="var(--bg-1)" />
               <span>Iniciar</span>
             </button>
           ) : (

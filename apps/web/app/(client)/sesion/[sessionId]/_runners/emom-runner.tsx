@@ -6,6 +6,7 @@ import type { WorkoutBlockSummary, SessionExercise } from "@regen/types";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import { CircleTimer } from "./circle-timer";
 import { useSounds } from "../_hooks/use-sounds";
+import { PhaseLabel } from "../_components/phase-label";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -170,9 +171,16 @@ export function EmomRunner({
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "0 24px 32px", position: "relative" }}>
 
+          <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+            <PhaseLabel
+              phase={isPreparing ? "prep" : "work"}
+              hint={isPreparing ? "Prepárate…" : "¡Vamos!"}
+            />
+          </div>
+
           {/* Ring + exercise */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20 }}>
-            <CircleTimer seconds={seconds} total={minuteSeconds} color={timerColor} />
+            <CircleTimer seconds={seconds} total={isPreparing ? prepareSeconds : minuteSeconds} color={timerColor} />
 
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{isPreparing ? "Preparación" : currentEx.exercise.name}</div>

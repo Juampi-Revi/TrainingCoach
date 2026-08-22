@@ -10,16 +10,21 @@ export function SessionHeader({
   return (
     <div style={{ position: "relative", padding: "50px 14px 12px", borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
       <button
+        type="button"
         onClick={onExit}
+        aria-label="Salir a la semana"
+        title="Salir"
         style={{
-          width: 30, height: 30, borderRadius: 7,
+          minWidth: 44, height: 36, borderRadius: 9, padding: "0 10px",
           background: "var(--bg-2)", border: "1px solid var(--line-2)",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
           color: "var(--text)", cursor: "pointer",
           position: "absolute", top: 48, left: 12,
+          fontSize: 12, fontWeight: 700,
         }}
       >
         <Icon name="x" size={14} />
+        <span style={{ color: "var(--text-mute)" }}>Salir</span>
       </button>
       <div className="ta-mono" style={{ fontSize: 9, color: "var(--text-mute)", letterSpacing: ".1em", fontWeight: 700, textAlign: "center", marginTop: 6 }}>
         EJERCICIO {exNum} / {exTotal}
@@ -43,15 +48,6 @@ export function SessionHeader({
           </div>
         </div>
       )}
-      <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 6 }}>
-        {Array.from({ length: exTotal }).map((_, i) => (
-          <div key={i} style={{
-            width: Math.min(18, Math.floor(260 / exTotal) - 2),
-            height: 3, borderRadius: 2,
-            background: i < exNum ? "var(--lime)" : "var(--bg-3)",
-          }} />
-        ))}
-      </div>
       <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-.01em", textAlign: "center", marginTop: 8 }}>
         {title}
       </div>

@@ -47,8 +47,8 @@ export function SessionBottomBar({
         left: 0,
         right: 0,
         bottom: keyboardOffset,
-        padding: "4px 16px 28px",
-        background: "linear-gradient(to top, var(--bg) 70%, transparent)",
+        padding: "8px 16px calc(12px + env(safe-area-inset-bottom))",
+        background: "linear-gradient(to top, var(--bg) 75%, transparent)",
         display: "flex",
         flexDirection: "column",
         gap: 6,
@@ -62,27 +62,27 @@ export function SessionBottomBar({
             background: "none",
             border: "none",
             cursor: "pointer",
-            padding: "4px 0",
+            padding: "2px 0",
             color: "var(--danger)",
             fontSize: 12,
             fontWeight: 600,
           }}
         >
-          Reiniciar
+          Reiniciar sesión
         </button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {allDone ? (
-          <Button size="xl" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={onComplete}>
+          <Button size="lg" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={onComplete}>
             {completing ? "Completando…" : "Finalizar sesión"}
           </Button>
         ) : (
           <>
             <Button
-              size="xl"
+              size="lg"
               block
-              icon={ex?.block?.type === "intervals" ? "timer" : "book"}
-              style={{ fontSize: 16 }}
+              icon={ex?.block?.type === "intervals" ? "timer" : ex?.target?.durationSeconds && !ex.target?.sets ? "timer" : "book"}
+              style={{ fontSize: 15, minHeight: 52 }}
               disabled={!ex}
               onClick={() => {
                 if (!ex) return;
@@ -93,7 +93,11 @@ export function SessionBottomBar({
                 }
               }}
             >
-              {ex?.block?.type === "intervals" ? "Iniciar bloque" : "Registrar series"}
+              {ex?.block?.type === "intervals"
+                ? "Iniciar bloque"
+                : ex?.target?.durationSeconds && !ex.target?.sets
+                  ? "Registrar tiempo"
+                  : "Registrar series"}
             </Button>
             <button
               type="button"
@@ -103,7 +107,7 @@ export function SessionBottomBar({
                 background: "none",
                 border: "none",
                 cursor: completing ? "default" : "pointer",
-                padding: "8px 0",
+                padding: "6px 0",
                 color: "var(--text-mute)",
                 fontSize: 13,
                 fontWeight: 600,

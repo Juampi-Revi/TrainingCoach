@@ -9,13 +9,17 @@ export type BlockExecutionPattern =
   | "steady_state"
   | "recovery";
 
+function blockSteps(block: Pick<WorkoutBlockSummary, "steps"> | { steps?: WorkoutBlockSummary["steps"] | null }) {
+  return block.steps ?? [];
+}
+
 export function getBlockExecutionPattern(block: Pick<WorkoutBlockSummary, "type" | "intervalType" | "steps">): BlockExecutionPattern {
   if (block.type === "intervals") {
     if (block.intervalType === "emom") return "emom";
     if (block.intervalType === "amrap") return "amrap";
     return "guided_intervals";
   }
-  if (block.type === "cardio" && block.steps.length > 0) return "endurance_steps";
+  if (block.type === "cardio" && blockSteps(block).length > 0) return "endurance_steps";
   if (block.type === "cardio") return "steady_state";
   if (block.type === "cooldown") return "recovery";
   return "exercise_list";
@@ -25,8 +29,9 @@ export function estimateBlockDurationSeconds(block: Pick<
   WorkoutBlockSummary,
   "type" | "intervalType" | "prepareSeconds" | "workSeconds" | "restSeconds" | "rounds" | "setCount" | "restBetweenSetsSeconds" | "totalDurationSeconds" | "targetMinutes" | "steps"
 >) {
-  if (block.steps.length > 0) {
-    const stepSeconds = block.steps.reduce((total, step) => total + (step.durationSeconds ?? 0), 0);
+  const steps = blockSteps(block);
+  if (steps.length > 0) {
+    const stepSeconds = steps.reduce((total, step) => total + (step.durationSeconds ?? 0), 0);
     if (stepSeconds > 0) return stepSeconds;
   }
 
@@ -96,7 +101,8 @@ export function blockCoachSummary(block: WorkoutBlockSummary) {
     return `${duration} · tantas rondas como puedas`;
   }
   if (pattern === "endurance_steps") {
-    return `${duration} · ${block.steps.length} paso${block.steps.length === 1 ? "" : "s"}`;
+    const steps = blockSteps(block);
+    return `${duration} · ${steps.length} paso${steps.length === 1 ? "" : "s"}`;
   }
   if (pattern === "steady_state") {
     return `${duration}${block.targetZone ? ` · ${block.targetZone}` : ""}`;
@@ -104,8 +110,9 @@ export function blockCoachSummary(block: WorkoutBlockSummary) {
   return duration;
 }
 
-export function estimateWorkoutDurationSeconds(blocks: WorkoutBlockSummary[]) {
-  const total = blocks.reduce((acc, block) => {
+export function estimateWorkoutDurationSeconds(blocks: WorkoutBlockSummary[] | null | undefined) {
+  const list = blocks ?? [];
+  const total = list.reduce((acc, block) => {
     const blockDuration = estimateBlockDurationSeconds(block) ?? 0;
     return acc + blockDuration + (block.restAfterSeconds ?? 0);
   }, 0);

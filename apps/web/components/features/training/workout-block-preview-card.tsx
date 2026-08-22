@@ -58,7 +58,8 @@ function buildStudentRecipe(block: WorkoutBlockSummary) {
     return `${block.targetMinutes ?? 0} min${block.targetZone ? ` · ${block.targetZone}` : ""}`;
   }
   if (pattern === "endurance_steps") {
-    return `${block.steps.length} paso${block.steps.length === 1 ? "" : "s"} · seguí las consignas de cada pasada`;
+    const stepCount = block.steps?.length ?? 0;
+    return `${stepCount} paso${stepCount === 1 ? "" : "s"} · seguí las consignas de cada pasada`;
   }
   if (pattern === "recovery") {
     return `${block.targetMinutes ? `${block.targetMinutes} min` : "bloque libre"} · soltura y recuperación`;
@@ -107,7 +108,7 @@ export function WorkoutBlockPreviewCard({
 
       {pattern === "endurance_steps" && (
         <div style={{ display: "grid" }}>
-          {block.steps.map((step, index) => (
+          {(block.steps ?? []).map((step, index) => (
             <div
               key={step.id}
               style={{

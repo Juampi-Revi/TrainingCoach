@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@/components/ui";
+import { PhaseLabel } from "../_components/phase-label";
 import type { WorkoutBlockSummary, SessionExercise } from "@regen/types";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import { useSounds } from "../_hooks/use-sounds";
@@ -196,6 +197,12 @@ export function AmrapRunner({
 
         {/* Global countdown */}
         <div style={{ textAlign: "center", paddingTop: 24, marginBottom: 24, position: "relative" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+            <PhaseLabel
+              phase={isPreparing ? "prep" : "work"}
+              hint={isPreparing ? "Prepárate…" : "¡Vamos!"}
+            />
+          </div>
           <div className="ta-mono" style={{ fontSize: 10, color: "var(--text-mute)", marginBottom: 6, letterSpacing: ".1em" }}>
             {isPreparing ? "PREPARACIÓN" : "TIEMPO RESTANTE"}
           </div>

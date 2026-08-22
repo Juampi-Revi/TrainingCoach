@@ -1,0 +1,270 @@
+/* Sprint A — session briefing + progress */
+
+.session-briefing {
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--lime) 14%, transparent), transparent 55%),
+    var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: 56px var(--s-4) calc(28px + env(safe-area-inset-bottom));
+  gap: var(--s-5);
+}
+
+.session-briefing__eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--lime);
+}
+
+.session-briefing__title {
+  margin: 6px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.session-briefing__meta {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.session-briefing__section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-mute);
+  margin-bottom: 10px;
+}
+
+.session-briefing__timeline,
+.session-briefing__chips,
+.session-briefing__note {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+}
+
+.session-briefing__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.session-briefing__step {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 12px;
+  position: relative;
+  align-items: start;
+}
+
+.session-briefing__step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  background: var(--bg-3);
+  border: 2px solid var(--lime);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lime) 18%, transparent);
+}
+
+.session-briefing__step-dot[data-type="warmup"],
+.session-briefing__step-dot[data-type="cooldown"] {
+  border-color: var(--info);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--info) 18%, transparent);
+}
+
+.session-briefing__step-dot[data-type="intervals"],
+.session-briefing__step-dot[data-type="cardio"] {
+  border-color: var(--warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 18%, transparent);
+}
+
+.session-briefing__step-line {
+  position: absolute;
+  left: 5px;
+  top: 20px;
+  bottom: -14px;
+  width: 2px;
+  background: var(--line-2);
+}
+
+.session-briefing__step:last-child .session-briefing__step-line {
+  display: none;
+}
+
+.session-briefing__step-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.session-briefing__step-sub {
+  font-size: 11px;
+  color: var(--text-mute);
+  margin-top: 2px;
+}
+
+.session-briefing__chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.session-briefing__chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mute);
+}
+
+.session-briefing__note p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.session-briefing__cta {
+  margin-top: auto;
+  padding-top: var(--s-4);
+}
+
+.session-progress {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.session-progress__track {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.session-progress__track::-webkit-scrollbar {
+  display: none;
+}
+
+.session-progress__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 52px;
+  flex: 1;
+}
+
+.session-progress__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  border: 2px solid var(--line-2);
+  z-index: 1;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.session-progress__line {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 6px);
+  width: calc(100% - 12px);
+  height: 2px;
+  background: var(--line-2);
+}
+
+.session-progress__item.is-done .session-progress__dot,
+.session-progress__item.is-active .session-progress__dot {
+  background: var(--lime);
+  border-color: var(--lime);
+}
+
+.session-progress__item.is-active .session-progress__dot {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lime) 22%, transparent);
+}
+
+.session-progress__item.is-done .session-progress__line {
+  background: color-mix(in srgb, var(--lime) 55%, var(--line-2));
+}
+
+.session-progress__label {
+  margin-top: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text-dim);
+  text-align: center;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-progress__item.is-active .session-progress__label {
+  color: var(--lime);
+}
+
+.session-progress__count {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-mute);
+  letter-spacing: 0.08em;
+}
+
+.completada-next {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.completada-next__title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.completada-next__sub {
+  font-size: 13px;
+  color: var(--text-mute);
+  line-height: 1.45;
+}
+
+.completada-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lime) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--lime) 30%, transparent);
+  color: var(--lime);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  width: fit-content;
+}

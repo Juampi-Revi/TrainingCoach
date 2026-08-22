@@ -61,8 +61,8 @@ export default function WorkoutDetailPage() {
     return <div style={{ minHeight: "100dvh", background: "var(--bg)" }}><StateBlock kind="error" title="No se pudo cargar" body={error ?? ""} /></div>;
   }
 
-  const blocksSorted = [...data.blocks].sort((a, b) => a.sortOrder - b.sortOrder);
-  const totalExercises = data.exercises.length;
+  const blocksSorted = [...(data.blocks ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+  const totalExercises = data.exercises?.length ?? 0;
   const totalEstimated = formatBlockDurationShort(estimateWorkoutDurationSeconds(blocksSorted));
   const extraBlockCount = blocksSorted.filter((block) => block.isExtra).length;
   const extraGroupCount = Array.from(

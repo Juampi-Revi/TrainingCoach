@@ -1,20 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Button, Icon, Tabs } from "@/components/ui";
+import { Tabs } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef } from "./_types";
 import { LoggerSheetRepsRow } from "./logger-sheet-reps-row";
+import { LoggerSheetTimedRow } from "./logger-sheet-timed-row";
 import { LoggerCardioTimer } from "./logger-cardio-timer";
 import { LoggerHeader, LoggerFooter } from "./logger-parts";
+import { LoggerQuickPresets } from "./logger-quick-presets";
+import { LoggerTechniquePreview } from "./logger-technique-preview";
 import { useSounds } from "../_hooks/use-sounds";
-
-function formatSeconds(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0 ? `${mins}:${String(secs).padStart(2, "0")}` : String(secs);
-}
 
 export function LoggerSheet({
   ex,
@@ -58,7 +54,6 @@ export function LoggerSheet({
   onClose: () => void;
 }) {
   const isCardioPure = !!ex.target?.durationSeconds && !ex.target?.reps && !ex.target?.sets;
-  const [cardioTimerSeconds, setCardioTimerSeconds] = useState(0);
   const [hiddenTechniqueUrls, setHiddenTechniqueUrls] = useState<Record<string, boolean>>({});
   const wakeLockRef = useRef<{ release?: () => Promise<void> } | null>(null);
   const lastCountdownRef = useRef<number | null>(null);
@@ -117,55 +112,15 @@ export function LoggerSheet({
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", flexDirection: "column", justifyContent: "flex-end", zIndex: 1300 }}
       onClick={onClose}
     >
-      {techniqueImageUrl && !hiddenTechniqueUrls[techniqueImageUrl] && (
-        <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "16px 16px 10px", pointerEvents: "none" }}>
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 320,
-              aspectRatio: "16 / 9",
-              position: "relative",
-              borderRadius: 16,
-              overflow: "hidden",
-              border: "1px solid var(--line-2)",
-              background: "linear-gradient(135deg, rgba(20,20,24,.95), rgba(11,11,12,.9))",
-              boxShadow: "0 14px 40px rgba(0,0,0,.35)",
-            }}
-          >
-            <Image
-              src={techniqueImageUrl}
-              alt={`Técnica de ${ex.exercise.name}`}
-              fill
-              sizes="(max-width: 540px) calc(100vw - 32px), 320px"
-              style={{ objectFit: "cover" }}
-              unoptimized
-              onError={() => {
-                setHiddenTechniqueUrls((prev) => ({ ...prev, [techniqueImageUrl]: true }));
-              }}
-            />
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.28))" }} />
-            <div
-              style={{
-                position: "absolute",
-                top: 10,
-                left: 10,
-                padding: "6px 10px",
-                borderRadius: 999,
-                background: "rgba(11,11,12,.72)",
-                border: "1px solid var(--line-2)",
-                color: "var(--text)",
-                fontSize: 11,
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Icon name="image" size={12} color="var(--text)" />
-              Técnica
-            </div>
-          </div>
-        </div>
+      {techniqueImageUrl && (
+        <LoggerTechniquePreview
+          url={techniqueImageUrl}
+          exerciseName={ex.exercise.name}
+          hidden={!!hiddenTechniqueUrls[techniqueImageUrl]}
+          onHide={() => {
+            setHiddenTechniqueUrls((prev) => ({ ...prev, [techniqueImageUrl]: true }));
+          }}
+        />
       )}
 
       <div
@@ -226,6 +181,14 @@ export function LoggerSheet({
               <Tabs variant="pills" tabs={["RPE", "RIR"]} active={effortMode} onChange={(t) => setEffortMode(t as EffortMode)} />
             </div>
 
+            <LoggerQuickPresets
+              sheetRows={sheetRows}
+              setSheetRows={setSheetRows}
+              lastRef={lastRef}
+              effortMode={effortMode}
+              ex={ex}
+            />
+
             {ex.target?.durationSeconds ? (
               <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, padding: "0 2px 8px", fontSize: 10, color: "var(--text-mute)", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>
                 <div>Serie</div><div style={{ textAlign: "center" }}>seg</div><div style={{ textAlign: "center" }}>kg</div><div style={{ textAlign: "center" }}>{effortMode}</div><div />
@@ -240,54 +203,23 @@ export function LoggerSheet({
               {sheetRows.map((row) => {
                 const isTimingThis = activeTimerRow === row.setNumber;
                 return ex.target?.durationSeconds ? (
-                  <div key={row.setNumber} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
-                    <div className="ta-mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--text-mute)" }}>{row.setNumber}</div>
-                    <div style={{ position: "relative" }}>
-                      {isTimingThis ? (
-                        <div style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--lime)", borderRadius: 10, padding: "10px 0", fontSize: 22, fontWeight: 800, fontFamily: "var(--font-mono)", color: "var(--lime)", width: "100%" }}>
-                          {formatSeconds(timerSecondsLeft)}
-                        </div>
-                      ) : (
-                        <input
-                          type="number" inputMode="decimal" value={row.duration}
-                          onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, duration: e.target.value } : r))}
-                          placeholder={row.durationPlaceholder ?? String(ex.target.durationSeconds)}
-                          style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                        />
-                      )}
-                    </div>
-                    <input
-                      type="number" inputMode="decimal" value={row.kg}
-                      onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
-                      placeholder={row.kgPlaceholder ?? "—"}
-                      style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                    />
-                    <input
-                      type="number" inputMode="decimal" value={row.effort}
-                      onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
-                      placeholder={row.effortPlaceholder ?? (ex.target?.intensityTarget != null ? String(ex.target.intensityTarget) : "—")}
-                      style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
-                    />
-                    {isTimingThis ? (
-                      <button onClick={() => { setActiveTimerRow(null); setTimerEndsAtMs(null); setTimerSecondsLeft(0); }} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--lime)", background: "rgba(215,255,58,.1)", color: "var(--lime)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
-                        Parar
-                      </button>
-                    ) : row.isSaved ? (
-                      <button onClick={() => deleteSet(row.setNumber)} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-                        Borrar
-                      </button>
-                    ) : (
-                      <button onClick={() => {
-                        const duration = ex.target?.durationSeconds ?? 0;
-                        setActiveTimerRow(row.setNumber);
-                        setTimerSecondsLeft(duration);
-                        setTimerEndsAtMs(Date.now() + duration * 1000);
-                        playStart();
-                      }} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>
-                        <Icon name="timer" size={14} />
-                      </button>
-                    )}
-                  </div>
+                  <LoggerSheetTimedRow
+                    key={row.setNumber}
+                    ex={ex}
+                    row={row}
+                    isTimingThis={isTimingThis}
+                    timerSecondsLeft={timerSecondsLeft}
+                    setSheetRows={setSheetRows}
+                    deleteSet={deleteSet}
+                    onStopTimer={() => { setActiveTimerRow(null); setTimerEndsAtMs(null); setTimerSecondsLeft(0); }}
+                    onStartTimer={() => {
+                      const duration = ex.target?.durationSeconds ?? 0;
+                      setActiveTimerRow(row.setNumber);
+                      setTimerSecondsLeft(duration);
+                      setTimerEndsAtMs(Date.now() + duration * 1000);
+                      playStart();
+                    }}
+                  />
                 ) : (
                   <LoggerSheetRepsRow
                     key={row.setNumber}
@@ -344,17 +276,17 @@ export function LoggerSheet({
                 + Agregar serie
               </button>
             </div>
+
+            <LoggerFooter
+              sheetSaving={sheetSaving}
+              onClose={onClose}
+              saveSheet={saveSheet}
+              ex={ex}
+              sheetRows={sheetRows}
+              effortMode={effortMode}
+            />
           </>
         )}
-
-        <LoggerFooter
-          isCardioPure={isCardioPure}
-          cardioTimerSeconds={cardioTimerSeconds}
-          sheetSaving={sheetSaving}
-          onClose={onClose}
-          saveSheet={saveSheet}
-          ex={ex}
-        />
       </div>
     </div>
   );

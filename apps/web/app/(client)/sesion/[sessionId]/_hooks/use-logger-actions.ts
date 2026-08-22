@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import type { SessionDetail } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef, OfflineItem } from "../_components/_types";
+import { recommendedRestSeconds, restSuggestionText, suggestWeightKg } from "../_lib/recommended-rest";
 
 export function useLoggerActions({
   sessionId,
@@ -22,6 +23,7 @@ export function useLoggerActions({
   setRestSeconds,
   setRestTotal,
   setRestFromLogger,
+  setRestSuggestion,
   setLastSaved,
   setSheetSaving,
   lastRef,
@@ -42,6 +44,7 @@ export function useLoggerActions({
   setRestSeconds: (v: number | null) => void;
   setRestTotal: (v: number) => void;
   setRestFromLogger: (v: boolean) => void;
+  setRestSuggestion: (v: string | null) => void;
   setLastSaved: (v: string | null) => void;
   setSheetSaving: (v: boolean) => void;
   lastRef: LastRef | null;
@@ -119,11 +122,38 @@ export function useLoggerActions({
         }
       }
       setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
+
+      const lastFilled = [...rowsToSave].reverse().find((r) => {
+        const isTimed = !!(ex.target?.durationSeconds);
+        return isTimed ? !!(r.duration || r.kg || r.effort) : !!(r.reps || r.kg || r.effort);
+      });
+      if (lastFilled) {
+        setSheetRows((prev) => {
+          const nextEmpty = prev.find((r) => !r.isSaved && !r.reps && !r.kg && !r.effort && !r.duration);
+          if (!nextEmpty) return prev;
+          const suggestedKg = lastFilled.kg
+            ? suggestWeightKg(lastFilled.kg, lastFilled.effort, effortMode)
+            : null;
+          return prev.map((r) =>
+            r.setNumber === nextEmpty.setNumber
+              ? {
+                  ...r,
+                  kg: suggestedKg ?? lastFilled.kg,
+                  reps: lastFilled.reps,
+                  duration: lastFilled.duration,
+                  effort: lastFilled.effort,
+                }
+              : r,
+          );
+        });
+      }
+
       load();
       if (opts?.startRest) {
-        const rest = ex.target?.restSeconds ?? 90;
+        const rest = recommendedRestSeconds(ex, lastFilled?.effort, effortMode);
         setRestTotal(rest);
         setRestSeconds(rest);
+        setRestSuggestion(restSuggestionText(ex, lastFilled?.effort, effortMode, rest));
         setRestFromLogger(true);
         setLoggerOpen(false);
       }
@@ -132,7 +162,7 @@ export function useLoggerActions({
     } finally {
       setSheetSaving(false);
     }
-  }, [session, currentExIdx, sheetRows, effortMode, equipmentType, queueKey, sessionId, api, setOfflineCount, load, setLastSaved, setSheetSaving, setRestTotal, setRestSeconds, setRestFromLogger, setLoggerOpen, setSheetRows]);
+  }, [session, currentExIdx, sheetRows, effortMode, equipmentType, queueKey, sessionId, api, setOfflineCount, load, setLastSaved, setSheetSaving, setRestTotal, setRestSeconds, setRestFromLogger, setRestSuggestion, setLoggerOpen, setSheetRows]);
 
   return { openLogger, deleteSet, saveSheet };
 }

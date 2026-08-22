@@ -7,6 +7,26 @@ import type { SessionDetail } from "@regen/types";
 import { useWarmupTimer } from "./use-warmup-timer";
 import { useOfflineQueue } from "./use-offline-queue";
 
+const STALE_SESSION_MS = 4 * 60 * 60 * 1000;
+
+function resolveSessionClockStart(clockKey: string, performedAt: string): number {
+  try {
+    const stored = window.localStorage.getItem(clockKey);
+    if (stored) {
+      const n = Number(stored);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  } catch { /* ignore */ }
+
+  const performed = new Date(performedAt).getTime();
+  const age = Date.now() - performed;
+  const start = Number.isFinite(performed) && age >= 0 && age < STALE_SESSION_MS
+    ? performed
+    : Date.now();
+  try { window.localStorage.setItem(clockKey, String(start)); } catch { /* ignore */ }
+  return start;
+}
+
 export function useSession(sessionId: string) {
   const { api } = useAuth();
   const router = useRouter();
@@ -29,23 +49,31 @@ export function useSession(sessionId: string) {
     loadWarmupState, toggleWarmup, resetWarmup, finishWarmup,
   } = useWarmupTimer(warmupDoneKey, warmupTimerKey);
 
+  const clockKey = `regen_session_clock_${sessionId}`;
+
   const load = useCallback(() => {
     api.get<SessionDetail>(`/client/sessions/${sessionId}`)
       .then((s) => {
-        setSession(s);
-        setWorkoutStartedAtMs(new Date(s.performedAt).getTime());
+        const normalized: SessionDetail = {
+          ...s,
+          blocks: s.blocks ?? [],
+          exercises: s.exercises ?? [],
+          activities: s.activities ?? [],
+        };
+        setSession(normalized);
+        setWorkoutStartedAtMs(resolveSessionClockStart(clockKey, normalized.performedAt));
         if (!didInitIdx) {
           setDidInitIdx(true);
-          const firstWorkIdx = s.exercises.findIndex((e) => e.block?.type !== "warmup");
+          const firstWorkIdx = normalized.exercises.findIndex((e) => e.block?.type !== "warmup");
           if (firstWorkIdx >= 0) setCurrentExIdx(firstWorkIdx);
         }
-        if (s.status === "completed" || s.status === "partial") {
+        if (normalized.status === "completed" || normalized.status === "partial") {
           router.replace(`/sesion/${sessionId}/completada`);
         }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [api, didInitIdx, sessionId, router]);
+  }, [api, didInitIdx, sessionId, router, clockKey]);
 
   const { flushQueue } = useOfflineQueue({ sessionId, queueKey, setOfflineCount, load });
 
@@ -81,7 +109,7 @@ export function useSession(sessionId: string) {
     offlineCount, setOfflineCount,
     warmupDone, setWarmupDone,
     warmupTimer, setWarmupTimer,
-    queueKey, warmupDoneKey, warmupTimerKey,
+    queueKey, warmupDoneKey, warmupTimerKey, clockKey,
     load, flushQueue,
     toggleWarmup, resetWarmup, finishWarmup,
   };

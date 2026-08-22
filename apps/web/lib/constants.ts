@@ -83,7 +83,7 @@ export function blockTypeLabel(type: BlockType, intervalType?: IntervalType | nu
 }
 
 export function blockSummary(b: WorkoutBlockSummary): string {
-  if (b.steps.length > 0) {
+  if (b.steps?.length) {
     return `${b.steps.length} paso${b.steps.length === 1 ? "" : "s"}${b.targetZone ? ` · ${b.targetZone}` : ""}`;
   }
   // Interval blocks
@@ -139,8 +139,8 @@ export function formatStepLength(step: WorkoutBlockStepSummary): string {
   return parts.join(" · ") || "Sin duración";
 }
 
-export function summarizeEnduranceSteps(steps: WorkoutBlockStepSummary[]) {
-  return steps.reduce(
+export function summarizeEnduranceSteps(steps: WorkoutBlockStepSummary[] | null | undefined) {
+  return (steps ?? []).reduce(
     (acc, step) => {
       acc.steps += 1;
       acc.totalDistanceMeters += step.distanceMeters ?? 0;

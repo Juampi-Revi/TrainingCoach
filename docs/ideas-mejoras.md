@@ -444,12 +444,12 @@ Aplicar global en `globals.css`. Costo: 5 línas, impacto: enorme.
 
 ### Sprint A — Session experience (2-3 semanas)
 
-- Session briefing con timeline visual
-- Macro progress bar en runner
-- Rest timer adaptativo + haptic + sugerencia contextual
-- Phase labels explícitos (PREP / WORK / REST / TRANSITION)
-- Logger quick-log presets ("Same as last", "+5%", "−5%")
-- Completada con stats + celebration + next step
+- [x] Session briefing con timeline visual
+- [x] Macro progress bar en runner
+- [x] Rest timer adaptativo + haptic + sugerencia contextual
+- [x] Phase labels explícitos (PREP / WORK / REST / TRANSITION)
+- [x] Logger quick-log presets ("Same as last", "+5%", "−5%")
+- [x] Completada con stats + celebration + next step
 
 ### Sprint B — Coach experience (2-3 semanas)
 

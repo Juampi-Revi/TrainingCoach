@@ -3,29 +3,23 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Button, Icon, StateBlock, ConfirmModal } from "@/components/ui";
+import { Icon, StateBlock } from "@/components/ui";
 import { groupLabel, fmtDuration } from "@/lib/constants";
-import { BlockRunner } from "./block-runner";
 import { SessionHeader } from "./_components/session-header";
-import { ExercisePicker } from "./_components/exercise-picker";
 import { ExerciseList } from "./_components/exercise-list";
-import { PreSelectSheet } from "./_components/pre-select-sheet";
-import { MediaLightbox } from "./_components/media-lightbox";
 import { ExerciseMediaViewer } from "./_components/exercise-media-viewer";
-import { SwapSheet } from "./_components/swap-sheet";
-import { RestTimerOverlay } from "./_components/rest-timer-overlay";
-import { WarmupOverlay } from "./_components/warmup-overlay";
-import { LoggerSheet } from "./_components/logger-sheet";
-import { BlockRestScreen } from "./_components/block-rest-screen";
-import { ResetModal } from "./_components/reset-modal";
-import { BlockRunnerOverlay } from "./_components/block-runner-overlay";
 import { SessionEnduranceView } from "./_components/session-endurance-view";
 import { SessionBottomBar } from "./_components/session-bottom-bar";
+import { SessionBriefing } from "./_components/session-briefing";
+import { SessionProgressBar } from "./_components/session-progress-bar";
+import { SessionOfflineBanner, SessionExtrasBanner } from "./_components/session-banners";
+import { SessionOverlays } from "./_components/session-overlays";
 import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
 import { useBlockExecution } from "./_hooks/use-block-execution";
 import { isSessionExerciseExtra } from "@/lib/workout-labels";
 import { useToast } from "@/lib/toast";
+import "./_styles.css";
 
 export default function SessionInProgressPage() {
   const { api } = useAuth();
@@ -40,7 +34,7 @@ export default function SessionInProgressPage() {
     offlineCount, setOfflineCount,
     warmupDone, setWarmupDone,
     warmupTimer,
-    queueKey, warmupDoneKey, warmupTimerKey,
+    queueKey, warmupDoneKey, warmupTimerKey, clockKey,
     load, flushQueue,
     toggleWarmup, resetWarmup, finishWarmup,
   } = useSession(sessionId);
@@ -56,6 +50,7 @@ export default function SessionInProgressPage() {
     timerEndsAtMs, setTimerEndsAtMs,
     restSeconds, setRestSeconds,
     restTotal,
+    restSuggestion,
     lastRef,
     lastSaved,
     openLogger,
@@ -92,10 +87,19 @@ export default function SessionInProgressPage() {
   const [preSelectExIdx, setPreSelectExIdx] = useState<number | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
   const [blockRunnerOpen, setBlockRunnerOpen] = useState(false);
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [briefingDone, setBriefingDone] = useState(false);
+  const briefingKey = `regen_briefing_done_${sessionId}`;
+
+  useEffect(() => {
+    try {
+      setBriefingDone(window.localStorage.getItem(briefingKey) === "1");
+    } catch {
+      setBriefingDone(false);
+    }
+  }, [briefingKey]);
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -160,6 +164,8 @@ export default function SessionInProgressPage() {
       try { localStorage.removeItem(warmupDoneKey); } catch {}
       try { localStorage.removeItem(warmupTimerKey); } catch {}
       try { localStorage.removeItem(queueKey); } catch {}
+      try { localStorage.removeItem(briefingKey); } catch {}
+      try { localStorage.removeItem(clockKey); } catch {}
       router.replace(`/sesion/${res.id}`);
     } catch (e) {
       console.error(e);
@@ -171,7 +177,19 @@ export default function SessionInProgressPage() {
     return <div style={{ minHeight: "100dvh", background: "var(--bg)" }}><StateBlock kind="loading" title="Cargando sesión…" /></div>;
   }
 
-  const sessionEnduranceBlocks = session.blocks.filter((block) => block.steps.length > 0);
+  if (!briefingDone) {
+    return (
+      <SessionBriefing
+        session={session}
+        onStart={() => {
+          try { localStorage.setItem(briefingKey, "1"); } catch { /* ignore */ }
+          setBriefingDone(true);
+        }}
+      />
+    );
+  }
+
+  const sessionEnduranceBlocks = (session.blocks ?? []).filter((block) => (block.steps?.length ?? 0) > 0);
   if (session.exercises.length === 0 && sessionEnduranceBlocks.length > 0) {
     return (
       <SessionEnduranceView
@@ -190,7 +208,7 @@ export default function SessionInProgressPage() {
   const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
   const requiredExercises = workExercises.filter((e) => !isSessionExerciseExtra(e));
   const completedExs = requiredExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
-  const extraBlockCount = session.blocks.filter((block) => block.isExtra).length;
+  const extraBlockCount = (session.blocks ?? []).filter((block) => block.isExtra).length;
   const extraGroupCount = Array.from(
     new Set(
       workExercises
@@ -198,7 +216,6 @@ export default function SessionInProgressPage() {
         .map((item) => `${item.block?.id ?? "block"}:${item.supersetGroup}`),
     ),
   ).length;
-  const extraCount = extraBlockCount + extraGroupCount;
   const warmupExists = warmupExercises.length > 0;
   const warmupTargetMs = null; // No longer using warmupMinutes from template
   const workoutElapsedMs = workoutStartedAtMs != null ? Math.max(0, nowMs - workoutStartedAtMs) : 0;
@@ -227,7 +244,7 @@ export default function SessionInProgressPage() {
   const activeBlockId = currentBlockId ?? currentBlock?.block.id ?? null;
   const bottomBarVisible = !(warmupExists && !warmupDone) && !loggerOpen;
   const bottomBarPadding = bottomBarVisible
-    ? keyboardOffset + (completedExs === requiredExercises.length ? 176 : 236)
+    ? keyboardOffset + (completedExs === requiredExercises.length ? 140 : 180)
     : 120;
 
   return (
@@ -239,29 +256,10 @@ export default function SessionInProgressPage() {
         onExit={() => router.push("/semana")}
       />
 
-      {offlineCount > 0 && (
-        <div style={{ background: "var(--warn)", color: "#0B0B0C", padding: "8px 16px", margin: "8px 16px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <Icon name="alert" size={13} color="#0B0B0C" />
-          {offlineCount} serie{offlineCount !== 1 ? "s" : ""} pendiente{offlineCount !== 1 ? "s" : ""} · se sincronizarán al reconectar
-          <button onClick={flushQueue} style={{ background: "rgba(0,0,0,.15)", border: "none", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", color: "#0B0B0C" }}>
-            Reintentar
-          </button>
-        </div>
-      )}
+      <SessionProgressBar exercises={workExercises} currentId={ex?.id} />
 
-      {extraCount > 0 && (
-        <div style={{ margin: "8px 16px 0", padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(215,255,58,.24)", background: "rgba(215,255,58,.06)", color: "var(--text)" }}>
-          <div className="ta-mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--lime)", letterSpacing: ".08em", textTransform: "uppercase" }}>
-            Incluye extras opcionales
-          </div>
-          <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 4, lineHeight: 1.45 }}>
-            {extraBlockCount > 0 ? `${extraBlockCount} bloque${extraBlockCount > 1 ? "s" : ""}` : null}
-            {extraBlockCount > 0 && extraGroupCount > 0 ? " · " : null}
-            {extraGroupCount > 0 ? `${extraGroupCount} grupo${extraGroupCount > 1 ? "s" : ""}` : null}
-            {" · "}No cuentan para completar el entrenamiento, pero podés sumarlos si te sentís con energía.
-          </div>
-        </div>
-      )}
+      <SessionOfflineBanner count={offlineCount} onRetry={flushQueue} />
+      <SessionExtrasBanner extraBlockCount={extraBlockCount} extraGroupCount={extraGroupCount} />
 
       {/* Exercise Media Viewer */}
       {hasMedia && ex && (
@@ -323,121 +321,75 @@ export default function SessionInProgressPage() {
         onStartBlock={(blockId) => { setCurrentBlockId(blockId); setBlockRunnerOpen(true); }}
       />
 
-      {loggerOpen && ex && (
-        <LoggerSheet
-          ex={ex} sessionId={sessionId}
-          sheetRows={sheetRows} setSheetRows={setSheetRows}
-          effortMode={effortMode} setEffortMode={setEffortMode}
-          equipmentType={equipmentType} setEquipmentType={setEquipmentType}
-          activeTimerRow={activeTimerRow} setActiveTimerRow={setActiveTimerRow}
-          timerSecondsLeft={timerSecondsLeft} setTimerSecondsLeft={setTimerSecondsLeft}
-          timerEndsAtMs={timerEndsAtMs} setTimerEndsAtMs={setTimerEndsAtMs}
-          lastRef={lastRef} sheetSaving={sheetSaving}
-          saveSheet={saveSheet} deleteSet={deleteSet}
-          onClose={() => setLoggerOpen(false)}
-        />
-      )}
-
-      {warmupExists && !warmupDone && (
-        <WarmupOverlay
-          elapsedMs={warmupElapsedMs} targetMs={warmupTargetMs}
-          exercises={warmupExercises}
-          running={warmupTimer.runningSince != null}
-          onToggle={toggleWarmup} onReset={resetWarmup} onDone={finishWarmup}
-          onSkip={finishWarmup}
-        />
-      )}
-
-      <BlockRunnerOverlay
-        blockRunnerOpen={blockRunnerOpen}
-        currentBlockId={currentBlockId}
-        blocks={blocks}
-        currentBlock={currentBlock}
+      <SessionOverlays
+        session={session}
         sessionId={sessionId}
         api={api}
-        onClose={() => {
-          setBlockRunnerOpen(false);
-          setCurrentBlockId(null);
-          load();
-        }}
-        onSaved={load}
+        load={load}
+        setSession={setSession}
+        setCurrentExIdx={setCurrentExIdx}
+        loggerOpen={loggerOpen}
+        setLoggerOpen={setLoggerOpen}
+        ex={ex}
+        sheetRows={sheetRows}
+        setSheetRows={setSheetRows}
+        effortMode={effortMode}
+        setEffortMode={setEffortMode}
+        equipmentType={equipmentType}
+        setEquipmentType={setEquipmentType}
+        activeTimerRow={activeTimerRow}
+        setActiveTimerRow={setActiveTimerRow}
+        timerSecondsLeft={timerSecondsLeft}
+        setTimerSecondsLeft={setTimerSecondsLeft}
+        timerEndsAtMs={timerEndsAtMs}
+        setTimerEndsAtMs={setTimerEndsAtMs}
+        lastRef={lastRef}
+        sheetSaving={sheetSaving}
+        saveSheet={saveSheet}
+        deleteSet={deleteSet}
+        warmupExists={warmupExists}
+        warmupDone={warmupDone}
+        warmupElapsedMs={warmupElapsedMs}
+        warmupTargetMs={warmupTargetMs}
+        warmupTimer={warmupTimer}
+        toggleWarmup={toggleWarmup}
+        resetWarmup={resetWarmup}
+        finishWarmup={finishWarmup}
+        blockRunnerOpen={blockRunnerOpen}
+        setBlockRunnerOpen={setBlockRunnerOpen}
+        currentBlockId={currentBlockId}
+        setCurrentBlockId={setCurrentBlockId}
+        blocks={blocks}
+        currentBlock={currentBlock}
+        nextBlock={nextBlock}
+        isResting={isResting}
+        restSecondsRemaining={restSecondsRemaining}
+        totalBlocks={totalBlocks}
+        completedCount={completedCount}
+        skipRest={skipRest}
+        startNextBlock={startNextBlock}
+        restSeconds={restSeconds}
+        restTotal={restTotal}
+        restSuggestion={restSuggestion}
+        setRestSeconds={setRestSeconds}
+        nextEx={nextEx}
+        showPicker={showPicker}
+        setShowPicker={setShowPicker}
+        mediaOpen={mediaOpen}
+        setMediaOpen={setMediaOpen}
+        swapOpen={swapOpen}
+        setSwapOpen={setSwapOpen}
+        showReset={showReset}
+        setShowReset={setShowReset}
+        resetting={resetting}
+        onResetConfirm={() => { void resetSession(); }}
+        showEarlyFinish={showEarlyFinish}
+        setShowEarlyFinish={setShowEarlyFinish}
+        onEarlyFinishConfirm={() => { void completeSession(); }}
+        preSelectExIdx={preSelectExIdx}
+        setPreSelectExIdx={setPreSelectExIdx}
+        confirmGoToEx={confirmGoToEx}
       />
-
-      {isResting && (
-        <BlockRestScreen
-          currentBlock={currentBlock}
-          nextBlock={nextBlock}
-          restSecondsRemaining={restSecondsRemaining}
-          totalBlocks={totalBlocks}
-          completedCount={completedCount}
-          onSkip={skipRest}
-          onStartNext={startNextBlock}
-        />
-      )}
-
-      {restSeconds != null && restSeconds > 0 && (
-        <RestTimerOverlay
-          seconds={restSeconds} total={restTotal} nextEx={nextEx}
-          onSkip={() => setRestSeconds(null)}
-          onAdjust={(delta) => setRestSeconds((s) => s != null ? Math.max(1, s + delta) : null)}
-        />
-      )}
-
-      {showPicker && (
-        <ExercisePicker sessionId={sessionId}
-          onAdd={(wse) => {
-            setSession((prev) => prev ? { ...prev, exercises: [...prev.exercises, wse] } : prev);
-            setCurrentExIdx(session.exercises.length);
-          }}
-          onClose={() => setShowPicker(false)}
-        />
-      )}
-
-      {mediaOpen && ex?.media?.length > 0 && (
-        <MediaLightbox
-          media={ex.media.map(m => ({ ...m, mediaType: m.mediaType as "image" | "video" }))}
-          exerciseName={ex.exercise.name}
-          onClose={() => setMediaOpen(false)}
-        />
-      )}
-      {swapOpen && ex && <SwapSheet ex={ex} sessionId={sessionId} onSwapped={() => load()} onClose={() => setSwapOpen(false)} />}
-
-      {showReset && (
-        <ResetModal
-          resetting={resetting}
-          onCancel={() => setShowReset(false)}
-          onConfirm={() => { setShowReset(false); void resetSession(); }}
-        />
-      )}
-
-      {showEarlyFinish && (
-        <ConfirmModal
-          message="Todavía hay series pendientes. ¿Terminar la sesión incompleta?"
-          confirmLabel="Terminar incompleto"
-          cancelLabel="Seguir entrenando"
-          destructive
-          onCancel={() => setShowEarlyFinish(false)}
-          onConfirm={() => {
-            setShowEarlyFinish(false);
-            void completeSession();
-          }}
-        />
-      )}
-
-      {preSelectExIdx !== null && session.exercises[preSelectExIdx] && (
-        <PreSelectSheet
-          target={session.exercises[preSelectExIdx]!}
-          onConfirm={() => confirmGoToEx(preSelectExIdx)}
-          onSwap={async (exerciseId) => {
-            const target = session.exercises[preSelectExIdx]!;
-            setPreSelectExIdx(null);
-            await api.patch(`/client/sessions/${sessionId}/exercises/${target.id}`, { swapExerciseId: exerciseId });
-            await load();
-            confirmGoToEx(preSelectExIdx);
-          }}
-          onDismiss={() => { setPreSelectExIdx(null); confirmGoToEx(preSelectExIdx); }}
-        />
-      )}
     </div>
   );
 }
