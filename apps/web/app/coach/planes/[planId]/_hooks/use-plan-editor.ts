@@ -2,6 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import type { CellData, PlanDetail, TemplateSummary, WeekMetaState } from "../_components/types";
+import {
+  clonePlanGrid,
+  usePlanGridHistory,
+  weekItemsFromRow,
+} from "./use-plan-grid-history";
 
 interface PlanEditorState {
   plan: PlanDetail | null;
@@ -28,6 +33,17 @@ interface PlanEditorState {
 export function usePlanEditor(planId: string) {
   const { api } = useAuth();
   const toast = useToast();
+  const {
+    capture: captureGrid,
+    undo: undoGrid,
+    redo: redoGrid,
+    clear: clearGridHistory,
+    canUndo,
+    canRedo,
+    busy: historyBusy,
+    beginApply,
+    endApply,
+  } = usePlanGridHistory();
 
   const [state, setState] = useState<PlanEditorState>({
     plan: null,
@@ -55,7 +71,7 @@ export function usePlanEditor(planId: string) {
     setState((s) => ({ ...s, [key]: value }));
   }
 
-  const load = useCallback(() => {
+  const load = useCallback((opts?: { resetHistory?: boolean }) => {
     api.get<PlanDetail>(`/coach/plans/${planId}`)
       .then((p) => {
         const meta: WeekMetaState = {};
@@ -87,12 +103,13 @@ export function usePlanEditor(planId: string) {
           grid: g,
           loading: false,
         }));
+        if (opts?.resetHistory) clearGridHistory();
       })
       .catch(console.error)
       .finally(() => patch("loading", false));
-  }, [api, planId]);
+  }, [api, planId, clearGridHistory]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load({ resetHistory: true }); }, [load]);
 
   const savePlanField = useCallback(async (field: Record<string, unknown>) => {
     patch("saveStatus", "saving");
@@ -181,11 +198,54 @@ export function usePlanEditor(planId: string) {
     });
   }, [api, planId, state.plan, toast]);
 
+  const syncGridToApi = useCallback(async (grid: Array<Array<CellData | null>>) => {
+    for (let wi = 0; wi < grid.length; wi++) {
+      const row = grid[wi] ?? [];
+      await api.put(`/coach/plans/${planId}/weeks/${wi + 1}/workouts`, {
+        items: weekItemsFromRow(row),
+      });
+    }
+    load();
+  }, [api, planId, load]);
+
+  const undo = useCallback(async () => {
+    const prev = undoGrid(clonePlanGrid(state.grid));
+    if (!prev) return;
+    beginApply();
+    setState((s) => ({ ...s, grid: prev, cellMenu: null }));
+    try {
+      await syncGridToApi(prev);
+      toast.success("Cambio deshecho");
+    } catch {
+      toast.error("No se pudo deshacer");
+      load();
+    } finally {
+      endApply();
+    }
+  }, [undoGrid, state.grid, beginApply, endApply, syncGridToApi, toast, load]);
+
+  const redo = useCallback(async () => {
+    const next = redoGrid(clonePlanGrid(state.grid));
+    if (!next) return;
+    beginApply();
+    setState((s) => ({ ...s, grid: next, cellMenu: null }));
+    try {
+      await syncGridToApi(next);
+      toast.success("Cambio rehecho");
+    } catch {
+      toast.error("No se pudo rehacer");
+      load();
+    } finally {
+      endApply();
+    }
+  }, [redoGrid, state.grid, beginApply, endApply, syncGridToApi, toast, load]);
+
   const handleMoveCell = useCallback(async (fromWeekIndex: number, fromDayIndex: number, toWeekIndex: number, toDayIndex: number) => {
     if (fromWeekIndex === toWeekIndex && fromDayIndex === toDayIndex) return;
     const from = state.grid[fromWeekIndex]?.[fromDayIndex] ?? null;
     if (!from) return;
 
+    captureGrid(state.grid);
     patch("cellMenu", null);
 
     setState((prev) => {
@@ -208,12 +268,13 @@ export function usePlanEditor(planId: string) {
     } catch {
       load();
     }
-  }, [api, planId, state.grid, load]);
+  }, [api, planId, state.grid, load, captureGrid]);
 
   const handleCellSelect = useCallback(async (template: TemplateSummary) => {
     const picker = state.picker;
     if (!picker) return;
     const { week, day } = picker;
+    captureGrid(state.grid);
     patch("picker", null);
     const cell: CellData = { pwwId: "", templateId: template.id, title: template.title, tags: template.tags, exerciseCount: template.exerciseCount, progressionNote: null };
 
@@ -231,9 +292,10 @@ export function usePlanEditor(planId: string) {
     } catch {
       load();
     }
-  }, [api, planId, state.picker, load]);
+  }, [api, planId, state.picker, state.grid, load, captureGrid]);
 
   const handleCellClear = useCallback(async (week: number, day: number) => {
+    captureGrid(state.grid);
     patch("cellMenu", null);
     setState((prev) => ({
       ...prev,
@@ -244,7 +306,7 @@ export function usePlanEditor(planId: string) {
     } catch {
       load();
     }
-  }, [api, planId, load]);
+  }, [api, planId, state.grid, load, captureGrid]);
 
   const handleEditProgressionNote = useCallback((weekIndex: number, dayIndex: number) => {
     const cell = state.grid[weekIndex]?.[dayIndex] ?? null;
@@ -292,15 +354,14 @@ export function usePlanEditor(planId: string) {
   }, [state.grid, toast]);
 
   const applyWeekReplace = useCallback(async (weekNumber: number, sourceRow: Array<CellData | null>) => {
+    captureGrid(state.grid);
     const targetRow = sourceRow.map((c) => (c ? { ...c, pwwId: "" } : null));
     setState((prev) => ({
       ...prev,
       grid: prev.grid.map((row, wi) => (wi === weekNumber - 1 ? targetRow : row)),
     }));
 
-    const items = targetRow.flatMap((cell, sortOrder) =>
-      cell ? [{ sortOrder, workoutTemplateId: cell.templateId, progressionNote: cell.progressionNote ?? null }] : [],
-    );
+    const items = weekItemsFromRow(targetRow);
 
     try {
       await api.put(`/coach/plans/${planId}/weeks/${weekNumber}/workouts`, { items });
@@ -310,7 +371,7 @@ export function usePlanEditor(planId: string) {
       toast.error("No se pudo actualizar la semana");
       load();
     }
-  }, [api, planId, load, toast]);
+  }, [api, planId, load, toast, captureGrid, state.grid]);
 
   const pasteWeek = useCallback(async (weekNumber: number) => {
     if (!state.weekClipboard) return;
@@ -322,6 +383,7 @@ export function usePlanEditor(planId: string) {
       message: `¿Vaciar la semana ${weekNumber}? Se quitarán todos los entrenos.`,
       onConfirm: async () => {
         patch("confirmDialog", null);
+        captureGrid(state.grid);
         setState((prev) => ({
           ...prev,
           grid: prev.grid.map((row, wi) => (wi === weekNumber - 1 ? row.map(() => null) : row)),
@@ -336,7 +398,7 @@ export function usePlanEditor(planId: string) {
         }
       },
     });
-  }, [api, planId, load, toast]);
+  }, [api, planId, load, toast, captureGrid, state.grid]);
 
   const duplicateWeek = useCallback(async (fromWeekNumber: number, toWeekNumber: number) => {
     const row = state.grid[fromWeekNumber - 1] ?? [];
@@ -363,5 +425,10 @@ export function usePlanEditor(planId: string) {
     pasteWeek,
     clearWeek,
     duplicateWeek,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyBusy,
   };
 }

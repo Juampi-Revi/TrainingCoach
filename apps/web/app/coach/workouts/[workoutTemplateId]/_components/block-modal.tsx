@@ -211,7 +211,7 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
     try {
       await api.del(`/coach/workouts/${templateId}/blocks/${block.id}`);
       onDeleted(block.id);
-      toast.success("Bloque eliminado");
+      toast.success("Bloque eliminado · ⌘Z para deshacer");
       onClose();
     } catch (e) {
       console.error(e);

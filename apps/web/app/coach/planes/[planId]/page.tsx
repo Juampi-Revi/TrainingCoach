@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Button, ConfirmModal, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
+import { UndoRedoButtons } from "@/components/shared/undo-redo-buttons";
+import { useUndoHotkeys } from "@/lib/use-undo-hotkeys";
 import { TemplatePicker } from "./_components/template-picker";
 import { PlanProperties } from "./_components/plan-properties";
 import { PlanGrid } from "./_components/plan-grid";
@@ -22,6 +24,12 @@ export default function PlanDetailPage() {
   const editor = usePlanEditor(planId);
   const { state } = editor;
   const { plan, loading } = state;
+
+  useUndoHotkeys({
+    onUndo: () => { void editor.undo(); },
+    onRedo: () => { void editor.redo(); },
+    enabled: !loading && !!plan && !editor.historyBusy,
+  });
 
   if (loading) return <DesktopShell active="plans" coachName={user?.name ?? "Coach"}><StateBlock kind="loading" title="Cargando plan…" /></DesktopShell>;
   if (!plan)  return <DesktopShell active="plans" coachName={user?.name ?? "Coach"}><StateBlock kind="error" title="Plan no encontrado" /></DesktopShell>;
@@ -68,6 +76,13 @@ export default function PlanDetailPage() {
                     ? "Error al guardar"
                     : "Autoguardado"}
             </span>
+            <UndoRedoButtons
+              canUndo={editor.canUndo}
+              canRedo={editor.canRedo}
+              onUndo={() => void editor.undo()}
+              onRedo={() => void editor.redo()}
+              busy={editor.historyBusy}
+            />
             <Button variant="outline" size="sm" icon="chevL" onClick={() => router.push("/coach/planes")}>
               Planes
             </Button>

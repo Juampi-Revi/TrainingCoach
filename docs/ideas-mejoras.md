@@ -456,7 +456,7 @@ Aplicar global en `globals.css`. Costo: 5 línas, impacto: enorme.
 - [x] Builder con "Vista alumno" (toggle Editar | Vista alumno)
 - [x] Alumno detail: diagnosis hero + tabs (Entrenos primero)
 - [x] Plan editor: zoom levels (estructura / detalle / vista alumno)
-- [ ] Undo/redo en builder + plan editor
+- [x] Undo/redo en builder + plan editor
 - [x] Autoguardado visible en plan editor (estado Guardando/Guardado)
 - [x] Batch select en alumnos list (selección + acciones 1:1)
 

@@ -6,9 +6,11 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Button, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
+import { UndoRedoButtons } from "@/components/shared/undo-redo-buttons";
 import type { WorkoutTemplateDetail } from "@regen/types";
 import { GROUP_LETTERS } from "@/lib/constants";
 import { estimateWorkoutDurationSeconds, formatBlockDurationShort } from "@/lib/training-blocks";
+import { useUndoHotkeys } from "@/lib/use-undo-hotkeys";
 import type { WE } from "./_components/_types";
 import { ExercisePicker } from "./_components/exercise-picker";
 import { ExerciseInspector } from "./_components/exercise-inspector";
@@ -17,6 +19,7 @@ import { BlockModal } from "./_components/block-modal";
 import type { WorkoutSport } from "@regen/types";
 import { WorkoutBuilderBlocks } from "./_components/workout-builder-blocks";
 import { WorkoutStudentPreview } from "./_components/workout-student-preview";
+import { applyWorkoutSnap, useWorkoutHistory } from "./_hooks/use-workout-history";
 import "./_styles.css";
 
 export default function TemplateEditorPage() {
@@ -40,8 +43,15 @@ export default function TemplateEditorPage() {
   const [blockModalOpen, setBlockModalOpen] = useState(false);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const history = useWorkoutHistory();
+  const { capture, clear: clearHistory, runUndo, runRedo, canUndo, canRedo, busy: historyBusy } = history;
 
-  const load = useCallback(() => {
+  const snap = useCallback(
+    () => ({ exercises, blocks }),
+    [exercises, blocks],
+  );
+
+  const load = useCallback((opts?: { resetHistory?: boolean }) => {
     api.get<WorkoutTemplateDetail>(`/coach/workouts/${workoutTemplateId}`)
       .then((d) => {
         setData(d);
@@ -50,12 +60,34 @@ export default function TemplateEditorPage() {
         setTitle(d.title);
         setDescription(d.description ?? "");
         setSport(d.sport ?? "generic");
+        if (opts?.resetHistory) clearHistory();
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [api, workoutTemplateId]);
+  }, [api, workoutTemplateId, clearHistory]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load({ resetHistory: true }); }, [load]);
+
+  const applySnap = useCallback(async (target: { exercises: WE[]; blocks: WorkoutTemplateDetail["blocks"] }) => {
+    await applyWorkoutSnap(api, workoutTemplateId, { exercises, blocks }, target);
+    load();
+  }, [api, workoutTemplateId, exercises, blocks, load]);
+
+  const undo = useCallback(async () => {
+    const ok = await runUndo(snap(), applySnap);
+    if (ok) toast.success("Cambio deshecho");
+  }, [runUndo, snap, applySnap, toast]);
+
+  const redo = useCallback(async () => {
+    const ok = await runRedo(snap(), applySnap);
+    if (ok) toast.success("Cambio rehecho");
+  }, [runRedo, snap, applySnap, toast]);
+
+  useUndoHotkeys({
+    onUndo: () => { void undo(); },
+    onRedo: () => { void redo(); },
+    enabled: !loading && !!data && mode === "edit" && !historyBusy,
+  });
 
   async function save() {
     setSaving(true);
@@ -103,6 +135,7 @@ export default function TemplateEditorPage() {
   }
 
   function moveExerciseInSection(id: string, direction: "up" | "down", blockId: string) {
+    capture(snap());
     setExercises((prev) => {
       const section = prev.filter((e) => e.workoutBlockId === blockId);
       const secIdx = section.findIndex((e) => e.id === id);
@@ -124,6 +157,7 @@ export default function TemplateEditorPage() {
     const source = group && current
       ? exercises.find((e) => e.id !== id && e.workoutBlockId === current.workoutBlockId && e.supersetGroup === group) ?? null
       : null;
+    capture(snap());
     setExercises((prev) => prev.map((e) => e.id === id ? {
       ...e,
       supersetGroup: group,
@@ -137,14 +171,17 @@ export default function TemplateEditorPage() {
   }
 
   async function deleteExercise(id: string) {
+    capture(snap());
     try {
       await api.del(`/coach/workouts/${workoutTemplateId}/exercises/${id}`);
       setExercises((prev) => prev.filter((e) => e.id !== id));
       if (selectedWeId === id) setSelectedWeId(null);
+      toast.success("Ejercicio eliminado · ⌘Z para deshacer");
     } catch (e) { console.error(e); }
   }
 
   async function reorderBlocks(nextSorted: WorkoutTemplateDetail["blocks"]) {
+    capture(snap());
     const prev = blocks;
     const nextWithOrder = nextSorted.map((b, index) => ({ ...b, sortOrder: index }));
     setBlocks(nextWithOrder);
@@ -230,6 +267,13 @@ export default function TemplateEditorPage() {
                 );
               })}
             </div>
+            <UndoRedoButtons
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={() => void undo()}
+              onRedo={() => void redo()}
+              busy={historyBusy}
+            />
             <Button variant="outline" size="sm" onClick={() => router.push("/coach/workouts")}>Volver</Button>
             <Button variant="outline" size="sm" icon="repeat" disabled={duplicating || saving} onClick={duplicateTemplate}>
               {duplicating ? "Duplicando…" : "Duplicar"}
@@ -313,7 +357,10 @@ export default function TemplateEditorPage() {
         <ExercisePicker
           templateId={workoutTemplateId}
           blockId={pickerBlockId}
-          onAdd={(we) => setExercises((prev) => [...prev, we])}
+          onAdd={(we) => {
+            capture(snap());
+            setExercises((prev) => [...prev, we]);
+          }}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -324,14 +371,15 @@ export default function TemplateEditorPage() {
           block={editingBlockId ? editingBlock : null}
           onClose={() => setBlockModalOpen(false)}
           onSaved={(next) => {
+            capture(snap());
             setBlocks((prev) => {
               const exists = prev.some((b) => b.id === next.id);
               return exists ? prev.map((b) => (b.id === next.id ? next : b)) : [...prev, next];
             });
           }}
           onDeleted={(id) => {
+            capture(snap());
             setBlocks((prev) => prev.filter((b) => b.id !== id));
-            // Exercises are cascade deleted in the DB, remove them from local state
             setExercises((prev) => prev.filter((e) => e.workoutBlockId !== id));
           }}
         />
