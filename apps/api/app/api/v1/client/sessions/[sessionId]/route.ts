@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, err, withHandler } from "@/lib/api-response";
-import { notify } from "@/lib/notify";
+import { notifyCoachSessionCompleted } from "@/lib/training/session-notify";
 import { sessionPatchSchema } from "@/lib/schemas";
 import { updateWorkoutStreak } from "@/lib/gamification/streaks.service";
 import { awardXpFromSource, XP_REWARDS } from "@/lib/gamification/xp.service";
@@ -413,24 +413,12 @@ export async function PATCH(
         }
       }
 
-      // Notify coach
-      const rel = await prisma.coachClient.findFirst({
-        where: { clientUserId: auth.user.sub, status: "active" },
-        select: { coachUserId: true },
+      await notifyCoachSessionCompleted({
+        clientUserId: auth.user.sub,
+        sessionId,
+        workoutTitle: session.workoutTemplate?.title ?? null,
+        energyRating: updated.energyRating,
       });
-      const client = await prisma.user.findUnique({
-        where: { id: auth.user.sub },
-        select: { displayName: true, email: true },
-      });
-      if (rel) {
-        await notify({
-          userId: rel.coachUserId,
-          type: "session_completed",
-          title: `${client?.displayName ?? client?.email ?? "Tu alumno"} completó un entrenamiento`,
-          body: session.workoutTemplate?.title ?? "Sesión libre",
-          linkUrl: `/coach/alumnos/${auth.user.sub}`,
-        });
-      }
 
       return ok({
         ...updated,

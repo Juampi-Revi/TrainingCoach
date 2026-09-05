@@ -691,6 +691,32 @@ export interface HealthDashboardData {
 // ─────────────────────────────────────────────────────────────
 // Notification Settings
 // ─────────────────────────────────────────────────────────────
+export type NotificationContext = {
+  clientUserId?: string;
+  clientName?: string;
+  sessionId?: string;
+  workoutTitle?: string;
+  rpe?: number | null;
+  daysInactive?: number;
+};
+
+export type GlobalSearchKind = "client" | "plan" | "workout" | "exercise";
+
+export interface GlobalSearchHit {
+  id: string;
+  kind: GlobalSearchKind;
+  title: string;
+  subtitle: string | null;
+  href: string;
+}
+
+export interface GlobalSearchResponse {
+  clients: GlobalSearchHit[];
+  plans: GlobalSearchHit[];
+  workouts: GlobalSearchHit[];
+  exercises: GlobalSearchHit[];
+}
+
 export interface NotificationSettings {
   id: string;
   workoutReminder: boolean;

@@ -67,26 +67,27 @@ async function sendMessage(threadId: string, authorUserId: string, text: string,
     },
   });
 
-  const thread = await prisma.chatThread.findUnique({
-    where: { id: threadId },
-  });
+  const [thread, author] = await Promise.all([
+    prisma.chatThread.findUnique({ where: { id: threadId } }),
+    prisma.user.findUnique({
+      where: { id: authorUserId },
+      select: { id: true, displayName: true, role: true },
+    }),
+  ]);
 
   if (thread) {
     const recipientId = thread.coachUserId === authorUserId ? thread.clientUserId : thread.coachUserId;
     const linkUrl = recipientId === thread.coachUserId ? `/coach/mensajes/${thread.clientUserId}` : "/mensajes";
+    const sender = author?.displayName?.trim() || "Nuevo mensaje";
     notify({
       userId: recipientId,
       type: "new_message",
-      title: "Nuevo mensaje",
+      title: `${sender} te escribió`,
       body: text.slice(0, 100),
       linkUrl,
+      context: { clientName: sender, clientUserId: thread.clientUserId },
     });
   }
-
-  const author = await prisma.user.findUnique({
-    where: { id: authorUserId },
-    select: { id: true, displayName: true, role: true },
-  });
 
   return {
     id: message.id,

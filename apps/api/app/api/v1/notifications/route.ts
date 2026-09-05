@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
         title: true,
         body: true,
         linkUrl: true,
+        context: true,
         readAt: true,
         createdAt: true,
       },

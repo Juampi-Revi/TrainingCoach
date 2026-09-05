@@ -102,9 +102,10 @@ export async function checkCoachClientInactivityAndNotify(coachUserId: string) {
     await notify({
       userId: coachUserId,
       type: "client_inactive",
-      title: "Alumno inactivo",
-      body: `${label} no entrena hace ${it.days} días`,
+      title: `${label} no entrena hace ${it.days} días`,
+      body: "Abrí el chat o ajustá el plan.",
       linkUrl: `/coach/alumnos/${it.clientUserId}`,
+      context: { clientUserId: it.clientUserId, clientName: label, daysInactive: it.days },
     });
     sent++;
   }

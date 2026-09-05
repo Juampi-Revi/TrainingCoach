@@ -126,6 +126,22 @@ export function DesktopShell({
 
         <div style={{ flex: 1 }} />
 
+        <button
+          type="button"
+          className="ta-nav-item"
+          onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+          style={{
+            display: "flex", alignItems: "center", gap: 10, width: "100%",
+            padding: "8px 10px", borderRadius: 8, marginBottom: 2,
+            background: "transparent", color: "var(--text-mute)",
+            fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", textAlign: "left",
+          }}
+        >
+          <Icon name="search" size={16} />
+          <span style={{ flex: 1 }}>Buscar</span>
+          <kbd className="cmdk-kbd">⌘K</kbd>
+        </button>
+
         <Link href={notificationsHref} className="ta-nav-item" style={{
           display: "flex", alignItems: "center", gap: 10,
           padding: "8px 10px", borderRadius: 8, marginBottom: 2,

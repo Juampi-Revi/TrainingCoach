@@ -1,5 +1,7 @@
 import { prisma } from "./prisma";
 import { isPushConfigured, sendPushNotification } from "./push-notifications";
+import type { NotificationContext } from "@regen/types";
+import type { Prisma } from "@prisma/client";
 
 const pushEnabledCache = new Map<string, { enabled: boolean; fetchedAt: number }>();
 const PUSH_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -10,9 +12,23 @@ export async function notify(params: {
   title: string;
   body?: string;
   linkUrl?: string;
+  context?: NotificationContext;
 }) {
+  const context = params.context
+    ? (params.context as Prisma.InputJsonValue)
+    : undefined;
+
   try {
-    await prisma.notification.create({ data: params });
+    await prisma.notification.create({
+      data: {
+        userId: params.userId,
+        type: params.type,
+        title: params.title,
+        body: params.body,
+        linkUrl: params.linkUrl,
+        ...(context !== undefined ? { context } : {}),
+      },
+    });
   } catch (error) {
     console.error("[notify] failed to create notification", {
       userId: params.userId,

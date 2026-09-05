@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "./auth";
+import type { NotificationContext } from "@regen/types";
 
 export interface AppNotification {
   id: string;
@@ -9,6 +10,7 @@ export interface AppNotification {
   title: string;
   body: string | null;
   linkUrl: string | null;
+  context: NotificationContext | null;
   readAt: string | null;
   createdAt: string;
 }

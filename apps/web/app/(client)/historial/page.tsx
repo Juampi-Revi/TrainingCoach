@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, ConfirmModal, Icon, StateBlock, Tabs } from "@/components/ui";
+import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import type { SessionDetail, SessionSummary } from "@regen/types";
 
 type Filter = "Mes" | "Todo";
@@ -218,12 +219,15 @@ export default function HistorialPage() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    api
-      .get<{ items: SessionSummary[]; nextCursor: string | null }>("/client/sessions?limit=50")
-      .then((r) => setSessions(r.items))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    try {
+      const r = await api.get<{ items: SessionSummary[]; nextCursor: string | null }>("/client/sessions?limit=50");
+      setSessions(r.items);
+    } catch (e: unknown) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   }, [api]);
 
   useEffect(() => { load(); }, [load]);
@@ -321,6 +325,7 @@ export default function HistorialPage() {
   };
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 100 }}>
       <div style={{ padding: "48px 20px 14px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -625,5 +630,6 @@ export default function HistorialPage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

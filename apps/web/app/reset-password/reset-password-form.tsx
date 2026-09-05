@@ -62,7 +62,7 @@ export default function ResetPasswordForm() {
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 40 }}>
           <div style={{ width: 36, height: 36, borderRadius: 9, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon name="logo" size={20} color="#0B0B0C" />
+            <Icon name="logo" size={20} color="var(--text-on-accent)" />
           </div>
           <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>
@@ -70,7 +70,7 @@ export default function ResetPasswordForm() {
         {done ? (
           <div>
             <div style={{ width: 48, height: 48, borderRadius: 12, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-              <Icon name="check" size={24} color="#0B0B0C" />
+              <Icon name="check" size={24} color="var(--text-on-accent)" />
             </div>
             <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>¡Contraseña actualizada!</div>
             <div style={{ fontSize: 14, color: "var(--text-mute)" }}>Redirigiendo al login…</div>

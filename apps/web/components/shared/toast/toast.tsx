@@ -18,8 +18,8 @@ const BG: Record<ToastKind, string> = {
 };
 
 const COLOR: Record<ToastKind, string> = {
-  success: "#0B0B0C",
-  error: "#fff",
+  success: "var(--text-on-accent)",
+  error: "var(--text-on-danger)",
   info: "var(--text)",
 };
 
@@ -65,7 +65,7 @@ export function Toast({ id, kind, message, onDismiss }: ToastProps) {
 
         .toast-success {
           background: var(--lime);
-          color: #0B0B0C;
+          color: var(--text-on-accent);
         }
 
         .toast-error {

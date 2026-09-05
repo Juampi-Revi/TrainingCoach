@@ -471,14 +471,14 @@ Aplicar global en `globals.css`. Costo: 5 línas, impacto: enorme.
 
 ### Sprint D — Sofisticación (1-2 semanas)
 
-- Search global `Cmd+K`
-- Notificaciones contextuales con `contextData`
-- PWA installable
-- Accent token system unificado (74 hardcodes)
-- Focus-visible global
-- Microanimations de guardar/undo/toast
-- Pull to refresh en listas
-- Logger sheet snap
+- [x] Search global `Cmd+K`
+- [x] Notificaciones contextuales con `contextData`
+- [x] PWA installable
+- [x] Accent token system unificado (74 hardcodes)
+- [x] Focus-visible global
+- [x] Microanimations de guardar/undo/toast
+- [x] Pull to refresh en listas
+- [x] Logger sheet snap
 
 ### Incrementales (sin fecha)
 

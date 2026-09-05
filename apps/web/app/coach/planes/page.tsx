@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
@@ -20,13 +21,19 @@ export default function PlanesPage() {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
-  useEffect(() => {
-    api
-      .get<PlanSummary[]>("/coach/plans")
-      .then(setPlans)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [api]);
+  const load = useCallback(async () => {
+    try {
+      const next = await api.get<PlanSummary[]>("/coach/plans");
+      setPlans(next);
+    } catch (e: unknown) {
+      console.error(e);
+      toast.error("No se pudieron cargar los planes");
+    } finally {
+      setLoading(false);
+    }
+  }, [api, toast]);
+
+  useEffect(() => { void load(); }, [load]);
 
   function deletePlan(e: React.MouseEvent, planId: string, planTitle: string) {
     e.stopPropagation();
@@ -98,6 +105,7 @@ export default function PlanesPage() {
         </>
       }
     >
+      <PullToRefresh onRefresh={load}>
       <div className="coach-pad">
         {loading ? (
           <StateBlock kind="loading" title="Cargando planes…" />
@@ -262,6 +270,7 @@ export default function PlanesPage() {
           </div>
         )}
       </div>
+      </PullToRefresh>
     </DesktopShell>
     {confirmDialog && (
       <ConfirmModal

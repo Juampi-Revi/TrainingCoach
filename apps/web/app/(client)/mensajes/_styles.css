@@ -99,7 +99,7 @@
 
 .msg-text.sent {
   background: var(--lime);
-  color: #0B0B0C;
+  color: var(--text-on-accent);
   border-radius: 14px 14px 4px 14px;
 }
 

@@ -483,7 +483,7 @@ export default function CoachSessionDetailPage() {
                         style={{
                           padding: "10px 12px",
                           background: isMe ? "var(--lime)" : "var(--bg-2)",
-                          color: isMe ? "#0B0B0C" : "var(--text)",
+                          color: isMe ? "var(--text-on-accent)" : "var(--text)",
                           borderRadius: isMe
                             ? "12px 4px 12px 12px"
                             : "4px 12px 12px 12px",

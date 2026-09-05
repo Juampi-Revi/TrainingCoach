@@ -18,7 +18,7 @@ export default function RootError({
   const isDeployMismatch = shouldRecoverFromDeployMismatch(error);
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#0B0B0C", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}>
       <div style={{ fontSize: 32 }}>😵</div>
       <div style={{ fontSize: 17, fontWeight: 700, color: "#fff", textAlign: "center" }}>Algo salió mal</div>
       <div style={{ fontSize: 13, color: "#888", textAlign: "center", maxWidth: 300, lineHeight: 1.5 }}>

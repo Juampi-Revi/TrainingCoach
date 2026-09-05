@@ -8,6 +8,7 @@ import { LoggerSheetRepsRow } from "./logger-sheet-reps-row";
 import { LoggerSheetTimedRow } from "./logger-sheet-timed-row";
 import { LoggerCardioTimer } from "./logger-cardio-timer";
 import { LoggerHeader, LoggerFooter } from "./logger-parts";
+import { SheetSnap } from "./sheet-snap";
 import { LoggerQuickPresets } from "./logger-quick-presets";
 import { LoggerTechniquePreview } from "./logger-technique-preview";
 import { useSounds } from "../_hooks/use-sounds";
@@ -108,10 +109,7 @@ export function LoggerSheet({
   }, [activeTimerRow]);
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", flexDirection: "column", justifyContent: "flex-end", zIndex: 1300 }}
-      onClick={onClose}
-    >
+    <SheetSnap onBackdrop={onClose}>
       {techniqueImageUrl && (
         <LoggerTechniquePreview
           url={techniqueImageUrl}
@@ -123,16 +121,7 @@ export function LoggerSheet({
         />
       )}
 
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%", maxWidth: 540,
-          background: "var(--bg-1)", borderRadius: "16px 16px 0 0",
-          padding: "14px 14px 18px",
-          paddingBottom: "calc(18px + env(safe-area-inset-bottom))",
-          maxHeight: "calc(100dvh - 40px)", overflow: "auto",
-        }}
-      >
+      <div>
         <LoggerHeader ex={ex} lastRef={lastRef} />
 
         {isCardioPure ? (
@@ -288,6 +277,6 @@ export function LoggerSheet({
           </>
         )}
       </div>
-    </div>
+    </SheetSnap>
   );
 }

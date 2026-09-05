@@ -19,7 +19,7 @@ export default function EjerciciosPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [muscle, setMuscle] = useState<string>("");
   const [equipment, setEquipment] = useState<string>("");
   const [difficulty, setDifficulty] = useState<string>("");

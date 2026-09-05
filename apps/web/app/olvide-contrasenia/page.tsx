@@ -56,7 +56,7 @@ export default function OlvideContraseniaPage() {
               justifyContent: "center",
             }}
           >
-            <Icon name="logo" size={20} color="#0B0B0C" />
+            <Icon name="logo" size={20} color="var(--text-on-accent)" />
           </div>
           <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>
@@ -75,7 +75,7 @@ export default function OlvideContraseniaPage() {
                 marginBottom: 16,
               }}
             >
-              <Icon name="check" size={24} color="#0B0B0C" />
+              <Icon name="check" size={24} color="var(--text-on-accent)" />
             </div>
             <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>
               Revisá tu email

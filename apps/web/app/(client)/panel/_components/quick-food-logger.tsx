@@ -354,7 +354,7 @@ export function QuickFoodLogger({ onClose, onSaved, embedded = false }: QuickFoo
         .qfl-meal-btn.selected {
           background: var(--lime);
           border-color: var(--lime);
-          color: #0B0B0C;
+          color: var(--text-on-accent);
         }
         
         @media (min-width: 900px) {
@@ -619,7 +619,7 @@ export function QuickFoodLogger({ onClose, onSaved, embedded = false }: QuickFoo
         
         .qfl-cta-btn.active {
           background: var(--lime);
-          color: #0B0B0C;
+          color: var(--text-on-accent);
         }
         
         .qfl-cta-btn.inactive {

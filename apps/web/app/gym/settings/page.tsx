@@ -23,7 +23,7 @@ export default function GymSettingsPage() {
       <div style={{ padding: "24px 20px", maxWidth: 600 }}>
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>Configuración</div>
         <div style={{ padding: 16, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 14, display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-          <Avatar name={name} src={user?.avatarUrl} size={48} tone="var(--lime)" textColor="#0B0B0C" />
+          <Avatar name={name} src={user?.avatarUrl} size={48} tone="var(--lime)" textColor="var(--text-on-accent)" />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{name}</div>
             <div style={{ fontSize: 13, color: "var(--text-mute)" }}>{user?.email}</div>

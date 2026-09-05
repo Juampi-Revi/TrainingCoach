@@ -32,7 +32,7 @@ const SIZES: Record<ButtonSize, { h: number; px: number; fs: number; gap: number
 };
 
 const VARIANTS: Record<ButtonVariant, { bg: string; color: string; borderColor: string; borderWidth: number; fw: number }> = {
-  primary:   { bg: "var(--lime)",    color: "#0B0B0C",       borderColor: "transparent",  borderWidth: 0, fw: 600 },
+  primary:   { bg: "var(--accent)",  color: "var(--text-on-accent)", borderColor: "transparent",  borderWidth: 0, fw: 600 },
   secondary: { bg: "var(--bg-2)",    color: "var(--text)",   borderColor: "var(--line-2)", borderWidth: 1, fw: 500 },
   ghost:     { bg: "transparent",    color: "var(--text)",   borderColor: "transparent",  borderWidth: 1, fw: 500 },
   outline:   { bg: "transparent",    color: "var(--text)",   borderColor: "var(--line-2)", borderWidth: 1, fw: 500 },

@@ -332,7 +332,7 @@ export function MediaManager({
                       borderRadius: 4,
                       fontSize: 9,
                       fontWeight: 700,
-                      color: "#0B0B0C",
+                      color: "var(--text-on-accent)",
                     }}
                   >
                     Principal

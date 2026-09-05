@@ -180,7 +180,7 @@ export function DoneScreen({ onClose }: { onClose: () => void }) {
           borderRadius: 12,
           fontSize: 15,
           fontWeight: 700,
-          color: "#0B0B0C",
+          color: "var(--text-on-accent)",
           cursor: "pointer",
           transition: "all 0.2s ease",
         }}

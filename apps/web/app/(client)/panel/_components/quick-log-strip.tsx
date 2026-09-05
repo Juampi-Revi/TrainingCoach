@@ -192,7 +192,7 @@ function QuickLogButton({ icon, label, done, badge, disabled, onClick }: QuickLo
           padding: 0 4px;
           border-radius: 8px;
           background: var(--lime);
-          color: #0b0b0c;
+          color: var(--text-on-accent);
           font-family: var(--font-mono);
           font-size: 9px;
           font-weight: 700;

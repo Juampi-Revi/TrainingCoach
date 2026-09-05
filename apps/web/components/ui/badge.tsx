@@ -14,7 +14,7 @@ interface BadgeProps {
 
 const TONES: Record<BadgeTone, { bg: string; color: string; border: string }> = {
   neutral:  { bg: "var(--bg-2)",                 color: "var(--text-mute)",  border: "var(--line-2)"             },
-  lime:     { bg: "var(--lime)",                 color: "#0B0B0C",           border: "transparent"               },
+  lime:     { bg: "var(--lime)",                 color: "var(--text-on-accent)",           border: "transparent"               },
   limeSoft: { bg: "rgba(215,255,58,.12)",        color: "var(--lime)",       border: "rgba(215,255,58,.3)"       },
   success:  { bg: "rgba(110,231,168,.12)",       color: "var(--success)",    border: "rgba(110,231,168,.3)"      },
   warn:     { bg: "rgba(255,181,71,.14)",        color: "var(--warn)",       border: "rgba(255,181,71,.3)"       },

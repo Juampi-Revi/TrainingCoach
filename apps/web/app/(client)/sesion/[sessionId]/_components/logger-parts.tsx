@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 import type { EffortMode, LastRef, SheetRow } from "./_types";
@@ -63,6 +64,17 @@ export function LoggerFooter({
 }) {
   const lastEffort = [...sheetRows].reverse().find((r) => r.effort)?.effort;
   const restSec = recommendedRestSeconds(ex, lastEffort, effortMode);
+  const wasSaving = useRef(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  useEffect(() => {
+    if (wasSaving.current && !sheetSaving) {
+      setJustSaved(true);
+      const t = window.setTimeout(() => setJustSaved(false), 1600);
+      return () => window.clearTimeout(t);
+    }
+    wasSaving.current = sheetSaving;
+  }, [sheetSaving]);
 
   return (
     <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
@@ -90,12 +102,13 @@ export function LoggerFooter({
       </button>
       <button
         type="button"
-        style={{ flex: 1.6, padding: "12px 0", borderRadius: 12, border: "none", background: "var(--lime)", color: "var(--bg-1)", fontSize: 14, fontWeight: 800, cursor: sheetSaving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+        className={justSaved ? "ta-save-ok" : undefined}
+        style={{ flex: 1.6, padding: "12px 0", borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--text-on-accent)", fontSize: 14, fontWeight: 800, cursor: sheetSaving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
         disabled={sheetSaving}
         onClick={() => { void saveSheet(); }}
       >
-        <Icon name="check" size={16} color="var(--bg-1)" />
-        {sheetSaving ? "Guardando…" : "Guardar series"}
+        <Icon name="check" size={16} color="var(--text-on-accent)" />
+        {sheetSaving ? "Guardando…" : justSaved ? "Guardado ✓" : "Guardar series"}
       </button>
     </div>
   );

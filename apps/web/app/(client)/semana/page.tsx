@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -18,16 +19,20 @@ export default function SemanaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api
-      .get<ClientWeekResponse>("/client/week")
-      .then((week) => {
-        setData(week);
-        precacheUrls(week.mediaUrls ?? []);
-      })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    try {
+      const week = await api.get<ClientWeekResponse>("/client/week");
+      setData(week);
+      precacheUrls(week.mediaUrls ?? []);
+      setError(null);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error desconocido");
+    } finally {
+      setLoading(false);
+    }
   }, [api]);
+
+  useEffect(() => { void load(); }, [load]);
 
   const days = todayStrip();
 
@@ -105,6 +110,7 @@ export default function SemanaPage() {
     `/semana/${w.workoutTemplateId}?pwwId=${encodeURIComponent(w.pwwId)}`;
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 84 }}>
       {/* Header */}
       <div style={{ padding: "48px 20px 16px" }}>
@@ -118,7 +124,7 @@ export default function SemanaPage() {
               <span style={{ color: "var(--text-mute)", fontWeight: 500 }}>/ {data.totalWeeks}</span>
             </div>
           </div>
-          <Avatar name={user?.name ?? "U"} size={36} tone="var(--lime)" textColor="#0B0B0C" />
+          <Avatar name={user?.name ?? "U"} size={36} tone="var(--lime)" textColor="var(--text-on-accent)" />
         </div>
 
         {/* Week strip */}
@@ -134,7 +140,7 @@ export default function SemanaPage() {
                 gap: 4,
                 padding: "10px 0",
                 background: d.today ? "var(--lime)" : "var(--bg-1)",
-                color: d.today ? "#0B0B0C" : "var(--text)",
+                color: d.today ? "var(--text-on-accent)" : "var(--text)",
                 border: `1px solid ${d.today ? "var(--lime)" : "var(--line)"}`,
                 borderRadius: 10,
               }}
@@ -180,7 +186,7 @@ export default function SemanaPage() {
       <div style={{ padding: "0 20px" }}>
         {/* Hero de intención */}
         {today ? (
-          <div style={{ padding: "18px 18px 16px", borderRadius: 14, background: "var(--lime)", color: "#0B0B0C", marginBottom: 10 }}>
+          <div style={{ padding: "18px 18px 16px", borderRadius: 14, background: "var(--lime)", color: "var(--text-on-accent)", marginBottom: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", opacity: 0.7 }}>
               HOY TOCA
             </div>
@@ -193,13 +199,13 @@ export default function SemanaPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {today.session?.status === "in_progress" ? (
                 <Link href={`/sesion/${today.session.id}`} style={{ flex: 1, textDecoration: "none" }}>
-                  <Button block size="lg" icon="play" style={{ background: "#0B0B0C", color: "var(--lime)" }}>
+                  <Button block size="lg" icon="play" style={{ background: "var(--text-on-accent)", color: "var(--lime)" }}>
                     Continuar entreno
                   </Button>
                 </Link>
               ) : (
                 <Link href={workoutHref(today)} style={{ flex: 1, textDecoration: "none" }}>
-                  <Button block size="lg" icon="play" style={{ background: "#0B0B0C", color: "var(--lime)" }}>
+                  <Button block size="lg" icon="play" style={{ background: "var(--text-on-accent)", color: "var(--lime)" }}>
                     Empezar entreno
                   </Button>
                 </Link>
@@ -254,5 +260,6 @@ export default function SemanaPage() {
         </div>
       </div>
     </div>
+    </PullToRefresh>
   );
 }

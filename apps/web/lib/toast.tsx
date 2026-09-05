@@ -8,10 +8,15 @@ interface ToastItem {
   id: string;
   kind: ToastKind;
   message: string;
+  undo?: () => void;
+}
+
+interface ToastOpts {
+  undo?: () => void;
 }
 
 interface ToastCtxValue {
-  success: (msg: string) => void;
+  success: (msg: string, opts?: ToastOpts) => void;
   error: (msg: string) => void;
   info: (msg: string) => void;
 }
@@ -19,27 +24,27 @@ interface ToastCtxValue {
 const ToastCtx = createContext<ToastCtxValue | null>(null);
 
 const BG: Record<ToastKind, string> = {
-  success: "var(--lime)",
+  success: "var(--accent)",
   error: "var(--danger)",
   info: "var(--bg-1)",
 };
 
 const COLOR: Record<ToastKind, string> = {
-  success: "#0B0B0C",
-  error: "#fff",
+  success: "var(--text-on-accent)",
+  error: "var(--text-on-danger)",
   info: "var(--text)",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const add = useCallback((kind: ToastKind, message: string) => {
+  const add = useCallback((kind: ToastKind, message: string, opts?: ToastOpts) => {
     const id = Math.random().toString(36).slice(2);
-    setToasts((prev) => [...prev, { id, kind, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+    setToasts((prev) => [...prev, { id, kind, message, undo: opts?.undo }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), opts?.undo ? 5000 : 3500);
   }, []);
 
-  const success = useCallback((msg: string) => add("success", msg), [add]);
+  const success = useCallback((msg: string, opts?: ToastOpts) => add("success", msg, opts), [add]);
   const error = useCallback((msg: string) => add("error", msg), [add]);
   const info = useCallback((msg: string) => add("info", msg), [add]);
 
@@ -67,6 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
+            className={t.kind === "success" ? "ta-save-ok" : undefined}
             style={{
               width: "100%",
               padding: "12px 16px",
@@ -76,11 +82,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               border: t.kind === "info" ? "1px solid var(--line)" : "none",
               fontSize: 14,
               fontWeight: 600,
-              boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+              boxShadow: "var(--shadow-md)",
               animation: "toastIn 0.18s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              pointerEvents: t.undo ? "auto" : "none",
             }}
           >
-            {t.message}
+            <span style={{ flex: 1 }}>{t.message}</span>
+            {t.undo && (
+              <button
+                type="button"
+                onClick={() => {
+                  t.undo?.();
+                  setToasts((prev) => prev.filter((x) => x.id !== t.id));
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "inherit",
+                  fontWeight: 800,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+              >
+                Deshacer
+              </button>
+            )}
           </div>
         ))}
       </div>

@@ -88,7 +88,7 @@ export function TeleClassScreen({ classId, controls = false }: TeleClassScreenPr
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100dvh", background: "var(--bg-0, #0B0B0C)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+      <div style={{ minHeight: "100dvh", background: "var(--bg)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
         Cargando clase…
       </div>
     );
@@ -96,7 +96,7 @@ export function TeleClassScreen({ classId, controls = false }: TeleClassScreenPr
 
   if (error || !data) {
     return (
-      <div style={{ minHeight: "100dvh", background: "var(--bg-0, #0B0B0C)", color: "var(--danger)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+      <div style={{ minHeight: "100dvh", background: "var(--bg)", color: "var(--danger)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
         {error || "Clase no encontrada"}
       </div>
     );
@@ -107,7 +107,7 @@ export function TeleClassScreen({ classId, controls = false }: TeleClassScreenPr
   const isTimed = data.teleMode === "timed";
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--bg-0, #0B0B0C)", color: "#fff", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", color: "#fff", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column" }}>
       <div style={{ flexShrink: 0, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,.08)", gap: 12 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 14, color: "var(--lime)", fontWeight: 700 }}>{data.name}</div>

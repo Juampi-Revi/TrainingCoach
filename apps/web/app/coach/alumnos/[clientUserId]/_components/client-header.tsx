@@ -56,7 +56,7 @@ export function ClientHeader({ client }: ClientHeaderProps) {
         alignItems: "center",
       }}
     >
-      <Avatar name={name} size={72} tone="var(--lime)" textColor="#0B0B0C" />
+      <Avatar name={name} size={72} tone="var(--lime)" textColor="var(--text-on-accent)" />
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em" }}>{name}</div>

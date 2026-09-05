@@ -67,7 +67,7 @@ export function PushNotificationSettings() {
             disabled={isLoading}
             className="push-btn push-btn-primary"
           >
-            <Icon name="bell" size={16} color="#0B0B0C" />
+            <Icon name="bell" size={16} color="var(--text-on-accent)" />
             {isLoading ? "Activando..." : "Activar notificaciones"}
           </button>
         )}
@@ -156,7 +156,7 @@ export function PushNotificationSettings() {
 
         .push-btn-primary {
           background: var(--lime);
-          color: #0B0B0C;
+          color: var(--text-on-accent);
         }
 
         .push-btn-primary:hover:not(:disabled) {

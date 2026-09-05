@@ -669,6 +669,7 @@ model Notification {
   title     String
   body      String?
   linkUrl   String?
+  context   Json?
   readAt    DateTime?
   createdAt DateTime  @default(now())
 

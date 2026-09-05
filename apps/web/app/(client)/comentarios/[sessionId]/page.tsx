@@ -481,7 +481,7 @@ export default function ComentariosPage() {
                     <div style={{
                       padding: "10px 12px",
                       background: isMe ? "var(--lime)" : "var(--bg-1)",
-                      color: isMe ? "#0B0B0C" : "var(--text)",
+                      color: isMe ? "var(--text-on-accent)" : "var(--text)",
                       border: isMe ? "none" : "1px solid var(--line)",
                       borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                       fontSize: 14, lineHeight: 1.45, fontWeight: 500,
@@ -518,7 +518,7 @@ export default function ComentariosPage() {
                   width: 44, height: 44, borderRadius: 22,
                   background: newMsg.trim() ? "var(--lime)" : "var(--bg-2)",
                   border: "none", display: "flex", alignItems: "center", justifyContent: "center",
-                  color: newMsg.trim() ? "#0B0B0C" : "var(--text-mute)",
+                  color: newMsg.trim() ? "var(--text-on-accent)" : "var(--text-mute)",
                   cursor: newMsg.trim() ? "pointer" : "default", transition: "background .15s",
                 }}
               >

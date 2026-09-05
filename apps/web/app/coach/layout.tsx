@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { CommandPalette } from "@/components/features/search/command-palette";
 
 export default function CoachLayout({ children }: { children: ReactNode }) {
   const { ready, token, user } = useAuth();
@@ -28,5 +29,10 @@ export default function CoachLayout({ children }: { children: ReactNode }) {
   if (!token) return null;
   if (user && user.role !== "coach" && user.role !== "gym") return null;
 
-  return <>{children}</>;
+  return (
+    <>
+      <CommandPalette />
+      {children}
+    </>
+  );
 }

@@ -180,7 +180,7 @@ export function ExercisePicker({ templateId, blockId, onAdd, onClose }: {
               </select>
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => setCreating(false)} style={{ flex: 1, height: 34, borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancelar</button>
-                <button onClick={handleCreate} disabled={!newName.trim() || creatingLoading} style={{ flex: 2, height: 34, borderRadius: 8, border: "none", background: "var(--lime)", color: "#0B0B0C", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: !newName.trim() || creatingLoading ? 0.5 : 1 }}>
+                <button onClick={handleCreate} disabled={!newName.trim() || creatingLoading} style={{ flex: 2, height: 34, borderRadius: 8, border: "none", background: "var(--lime)", color: "var(--text-on-accent)", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: !newName.trim() || creatingLoading ? 0.5 : 1 }}>
                   {creatingLoading ? "Creando…" : "Crear y agregar"}
                 </button>
               </div>

@@ -199,7 +199,7 @@
 
 .provider-action.connect {
   background: var(--lime);
-  color: #0B0B0C;
+  color: var(--text-on-accent);
 }
 
 .provider-action.connect:hover:not(:disabled) {
@@ -430,7 +430,7 @@
 
 .modal-btn.connect {
   background: var(--lime);
-  color: #0B0B0C;
+  color: var(--text-on-accent);
 }
 
 .modal-btn.connect:hover:not(:disabled) {

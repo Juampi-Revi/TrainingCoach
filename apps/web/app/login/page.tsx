@@ -72,7 +72,7 @@ export default function LoginPage() {
               justifyContent: "center",
             }}
           >
-            <Icon name="logo" size={20} color="#0B0B0C" />
+            <Icon name="logo" size={20} color="var(--text-on-accent)" />
           </div>
           <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-.02em" }}>YourCoach</span>
         </div>

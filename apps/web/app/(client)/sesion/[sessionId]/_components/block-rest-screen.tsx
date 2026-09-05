@@ -230,7 +230,7 @@ export function BlockRestScreen({
             width: "100%",
             padding: "14px 20px",
             background: "var(--lime)",
-            color: "#0B0B0C",
+            color: "var(--text-on-accent)",
             border: "none",
             borderRadius: 12,
             fontSize: 15,
@@ -242,7 +242,7 @@ export function BlockRestScreen({
             gap: 8,
           }}
         >
-          <Icon name="play" size={16} color="#0B0B0C" />
+          <Icon name="play" size={16} color="var(--text-on-accent)" />
           {restSecondsRemaining > 0 ? "Empezar ahora" : "Continuar"}
         </button>
         {restSecondsRemaining > 5 && (

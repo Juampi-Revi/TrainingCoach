@@ -28,7 +28,7 @@ export default function CuentaPage() {
       {/* Profile Section */}
       <div className="cuenta-section">
         <div className="profile-banner">
-          <Avatar name={name} src={user?.avatarUrl} size={64} tone="var(--lime)" textColor="#0B0B0C" />
+          <Avatar name={name} src={user?.avatarUrl} size={64} tone="var(--lime)" textColor="var(--text-on-accent)" />
           <div className="profile-info">
             <div className="profile-name">{name}</div>
             <div className="profile-email">{user?.email}</div>

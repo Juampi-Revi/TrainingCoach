@@ -77,7 +77,7 @@ export function ExerciseInspectorMeta({
                   borderRadius: 8,
                   background: sel ? (gColor ?? "var(--bg-3)") : "var(--bg-2)",
                   border: `1px solid ${sel ? (gColor ?? "var(--line)") : "var(--line-2)"}`,
-                  color: sel ? (g ? "#0B0B0C" : "var(--text)") : (g ? (gColor ?? "var(--text-mute)") : "var(--text-mute)"),
+                  color: sel ? (g ? "var(--text-on-accent)" : "var(--text)") : (g ? (gColor ?? "var(--text-mute)") : "var(--text-mute)"),
                   fontFamily: "var(--font-mono)",
                   fontSize: 12,
                   fontWeight: 700,

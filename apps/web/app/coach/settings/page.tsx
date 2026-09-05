@@ -93,7 +93,7 @@ export default function SettingsPage() {
                 src={user?.avatarUrl}
                 size={64}
                 tone="var(--lime)"
-                textColor="#0B0B0C"
+                textColor="var(--text-on-accent)"
               />
               <span className="profile-avatar-overlay">
                 <Icon name="edit" size={14} color="#fff" />
