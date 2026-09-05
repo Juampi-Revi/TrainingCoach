@@ -117,11 +117,12 @@ Pero conviene separar tres grupos:
     - regla escrita en doc
     - `/semana`, `/historial` y detalle usan el mismo contrato
 
-- [ ] `T009` Revisar persistencia del logger
+- [x] `T009` Revisar persistencia del logger
   - Criterio:
     - placeholders no se guardan como datos reales
     - guardado por serie o por fila queda explícito
     - casos timed/reps no se pisan
+  - Nota 2026-09: `isDirty` por fila, autofill vía placeholders, payload timed/reps separado
 
 - [x] `T010` Agregar transacciones donde hoy hay multi-operación
   - `session.service.ts`
@@ -184,8 +185,9 @@ Pero conviene separar tres grupos:
 - [x] Pulido: resumen semana, empty semana→mensajes, historial a11y, barra planes falsa removida
 
 
-- [ ] `T019` Completar `.env.example`
+- [x] `T019` Completar `.env.example`
   - agregar email, Garmin y variables operativas faltantes
+  - Nota 2026-09: Resend, VAPID, Google Health, Garmin fallback, cron
 
 - [x] `T020` Documentar `gym/`
   - mínimo en `ARCHITECTURE.md`
@@ -193,10 +195,10 @@ Pero conviene separar tres grupos:
 
 ### P4 — Calidad y cobertura
 
-- [ ] `T021` Tests para auth refresh/logout
-- [ ] `T022` Tests para leaderboard friends filter
-- [ ] `T023` Tests para session completion / notify
-- [ ] `T024` Tests para health sync callbacks con `state`
+- [x] `T021` Tests para auth refresh/logout
+- [x] `T022` Tests para leaderboard friends filter
+- [x] `T023` Tests para session completion / notify
+- [x] `T024` Tests para health sync callbacks con `state`
 
 ---
 
@@ -231,7 +233,7 @@ Eso te limpia seguridad, un bug lógico real y dos fuentes de comportamiento con
 ### Bloque 3
 
 - [ ] `T008`
-- [ ] `T009`
+- [x] `T009`
 - [ ] `T010`
 
 ### Bloque 4

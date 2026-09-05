@@ -17,6 +17,8 @@ export interface SheetRow {
   kgPlaceholder?: string;
   effortPlaceholder?: string;
   isSaved?: boolean;
+  /** User edited this row since open / last save */
+  isDirty?: boolean;
   suggestionLabel?: string | null;
 }
 

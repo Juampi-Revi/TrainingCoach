@@ -41,4 +41,13 @@ describe("health oauth state", () => {
 
     expect(verifyHealthOauthState(state, "strava")).toBeNull();
   });
+
+  it("rejects a missing or tampered state", () => {
+    expect(verifyHealthOauthState(null, "strava")).toBeNull();
+    expect(verifyHealthOauthState("not-a-state", "strava")).toBeNull();
+
+    const state = createHealthOauthState("user-123", "strava");
+    const [payload] = state.split(".");
+    expect(verifyHealthOauthState(`${payload}.tampered-signature`, "strava")).toBeNull();
+  });
 });

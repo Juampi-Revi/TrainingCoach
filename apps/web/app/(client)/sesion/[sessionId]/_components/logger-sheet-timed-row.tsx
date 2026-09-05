@@ -3,6 +3,7 @@
 import { Icon } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 import type { SheetRow } from "./_types";
+import { markRowDirty } from "../_lib/logger-save";
 
 function formatSeconds(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -40,7 +41,7 @@ export function LoggerSheetTimedRow({
         ) : (
           <input
             type="number" inputMode="decimal" value={row.duration}
-            onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, duration: e.target.value } : r))}
+            onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? markRowDirty(r, { duration: e.target.value }) : r))}
             placeholder={row.durationPlaceholder ?? String(ex.target?.durationSeconds ?? "")}
             style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
           />
@@ -48,13 +49,13 @@ export function LoggerSheetTimedRow({
       </div>
       <input
         type="number" inputMode="decimal" value={row.kg}
-        onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
+        onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? markRowDirty(r, { kg: e.target.value }) : r))}
         placeholder={row.kgPlaceholder ?? "—"}
         style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
       />
       <input
         type="number" inputMode="decimal" value={row.effort}
-        onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, effort: e.target.value } : r))}
+        onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? markRowDirty(r, { effort: e.target.value }) : r))}
         placeholder={row.effortPlaceholder ?? (ex.target?.intensityTarget != null ? String(ex.target.intensityTarget) : "—")}
         style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
       />

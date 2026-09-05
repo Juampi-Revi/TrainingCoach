@@ -2,8 +2,21 @@ import type { SessionExercise } from "@regen/types";
 import type { EffortMode, SheetRow } from "../_components/_types";
 import { suggestWeightKg, weightSuggestionLabel } from "./recommended-rest";
 
+export function isTimedExercise(ex: SessionExercise): boolean {
+  return !!(ex.target?.durationSeconds);
+}
+
 export function rowHasData(row: SheetRow, timed: boolean): boolean {
-  return timed ? !!(row.duration || row.kg || row.effort) : !!(row.reps || row.kg || row.effort);
+  if (timed) return !!(row.duration || row.kg || row.effort);
+  return !!(row.reps || row.kg || row.effort);
+}
+
+/** Only persist rows the user actually edited (or an explicit forced save). */
+export function shouldPersistRow(row: SheetRow, timed: boolean, force = false): boolean {
+  if (!rowHasData(row, timed)) return false;
+  if (force) return true;
+  if (row.isSaved && !row.isDirty) return false;
+  return !!row.isDirty;
 }
 
 export function setPayloadFromRow(
@@ -28,21 +41,28 @@ export function setPayloadFromRow(
   return body;
 }
 
-export function autofillNextRow(prev: SheetRow[], lastFilled: SheetRow, effortMode: EffortMode): SheetRow[] {
-  const nextEmpty = prev.find((r) => !r.isSaved && !r.reps && !r.kg && !r.effort && !r.duration);
+export function autofillNextRow(
+  prev: SheetRow[],
+  lastFilled: SheetRow,
+  effortMode: EffortMode,
+  timed: boolean,
+): SheetRow[] {
+  const nextEmpty = prev.find((r) => !r.isSaved && !rowHasData(r, timed));
   if (!nextEmpty) return prev;
+
   const suggestedKg = lastFilled.kg
     ? suggestWeightKg(lastFilled.kg, lastFilled.effort, effortMode)
     : null;
   const label = weightSuggestionLabel(lastFilled.effort, effortMode);
+
   return prev.map((r) =>
     r.setNumber === nextEmpty.setNumber
       ? {
           ...r,
-          kg: suggestedKg ?? lastFilled.kg,
-          reps: lastFilled.reps,
-          duration: lastFilled.duration,
-          effort: lastFilled.effort,
+          kgPlaceholder: (suggestedKg ?? lastFilled.kg) || r.kgPlaceholder,
+          repsPlaceholder: timed ? r.repsPlaceholder : (lastFilled.reps || r.repsPlaceholder),
+          durationPlaceholder: timed ? (lastFilled.duration || r.durationPlaceholder) : r.durationPlaceholder,
+          effortPlaceholder: lastFilled.effort || r.effortPlaceholder,
           suggestionLabel: suggestedKg ? label : (lastFilled.kg ? "Igual que el set anterior" : null),
         }
       : r,
@@ -50,6 +70,10 @@ export function autofillNextRow(prev: SheetRow[], lastFilled: SheetRow, effortMo
 }
 
 export function lastFilledRow(rows: SheetRow[], ex: SessionExercise): SheetRow | undefined {
-  const timed = !!(ex.target?.durationSeconds);
+  const timed = isTimedExercise(ex);
   return [...rows].reverse().find((r) => rowHasData(r, timed));
+}
+
+export function markRowDirty(row: SheetRow, patch: Partial<SheetRow>): SheetRow {
+  return { ...row, ...patch, isDirty: true, suggestionLabel: patch.suggestionLabel ?? null };
 }

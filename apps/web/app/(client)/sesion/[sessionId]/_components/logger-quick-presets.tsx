@@ -2,6 +2,7 @@
 
 import type { EffortMode, SheetRow, LastRef } from "./_types";
 import type { SessionExercise } from "@regen/types";
+import { markRowDirty } from "../_lib/logger-save";
 
 export function LoggerQuickPresets({
   sheetRows,
@@ -33,7 +34,7 @@ export function LoggerQuickPresets({
 
   function apply(patch: Partial<Pick<SheetRow, "kg" | "reps" | "effort">>) {
     setSheetRows((prev) =>
-      prev.map((r) => (r.setNumber === target!.setNumber ? { ...r, ...patch } : r)),
+      prev.map((r) => (r.setNumber === target!.setNumber ? markRowDirty(r, patch) : r)),
     );
   }
 

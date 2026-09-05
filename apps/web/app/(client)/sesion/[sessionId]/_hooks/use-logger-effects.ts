@@ -85,7 +85,7 @@ export function useLoggerEffects({
       setSheetRows(Array.from({ length: baseCount }).map((_, idx) => {
         const setNumber = idx + 1;
         const s = existing.find((x) => x.setNumber === setNumber);
-        if (s?.weight != null || s?.reps != null) {
+        if (s?.weight != null || s?.reps != null || s?.durationSeconds != null) {
           const effort = effortMode === "RPE" ? s?.rpe : s?.rir;
           return {
             setNumber,
@@ -94,6 +94,7 @@ export function useLoggerEffects({
             kg: s?.weight != null ? String(s.weight) : "",
             effort: effort != null ? String(effort) : "",
             isSaved: true,
+            isDirty: false,
           };
         }
         const effort = effortMode === "RPE" ? lastRef?.rpe : lastRef?.rir;
@@ -166,7 +167,7 @@ export function useLoggerEffects({
     const targetSec = currentExercise?.target?.durationSeconds ?? 30;
     const t = setTimeout(() => {
       setSheetRows((prev) =>
-        prev.map((r) => r.setNumber === activeTimerRow ? { ...r, duration: String(targetSec) } : r),
+        prev.map((r) => r.setNumber === activeTimerRow ? { ...r, duration: String(targetSec), isDirty: true } : r),
       );
       setActiveTimerRow(null);
       setTimerEndsAtMs(null);

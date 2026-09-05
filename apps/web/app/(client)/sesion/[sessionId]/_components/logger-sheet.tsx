@@ -128,7 +128,7 @@ export function LoggerSheet({
           <LoggerCardioTimer
             targetSeconds={ex.target?.durationSeconds}
             onSave={async (seconds) => {
-              await saveSheet({ rows: [{ setNumber: 1, duration: String(seconds), reps: "", kg: "", effort: "" }] });
+              await saveSheet({ rows: [{ setNumber: 1, duration: String(seconds), reps: "", kg: "", effort: "", isDirty: true }] });
               onClose();
             }}
             onClose={onClose}
@@ -226,7 +226,7 @@ export function LoggerSheet({
                 onClick={() => setSheetRows((prev) => {
                   if (prev.length <= 1) return prev;
                   const last = prev[prev.length - 1]!;
-                  if (last.isSaved || last.reps || last.kg || last.effort) return prev;
+                  if (last.isSaved || last.reps || last.kg || last.effort || last.duration) return prev;
                   return prev.slice(0, -1);
                 })}
                 style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}

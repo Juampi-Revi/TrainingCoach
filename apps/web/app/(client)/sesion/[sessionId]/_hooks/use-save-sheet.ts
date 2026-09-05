@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import type { SessionDetail } from "@regen/types";
 import type { EffortMode, SheetRow } from "../_components/_types";
 import { recommendedRestSeconds, restSuggestionText } from "../_lib/recommended-rest";
-import { autofillNextRow, lastFilledRow, setPayloadFromRow } from "../_lib/logger-save";
+import { autofillNextRow, isTimedExercise, lastFilledRow, setPayloadFromRow, shouldPersistRow } from "../_lib/logger-save";
 
 export function useSaveSheet({
   sessionId,
@@ -49,14 +49,16 @@ export function useSaveSheet({
     if (!ex) return;
     setSheetSaving(true);
     const rowsToSave = opts?.rows ?? sheetRows;
+    const timed = isTimedExercise(ex);
+    const forceSave = opts?.rows != null;
     try {
       for (const row of rowsToSave) {
-        const timed = !!(ex.target?.durationSeconds);
+        if (!forceSave && !shouldPersistRow(row, timed)) continue;
         const body = setPayloadFromRow(row, timed, effortMode, equipmentType);
         if (!body) continue;
         try {
           await api.put(`/client/sessions/${sessionId}/exercises/${ex.id}/sets/${row.setNumber}`, body);
-          setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, isSaved: true } : r));
+          setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, isSaved: true, isDirty: false } : r));
         } catch {
           try {
             await enqueue({ wseId: ex.id, setNumber: row.setNumber, body });
@@ -66,7 +68,7 @@ export function useSaveSheet({
       }
       setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
       const lastFilled = lastFilledRow(rowsToSave, ex);
-      if (lastFilled) setSheetRows((prev) => autofillNextRow(prev, lastFilled, effortMode));
+      if (lastFilled) setSheetRows((prev) => autofillNextRow(prev, lastFilled, effortMode, timed));
       load();
       if (opts?.startRest) {
         const rest = recommendedRestSeconds(ex, lastFilled?.effort, effortMode);
