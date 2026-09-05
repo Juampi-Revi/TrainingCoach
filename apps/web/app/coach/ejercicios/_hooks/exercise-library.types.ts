@@ -9,6 +9,7 @@ export type ExerciseLibraryItem = {
   objective: string | null;
   isSystem: boolean;
   isBasic: boolean;
+  isGuide?: boolean;
   thumbnailUrl: string | null;
   source?: string | null;
   sourceId?: string | null;

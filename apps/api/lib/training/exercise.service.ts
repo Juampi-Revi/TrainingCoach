@@ -26,6 +26,7 @@ function looksLikeSchemaOutOfDate(msg: string): boolean {
 }
 
 const BASIC_SOURCE = "regen_basic_v1";
+const GUIDE_SOURCE = "bryllim/workout-guide";
 
 export async function listCoachExercises(args: ListArgs) {
   const {
@@ -79,6 +80,7 @@ export async function listCoachExercises(args: ListArgs) {
       const hasImage = e.media.some((m) => m.mediaType === "image") || false;
       const hasVideo = e.media.some((m) => m.mediaType === "video") || !!(e.youtubeUrl && e.youtubeUrl.trim());
       const isBasic = e.source === BASIC_SOURCE;
+      const isGuide = e.source === GUIDE_SOURCE;
       const firstMedia = e.media[0];
       if (firstMedia?.mediaType === "image") thumbnailUrl = firstMedia.url;
       if (firstMedia?.mediaType === "video" && firstMedia.publicId) {
@@ -97,6 +99,7 @@ export async function listCoachExercises(args: ListArgs) {
         objective: e.objective ?? null,
         isSystem: e.isSystem,
         isBasic,
+        isGuide,
         source: e.source,
         sourceId: e.sourceId,
         youtubeUrl: e.youtubeUrl,
@@ -110,6 +113,7 @@ export async function listCoachExercises(args: ListArgs) {
     mapped.sort((a, b) => {
       if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
       if (a.isBasic !== b.isBasic) return a.isBasic ? -1 : 1;
+      if (a.isGuide !== b.isGuide) return a.isGuide ? -1 : 1;
       if (a.isSystem !== b.isSystem) return a.isSystem ? -1 : 1;
       return a.name.localeCompare(b.name, "es");
     });
@@ -159,6 +163,7 @@ export async function listCoachExercises(args: ListArgs) {
       const hasImage = e.media.some((m) => m.mediaType === "image") || false;
       const hasVideo = e.media.some((m) => m.mediaType === "video") || !!(e.youtubeUrl && e.youtubeUrl.trim());
       const isBasic = e.source === BASIC_SOURCE;
+      const isGuide = e.source === GUIDE_SOURCE;
       const firstMedia = e.media[0];
       if (firstMedia?.mediaType === "image") thumbnailUrl = firstMedia.url;
       if (firstMedia?.mediaType === "video" && firstMedia.publicId) {
@@ -177,6 +182,7 @@ export async function listCoachExercises(args: ListArgs) {
         objective: null,
         isSystem: e.isSystem,
         isBasic,
+        isGuide,
         source: e.source,
         sourceId: e.sourceId,
         youtubeUrl: e.youtubeUrl,

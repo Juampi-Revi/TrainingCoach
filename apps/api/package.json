@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed-workout-guide": "tsx prisma/seed-workout-guide.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
@@ -20,6 +21,7 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@bryllim/workout-guide": "^1.0.0",
     "@regen/types": "workspace:*",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",

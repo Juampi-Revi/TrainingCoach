@@ -12,7 +12,8 @@
     "db:generate": "pnpm --filter @regen/api db:generate",
     "db:migrate": "pnpm --filter @regen/api db:migrate",
     "db:studio": "pnpm --filter @regen/api db:studio",
-    "db:seed": "pnpm --filter @regen/api db:seed"
+    "db:seed": "pnpm --filter @regen/api db:seed",
+    "db:seed-workout-guide": "pnpm --filter @regen/api db:seed-workout-guide"
   },
   "devDependencies": {
     "typescript": "^6.0.2"

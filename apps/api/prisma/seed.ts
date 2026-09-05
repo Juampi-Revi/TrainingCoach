@@ -773,6 +773,10 @@ async function main() {
   }
   console.log(`  Public self-guided plan: ${publicPlan.title}`)
 
+  const { seedWorkoutGuideCatalog } = await import("../lib/training/workout-guide-catalog")
+  const guideResult = await seedWorkoutGuideCatalog()
+  console.log(`  Workout Guide catalog: ${guideResult.created} created, ${guideResult.updated} updated`)
+
   console.log('\nSeed completed successfully')
 }
 
