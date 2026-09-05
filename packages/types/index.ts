@@ -237,9 +237,9 @@ export interface SessionExercise {
   sortOrder: number;
   supersetGroup: string | null;
   block: WorkoutBlockSummary;
-  exercise: { id: string; name: string; primaryMuscle: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null };
+  exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null };
   media: { id: string; url: string; mediaType: string }[];
-  alternatives: { exerciseId: string; name: string; primaryMuscle: string | null }[];
+  alternatives: { exerciseId: string; name: string; primaryMuscle: string | null; equipment: string | null }[];
   target: ExerciseTarget | null;
   sets: WorkoutSet[];
 }
@@ -416,6 +416,7 @@ export interface ClientWeekResponse {
   totalWeeks: number;
   assignmentStatus: AssignmentStatus;
   workouts: WeekWorkout[];
+  mediaUrls?: string[];
 }
 
 export interface CoachCalendarItem {

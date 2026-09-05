@@ -1,18 +1,41 @@
 const SW = self;
 
-// Cache name
 const CACHE_NAME = "regen-app-v1";
+const MEDIA_CACHE = "regen-media-v1";
 
-// Install event
 SW.addEventListener("install", (event) => {
-  console.log("[SW] Installing...");
   event.waitUntil(SW.skipWaiting());
 });
 
-// Activate event
 SW.addEventListener("activate", (event) => {
-  console.log("[SW] Activating...");
   event.waitUntil(SW.clients.claim());
+});
+
+SW.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || data.type !== "PRECACHE" || !Array.isArray(data.urls)) return;
+  event.waitUntil(
+    caches.open(MEDIA_CACHE).then((cache) =>
+      Promise.all(data.urls.map((url) => cache.add(url).catch(() => undefined))),
+    ),
+  );
+});
+
+SW.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const dest = req.destination;
+  if (dest !== "image" && dest !== "video") return;
+
+  event.respondWith(
+    caches.open(MEDIA_CACHE).then(async (cache) => {
+      const hit = await cache.match(req);
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok) cache.put(req, res.clone()).catch(() => undefined);
+      return res;
+    }),
+  );
 });
 
 // Push notification event

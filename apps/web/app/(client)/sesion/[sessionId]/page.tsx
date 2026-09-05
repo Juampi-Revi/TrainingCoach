@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Icon, StateBlock } from "@/components/ui";
-import { groupLabel, fmtDuration } from "@/lib/constants";
+import { fmtDuration } from "@/lib/constants";
 import { SessionHeader } from "./_components/session-header";
 import { ExerciseList } from "./_components/exercise-list";
 import { ExerciseMediaViewer } from "./_components/exercise-media-viewer";
@@ -17,8 +17,10 @@ import { SessionOverlays } from "./_components/session-overlays";
 import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
 import { useBlockExecution } from "./_hooks/use-block-execution";
-import { isSessionExerciseExtra } from "@/lib/workout-labels";
 import { useToast } from "@/lib/toast";
+import { clearOfflineSets } from "./_lib/offline-idb";
+import { precacheUrls } from "@/lib/precache-media";
+import { sessionWorkSplit, exerciseSubtitle } from "./_lib/session-view";
 import "./_styles.css";
 
 export default function SessionInProgressPage() {
@@ -31,11 +33,11 @@ export default function SessionInProgressPage() {
     session, setSession, loading,
     currentExIdx, setCurrentExIdx,
     workoutStartedAtMs, nowMs,
-    offlineCount, setOfflineCount,
+    offlineCount,
     warmupDone, setWarmupDone,
     warmupTimer,
     queueKey, warmupDoneKey, warmupTimerKey, clockKey,
-    load, flushQueue,
+    load, flushQueue, enqueue,
     toggleWarmup, resetWarmup, finishWarmup,
   } = useSession(sessionId);
 
@@ -55,7 +57,7 @@ export default function SessionInProgressPage() {
     lastSaved,
     openLogger,
     saveSheet, deleteSet,
-  } = useSetLogger({ sessionId, currentExIdx, session, queueKey, setOfflineCount, load });
+  } = useSetLogger({ sessionId, currentExIdx, session, enqueue, load });
 
   // Block execution management
   const {
@@ -78,6 +80,15 @@ export default function SessionInProgressPage() {
     const id = setInterval(tickRest, 1000);
     return () => clearInterval(id);
   }, [isResting, tickRest]);
+
+  useEffect(() => {
+    if (!session) return;
+    const urls = session.exercises.flatMap((e) => [
+      e.exercise.thumbnailUrl,
+      ...e.media.map((m) => m.url),
+    ]).filter((u): u is string => !!u);
+    precacheUrls(urls);
+  }, [session]);
 
   const [completing, setCompleting] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -130,7 +141,7 @@ export default function SessionInProgressPage() {
     // Don't auto-open tools — the user should click "Iniciar" or "Registrar series" explicitly
   }
 
-  async function completeSession() {
+  async function completeSession(sessionNotes?: string) {
     setCompleting(true);
     try {
       const remaining = await flushQueue();
@@ -140,7 +151,10 @@ export default function SessionInProgressPage() {
         return;
       }
       load();
-      await api.patch(`/client/sessions/${sessionId}`, { status: "completed" });
+      await api.patch(`/client/sessions/${sessionId}`, {
+        status: "completed",
+        ...(sessionNotes ? { sessionNotes } : {}),
+      });
       router.replace(`/sesion/${sessionId}/completada`);
     } catch (e) {
       console.error(e);
@@ -166,6 +180,7 @@ export default function SessionInProgressPage() {
       try { localStorage.removeItem(queueKey); } catch {}
       try { localStorage.removeItem(briefingKey); } catch {}
       try { localStorage.removeItem(clockKey); } catch {}
+      void clearOfflineSets(sessionId);
       router.replace(`/sesion/${res.id}`);
     } catch (e) {
       console.error(e);
@@ -199,49 +214,24 @@ export default function SessionInProgressPage() {
         completing={completing}
         onComplete={completeSession}
         onExit={() => router.push("/semana")}
+        onReload={load}
       />
     );
   }
 
   const ex = session.exercises[currentExIdx];
-  const warmupExercises = session.exercises.filter((e) => e.block?.type === "warmup");
-  const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
-  const requiredExercises = workExercises.filter((e) => !isSessionExerciseExtra(e));
-  const completedExs = requiredExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
-  const extraBlockCount = (session.blocks ?? []).filter((block) => block.isExtra).length;
-  const extraGroupCount = Array.from(
-    new Set(
-      workExercises
-        .filter((item) => item.supersetGroup && item.target?.groupIsExtra)
-        .map((item) => `${item.block?.id ?? "block"}:${item.supersetGroup}`),
-    ),
-  ).length;
+  const { warmupExercises, workExercises, requiredExercises, completedExs, extraBlockCount, extraGroupCount } = sessionWorkSplit(session);
   const warmupExists = warmupExercises.length > 0;
-  const warmupTargetMs = null; // No longer using warmupMinutes from template
+  const warmupTargetMs = null;
   const workoutElapsedMs = workoutStartedAtMs != null ? Math.max(0, nowMs - workoutStartedAtMs) : 0;
   const warmupElapsedMs = warmupTimer.accMs + (warmupTimer.runningSince ? nowMs - warmupTimer.runningSince : 0);
   const headerExIdx = ex ? workExercises.findIndex((e) => e.id === ex.id) : -1;
   const headerExTotal = workExercises.length || session.exercises.length;
   const headerExNum = headerExIdx >= 0 ? headerExIdx + 1 : currentExIdx + 1;
-  const groupSizes = workExercises.reduce<Record<string, number>>((acc, e) => { if (e.supersetGroup) acc[e.supersetGroup] = (acc[e.supersetGroup] ?? 0) + 1; return acc; }, {});
   const nextEx = session.exercises[currentExIdx + 1] ?? null;
-  const currentWorkPos = ex ? workExercises.findIndex((e) => e.id === ex.id) : -1;
-  const prevRealIdx = currentWorkPos > 0 ? session.exercises.findIndex((s) => s.id === workExercises[currentWorkPos - 1]!.id) : null;
-  const nextRealIdx = currentWorkPos >= 0 && currentWorkPos < workExercises.length - 1
-    ? session.exercises.findIndex((s) => s.id === workExercises[currentWorkPos + 1]!.id) : null;
-
-  let exSubtitle: string | undefined;
-  if (ex) {
-    const parts: string[] = [];
-    const isInterval = ex.block.type === "intervals";
-    if (ex.supersetGroup) parts.push(`${ex.supersetGroup} · ${groupLabel(groupSizes[ex.supersetGroup] ?? 1).toUpperCase()}`);
-    if (ex.target?.sets && !isInterval) parts.push(`${ex.target.sets} series`);
-    if (ex.target?.intensityType && ex.target?.intensityTarget) parts.push(`${ex.target.intensityType.toUpperCase()} ${ex.target.intensityTarget}`);
-    if (parts.length) exSubtitle = parts.join(" · ");
-  }
+  const exSubtitle = exerciseSubtitle(ex, workExercises);
 
   const hasMedia = (ex?.media?.length ?? 0) > 0;
-  const activeBlockId = currentBlockId ?? currentBlock?.block.id ?? null;
   const bottomBarVisible = !(warmupExists && !warmupDone) && !loggerOpen;
   const bottomBarPadding = bottomBarVisible
     ? keyboardOffset + (completedExs === requiredExercises.length ? 140 : 180)
@@ -277,7 +267,7 @@ export default function SessionInProgressPage() {
             {(ex.alternatives?.length ?? 0) > 0 && (
               <button onClick={() => setSwapOpen(true)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "transparent", color: "var(--text-mute)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 <Icon name="repeat" size={12} color="var(--text-mute)" />
-                Cambiar
+                Alternativas
               </button>
             )}
             {ex.exercise.youtubeUrl && (
@@ -294,6 +284,10 @@ export default function SessionInProgressPage() {
         session={session} workExercises={workExercises} currentExIdx={currentExIdx}
         warmupExists={warmupExists} warmupDone={warmupDone} warmupTargetMs={warmupTargetMs}
         onSelectEx={goToEx}
+        onSwapEx={(i) => {
+          setCurrentExIdx(i);
+          setSwapOpen(true);
+        }}
         onStartEx={(i) => {
           const target = session?.exercises[i];
           if (target && target.block.type !== "warmup") {

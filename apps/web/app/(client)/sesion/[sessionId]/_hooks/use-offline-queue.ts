@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import type { OfflineItem } from "../_components/_types";
+import {
+  countOfflineSets,
+  deleteOfflineSet,
+  enqueueOfflineSet,
+  listOfflineSets,
+  migrateLegacyQueue,
+} from "../_lib/offline-idb";
 
 export function useOfflineQueue({
   sessionId,
@@ -17,30 +23,55 @@ export function useOfflineQueue({
 }) {
   const { api } = useAuth();
 
+  const refreshCount = useCallback(async () => {
+    try {
+      setOfflineCount(await countOfflineSets(sessionId));
+    } catch {
+      setOfflineCount(0);
+    }
+  }, [sessionId, setOfflineCount]);
+
+  const enqueue = useCallback(
+    async (item: { wseId: string; setNumber: number; body: Record<string, string> }) => {
+      await enqueueOfflineSet({ sessionId, ...item });
+      await refreshCount();
+    },
+    [sessionId, refreshCount],
+  );
+
   const flushQueue = useCallback(async () => {
     try {
-      const queue: OfflineItem[] = JSON.parse(localStorage.getItem(queueKey) ?? "[]");
-      if (!queue.length) return 0;
-      const remaining: OfflineItem[] = [];
+      await migrateLegacyQueue(sessionId, queueKey);
+      const queue = await listOfflineSets(sessionId);
+      if (!queue.length) {
+        setOfflineCount(0);
+        return 0;
+      }
+      let remaining = 0;
+      let flushed = 0;
       for (const item of queue) {
         try {
           await api.put(`/client/sessions/${sessionId}/exercises/${item.wseId}/sets/${item.setNumber}`, item.body);
-        } catch { remaining.push(item); }
+          if (item.id != null) await deleteOfflineSet(item.id);
+          flushed += 1;
+        } catch {
+          remaining += 1;
+        }
       }
-      localStorage.setItem(queueKey, JSON.stringify(remaining));
-      setOfflineCount(remaining.length);
-      if (remaining.length < queue.length) load();
-      return remaining.length;
+      setOfflineCount(remaining);
+      if (flushed > 0) load();
+      return remaining;
     } catch {
       return Number.POSITIVE_INFINITY;
     }
   }, [queueKey, sessionId, load, api, setOfflineCount]);
 
   useEffect(() => {
+    void migrateLegacyQueue(sessionId, queueKey).then(() => refreshCount());
     const id = setTimeout(() => { void flushQueue(); }, 0);
     window.addEventListener("online", flushQueue);
     return () => { clearTimeout(id); window.removeEventListener("online", flushQueue); };
-  }, [flushQueue]);
+  }, [flushQueue, queueKey, refreshCount, sessionId]);
 
-  return { flushQueue };
+  return { flushQueue, enqueue };
 }

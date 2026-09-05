@@ -17,6 +17,7 @@ export interface SheetRow {
   kgPlaceholder?: string;
   effortPlaceholder?: string;
   isSaved?: boolean;
+  suggestionLabel?: string | null;
 }
 
 export interface LastRef {

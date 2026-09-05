@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, ConfirmModal, Icon, StateBlock, Tabs } from "@/components/ui";
 import type { SessionDetail, SessionSummary } from "@regen/types";
@@ -347,7 +348,16 @@ export default function HistorialPage() {
       {loading ? (
         <StateBlock kind="loading" title="Cargando historial…" />
       ) : filtered.length === 0 ? (
-        <StateBlock kind="empty" title="Sin sesiones" body="Completá tu primera sesión para verla acá." />
+        <StateBlock
+          kind="empty"
+          title="Sin sesiones"
+          body="Completá tu primera sesión para verla acá."
+          cta={
+            <Link href="/semana" style={{ textDecoration: "none" }}>
+              <Button size="sm">Ir a la semana</Button>
+            </Link>
+          }
+        />
       ) : (
         <div style={{ padding: "0 20px" }}>
           {weeks.map(({ weekStart, label, sessions: ws }) => (

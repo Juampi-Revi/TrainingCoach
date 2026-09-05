@@ -3,50 +3,27 @@
 import { useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import type { SessionDetail } from "@regen/types";
-import type { EffortMode, SheetRow, LastRef, OfflineItem } from "../_components/_types";
-import { recommendedRestSeconds, restSuggestionText, suggestWeightKg } from "../_lib/recommended-rest";
+import type { SheetRow, LastRef } from "../_components/_types";
 
 export function useLoggerActions({
   sessionId,
   currentExIdx,
   session,
-  queueKey,
-  setOfflineCount,
   load,
-  effortMode,
-  setEffortMode,
-  equipmentType,
   setEquipmentType,
   sheetRows,
   setSheetRows,
   setLoggerOpen,
-  setRestSeconds,
-  setRestTotal,
-  setRestFromLogger,
-  setRestSuggestion,
-  setLastSaved,
-  setSheetSaving,
   lastRef,
 }: {
   sessionId: string;
   currentExIdx: number;
   session: SessionDetail | null;
-  queueKey: string;
-  setOfflineCount: (n: number) => void;
   load: () => void;
-  effortMode: EffortMode;
-  setEffortMode: (v: EffortMode) => void;
-  equipmentType: "barra" | "mancuernas" | "maquina" | null;
   setEquipmentType: (v: "barra" | "mancuernas" | "maquina" | null) => void;
   sheetRows: SheetRow[];
   setSheetRows: (v: SheetRow[] | ((prev: SheetRow[]) => SheetRow[])) => void;
   setLoggerOpen: (v: boolean) => void;
-  setRestSeconds: (v: number | null) => void;
-  setRestTotal: (v: number) => void;
-  setRestFromLogger: (v: boolean) => void;
-  setRestSuggestion: (v: string | null) => void;
-  setLastSaved: (v: string | null) => void;
-  setSheetSaving: (v: boolean) => void;
   lastRef: LastRef | null;
 }) {
   const { api } = useAuth();
@@ -86,83 +63,5 @@ export function useLoggerActions({
     load();
   }, [session, currentExIdx, sheetRows, api, sessionId, load, setSheetRows]);
 
-  const saveSheet = useCallback(async (opts?: { startRest?: boolean; rows?: SheetRow[] }) => {
-    const ex = session?.exercises[currentExIdx];
-    if (!ex) return;
-    setSheetSaving(true);
-    const rowsToSave = opts?.rows ?? sheetRows;
-    try {
-      for (const row of rowsToSave) {
-        const body: Record<string, string> = {};
-        if (row.kg) body.weight = row.kg;
-        const isTimed = !!(ex.target?.durationSeconds);
-        if (isTimed) {
-          if (row.duration) body.durationSeconds = row.duration;
-        } else {
-          if (row.reps) body.reps = row.reps;
-        }
-        if (row.effort) {
-          if (effortMode === "RPE") body.rpe = row.effort;
-          else body.rir = row.effort;
-        }
-        if (equipmentType) body.notes = equipmentType;
-        const hasAny = isTimed ? !!(row.duration || row.kg || row.effort) : !!(row.reps || row.kg || row.effort);
-        if (!hasAny) continue;
-        try {
-          await api.put(`/client/sessions/${sessionId}/exercises/${ex.id}/sets/${row.setNumber}`, body);
-          setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, isSaved: true } : r));
-        } catch {
-          try {
-            const queue: OfflineItem[] = JSON.parse(localStorage.getItem(queueKey) ?? "[]");
-            queue.push({ wseId: ex.id, setNumber: row.setNumber, body });
-            localStorage.setItem(queueKey, JSON.stringify(queue));
-            setOfflineCount(queue.length);
-            setLastSaved("guardado offline");
-          } catch {}
-        }
-      }
-      setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
-
-      const lastFilled = [...rowsToSave].reverse().find((r) => {
-        const isTimed = !!(ex.target?.durationSeconds);
-        return isTimed ? !!(r.duration || r.kg || r.effort) : !!(r.reps || r.kg || r.effort);
-      });
-      if (lastFilled) {
-        setSheetRows((prev) => {
-          const nextEmpty = prev.find((r) => !r.isSaved && !r.reps && !r.kg && !r.effort && !r.duration);
-          if (!nextEmpty) return prev;
-          const suggestedKg = lastFilled.kg
-            ? suggestWeightKg(lastFilled.kg, lastFilled.effort, effortMode)
-            : null;
-          return prev.map((r) =>
-            r.setNumber === nextEmpty.setNumber
-              ? {
-                  ...r,
-                  kg: suggestedKg ?? lastFilled.kg,
-                  reps: lastFilled.reps,
-                  duration: lastFilled.duration,
-                  effort: lastFilled.effort,
-                }
-              : r,
-          );
-        });
-      }
-
-      load();
-      if (opts?.startRest) {
-        const rest = recommendedRestSeconds(ex, lastFilled?.effort, effortMode);
-        setRestTotal(rest);
-        setRestSeconds(rest);
-        setRestSuggestion(restSuggestionText(ex, lastFilled?.effort, effortMode, rest));
-        setRestFromLogger(true);
-        setLoggerOpen(false);
-      }
-    } catch {
-      // no-op
-    } finally {
-      setSheetSaving(false);
-    }
-  }, [session, currentExIdx, sheetRows, effortMode, equipmentType, queueKey, sessionId, api, setOfflineCount, load, setLastSaved, setSheetSaving, setRestTotal, setRestSeconds, setRestFromLogger, setRestSuggestion, setLoggerOpen, setSheetRows]);
-
-  return { openLogger, deleteSet, saveSheet };
+  return { openLogger, deleteSet };
 }

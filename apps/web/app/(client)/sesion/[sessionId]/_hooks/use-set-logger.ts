@@ -6,20 +6,19 @@ import type { SessionDetail } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef } from "../_components/_types";
 import { useLoggerEffects } from "./use-logger-effects";
 import { useLoggerActions } from "./use-logger-actions";
+import { useSaveSheet } from "./use-save-sheet";
 
 export function useSetLogger({
   sessionId,
   currentExIdx,
   session,
-  queueKey,
-  setOfflineCount,
+  enqueue,
   load,
 }: {
   sessionId: string;
   currentExIdx: number;
   session: SessionDetail | null;
-  queueKey: string;
-  setOfflineCount: (n: number) => void;
+  enqueue: (item: { wseId: string; setNumber: number; body: Record<string, string> }) => Promise<void>;
   load: () => void;
 }) {
   const { api } = useAuth();
@@ -70,27 +69,13 @@ export function useSetLogger({
     setEffortMode,
   });
 
-  const { openLogger, deleteSet, saveSheet } = useLoggerActions({
-    sessionId,
-    currentExIdx,
-    session,
-    queueKey,
-    setOfflineCount,
-    load,
-    effortMode,
-    setEffortMode,
-    equipmentType,
-    setEquipmentType,
-    sheetRows,
-    setSheetRows,
-    setLoggerOpen,
-    setRestSeconds,
-    setRestTotal,
-    setRestFromLogger,
-    setRestSuggestion,
-    setLastSaved,
-    setSheetSaving,
-    lastRef,
+  const { openLogger, deleteSet } = useLoggerActions({
+    sessionId, currentExIdx, session, load, setEquipmentType, sheetRows, setSheetRows, setLoggerOpen, lastRef,
+  });
+
+  const saveSheet = useSaveSheet({
+    sessionId, currentExIdx, session, enqueue, load, effortMode, equipmentType, sheetRows, setSheetRows,
+    setLoggerOpen, setRestSeconds, setRestTotal, setRestFromLogger, setRestSuggestion, setLastSaved, setSheetSaving,
   });
 
   return {

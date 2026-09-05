@@ -2,6 +2,7 @@
 
 import { Avatar, Icon } from "@/components/ui";
 import { ChatMessageItem, RefPayload } from "../_types";
+import Link from "next/link";
 
 interface ChatMessageProps {
   message: ChatMessageItem;
@@ -41,6 +42,11 @@ export function ChatMessage({ message, currentUserId, onRefClick }: ChatMessageP
 
 export function ChatEmptyState() {
   return (
-    <div className="chat-empty">Aún no hay mensajes. Escribile a tu coach.</div>
+    <div className="chat-empty" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+      <div>Aún no hay mensajes. Escribile a tu coach cuando tengas una duda del entreno.</div>
+      <Link href="/semana" style={{ color: "var(--lime)", fontSize: 13, fontWeight: 700 }}>
+        Ir a tu semana
+      </Link>
+    </div>
   );
 }

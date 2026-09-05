@@ -9,6 +9,7 @@ import type { ClientWeekResponse } from "@regen/types";
 import { WeekWorkoutCard } from "./_components/week-workout-card";
 import { AfterTodaySection } from "./_components/after-today-section";
 import { weekContext, workoutBriefing, nextWorkoutMessage, todayStrip } from "./_lib/week-helpers";
+import { precacheUrls } from "@/lib/precache-media";
 
 export default function SemanaPage() {
   const { api, user } = useAuth();
@@ -20,7 +21,10 @@ export default function SemanaPage() {
   useEffect(() => {
     api
       .get<ClientWeekResponse>("/client/week")
-      .then(setData)
+      .then((week) => {
+        setData(week);
+        precacheUrls(week.mediaUrls ?? []);
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [api]);

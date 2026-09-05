@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Avatar, StateBlock } from "@/components/ui";
+import { Avatar, StateBlock, Button } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 
 type ThreadItem = {
@@ -89,7 +89,12 @@ export default function MensajesPage() {
           <StateBlock
             kind="empty"
             title="Sin mensajes"
-            body="Cuando tus alumnos o vos comenten en una sesión, aparecerán acá."
+            body="Cuando un alumno te escriba, el hilo aparece acá."
+            cta={
+              <Button size="sm" onClick={() => router.push("/coach/alumnos")}>
+                Ir a alumnos
+              </Button>
+            }
           />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

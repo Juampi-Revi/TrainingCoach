@@ -36,9 +36,9 @@ export function SwapSheet({
         onClick={(e) => e.stopPropagation()}
         style={{ width: "100%", maxWidth: 540, background: "var(--bg-1)", borderRadius: "16px 16px 0 0", padding: "20px 16px 36px" }}
       >
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Cambiar ejercicio</div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Alternativas</div>
         <div style={{ fontSize: 12, color: "var(--text-mute)", marginBottom: 16 }}>
-          Alternativas para <strong>{ex.exercise.name}</strong>
+          Opciones para <strong>{ex.exercise.name}</strong>
         </div>
 
         {ex.alternatives.length === 0 ? (
@@ -46,7 +46,9 @@ export function SwapSheet({
             El coach no configuró alternativas para este ejercicio.
           </div>
         ) : (
-          ex.alternatives.map((alt) => (
+          ex.alternatives.map((alt, i) => {
+            const sameEquip = !!alt.equipment && !!ex.exercise.equipment && alt.equipment === ex.exercise.equipment;
+            return (
             <button
               key={alt.exerciseId}
               onClick={() => doSwap(alt.exerciseId)}
@@ -65,9 +67,21 @@ export function SwapSheet({
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{alt.name}</div>
-                {alt.primaryMuscle && (
-                  <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 1 }}>{MUSCLE_LABEL[alt.primaryMuscle] ?? alt.primaryMuscle}</div>
-                )}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                  {alt.primaryMuscle && (
+                    <span style={{ fontSize: 12, color: "var(--text-mute)" }}>{MUSCLE_LABEL[alt.primaryMuscle] ?? alt.primaryMuscle}</span>
+                  )}
+                  {i === 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--lime)", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                      Recomendado por coach
+                    </span>
+                  )}
+                  {alt.equipment && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                      {sameEquip ? "Mismo equipo" : alt.equipment}
+                    </span>
+                  )}
+                </div>
               </div>
               {swapping === alt.exerciseId ? (
                 <span style={{ fontSize: 12, color: "var(--text-mute)" }}>Cambiando…</span>
@@ -75,7 +89,8 @@ export function SwapSheet({
                 <Icon name="chevR" size={14} color="var(--text-mute)" />
               )}
             </button>
-          ))
+            );
+          })
         )}
       </div>
     </div>

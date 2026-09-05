@@ -78,7 +78,7 @@ export async function GET(
                 alternatives: {
                   orderBy: { priority: "asc" },
                   include: {
-                    alternativeExercise: { select: { id: true, name: true, primaryMuscle: true } },
+                    alternativeExercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } },
                   },
                 },
               },
@@ -88,6 +88,7 @@ export async function GET(
                 id: true,
                 name: true,
                 primaryMuscle: true,
+                equipment: true,
                 youtubeUrl: true,
                 media: {
                   select: {
@@ -198,6 +199,7 @@ export async function GET(
           id: ex.performedExercise.id,
           name: ex.performedExercise.name,
           primaryMuscle: ex.performedExercise.primaryMuscle,
+          equipment: ex.performedExercise.equipment,
           thumbnailUrl: ex.performedExercise.media[0]?.url ?? null,
           youtubeUrl: ex.performedExercise.youtubeUrl ?? null,
         },
@@ -232,6 +234,7 @@ export async function GET(
           exerciseId: a.alternativeExercise.id,
           name: a.alternativeExercise.name,
           primaryMuscle: a.alternativeExercise.primaryMuscle,
+          equipment: a.alternativeExercise.equipment,
         })),
         target: ex.workoutExercise
           ? {

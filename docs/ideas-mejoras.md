@@ -462,12 +462,12 @@ Aplicar global en `globals.css`. Costo: 5 línas, impacto: enorme.
 
 ### Sprint C — Robustness (2-3 semanas)
 
-- SW precarga de media para la semana
-- Offline-first en `/sesion` (IndexedDB)
-- Auto-fill inteligente del siguiente set
-- Exercise swap como chip pre-logger
-- Endurance sin Strava (modo manual + GPS opcional)
-- Empty states con intención + CTA
+- [x] SW precarga de media para la semana
+- [x] Offline-first en `/sesion` (IndexedDB)
+- [x] Auto-fill inteligente del siguiente set
+- [x] Exercise swap como chip pre-logger
+- [x] Endurance sin Strava (modo manual + GPS opcional)
+- [x] Empty states con intención + CTA
 
 ### Sprint D — Sofisticación (1-2 semanas)
 

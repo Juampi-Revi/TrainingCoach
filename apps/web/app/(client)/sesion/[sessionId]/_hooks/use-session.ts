@@ -6,26 +6,7 @@ import { useAuth } from "@/lib/auth";
 import type { SessionDetail } from "@regen/types";
 import { useWarmupTimer } from "./use-warmup-timer";
 import { useOfflineQueue } from "./use-offline-queue";
-
-const STALE_SESSION_MS = 4 * 60 * 60 * 1000;
-
-function resolveSessionClockStart(clockKey: string, performedAt: string): number {
-  try {
-    const stored = window.localStorage.getItem(clockKey);
-    if (stored) {
-      const n = Number(stored);
-      if (Number.isFinite(n) && n > 0) return n;
-    }
-  } catch { /* ignore */ }
-
-  const performed = new Date(performedAt).getTime();
-  const age = Date.now() - performed;
-  const start = Number.isFinite(performed) && age >= 0 && age < STALE_SESSION_MS
-    ? performed
-    : Date.now();
-  try { window.localStorage.setItem(clockKey, String(start)); } catch { /* ignore */ }
-  return start;
-}
+import { resolveSessionClockStart } from "../_lib/session-clock";
 
 export function useSession(sessionId: string) {
   const { api } = useAuth();
@@ -75,23 +56,13 @@ export function useSession(sessionId: string) {
       .finally(() => setLoading(false));
   }, [api, didInitIdx, sessionId, router, clockKey]);
 
-  const { flushQueue } = useOfflineQueue({ sessionId, queueKey, setOfflineCount, load });
+  const { flushQueue, enqueue } = useOfflineQueue({ sessionId, queueKey, setOfflineCount, load });
 
   useEffect(() => {
     const id0 = setTimeout(() => setNowMs(Date.now()), 0);
     const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => { clearTimeout(id0); clearInterval(id); };
   }, []);
-
-  useEffect(() => {
-    const id = setTimeout(() => {
-      try {
-        const stored = window.localStorage.getItem(queueKey);
-        setOfflineCount(stored ? (JSON.parse(stored) as unknown[]).length : 0);
-      } catch { setOfflineCount(0); }
-    }, 0);
-    return () => clearTimeout(id);
-  }, [queueKey]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -110,7 +81,7 @@ export function useSession(sessionId: string) {
     warmupDone, setWarmupDone,
     warmupTimer, setWarmupTimer,
     queueKey, warmupDoneKey, warmupTimerKey, clockKey,
-    load, flushQueue,
+    load, flushQueue, enqueue,
     toggleWarmup, resetWarmup, finishWarmup,
   };
 }

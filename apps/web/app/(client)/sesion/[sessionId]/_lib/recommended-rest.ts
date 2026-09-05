@@ -76,3 +76,12 @@ function trimKg(n: number): string {
   const rounded = Math.round(n * 2) / 2;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
+
+export function weightSuggestionLabel(effort: string | undefined, effortMode: EffortMode): string | null {
+  const raw = Number(effort);
+  if (!Number.isFinite(raw)) return null;
+  const rpe = effortMode === "RPE" ? raw : Math.max(1, 10 - raw);
+  if (rpe >= 9) return "Sugerido −5%";
+  if (rpe <= 6) return "Sugerido +5%";
+  return null;
+}

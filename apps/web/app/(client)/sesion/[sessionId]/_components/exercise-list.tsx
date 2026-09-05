@@ -5,6 +5,7 @@ import { GROUP_COLORS, groupLabel, fmtDuration, blockTypeLabel, blockSummary } f
 import type { SessionDetail, SessionExercise, WorkoutBlockSummary } from "@regen/types";
 import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 import { isSessionExerciseExtra } from "@/lib/workout-labels";
+import { ExerciseAltChips } from "./exercise-alt-chips";
 
 interface BlockGroup {
   block: WorkoutBlockSummary | null;
@@ -23,6 +24,7 @@ export function ExerciseList({
   onAddEx,
   onToggleWarmup,
   onStartBlock,
+  onSwapEx,
 }: {
   session: SessionDetail;
   workExercises: SessionExercise[];
@@ -35,6 +37,7 @@ export function ExerciseList({
   onAddEx: () => void;
   onToggleWarmup: () => void;
   onStartBlock?: (block: WorkoutBlockSummary) => void;
+  onSwapEx?: (realIdx: number) => void;
 }) {
   // Group exercises by block
   const blockGroups: BlockGroup[] = [];
@@ -160,23 +163,30 @@ export function ExerciseList({
                     const isExtra = isSessionExerciseExtra(e);
                     const isLast = itemIdx === sg.items.length - 1 && sgi === supersetGroups.length - 1;
                     return (
-                      <button key={e.id} onClick={() => onSelectEx(realIdx)}
-                        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", minHeight: 44, paddingLeft: isSuperset ? 14 : 12, background: active ? "rgba(255,255,255,.03)" : "transparent", border: "none", borderLeft: isSuperset ? `3px solid ${gc}40` : "3px solid transparent", borderBottom: isLast ? "none" : "1px solid var(--line)", cursor: "pointer", textAlign: "left" }}
-                      >
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: done ? "var(--success)" : active ? "var(--lime)" : "var(--bg-3)" }} />
-                        <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 700 : 500, color: done ? "var(--text-mute)" : "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {e.exercise.name}
-                        </span>
-                        {isExtra && (
-                          <span className="ta-mono" style={{ fontSize: 9, fontWeight: 700, color: "var(--lime)", border: "1px solid rgba(215,255,58,.35)", borderRadius: 999, padding: "2px 6px", textTransform: "uppercase", letterSpacing: ".06em" }}>
-                            Extra
+                      <div key={e.id}>
+                        <button type="button" onClick={() => onSelectEx(realIdx)}
+                          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", minHeight: 44, paddingLeft: isSuperset ? 14 : 12, background: active ? "rgba(255,255,255,.03)" : "transparent", border: "none", borderLeft: isSuperset ? `3px solid ${gc}40` : "3px solid transparent", borderBottom: (isLast && e.alternatives.length === 0) ? "none" : "1px solid var(--line)", cursor: "pointer", textAlign: "left" }}
+                        >
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: done ? "var(--success)" : active ? "var(--lime)" : "var(--bg-3)" }} />
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 700 : 500, color: done ? "var(--text-mute)" : "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {e.exercise.name}
                           </span>
+                          {isExtra && (
+                            <span className="ta-mono" style={{ fontSize: 9, fontWeight: 700, color: "var(--lime)", border: "1px solid rgba(215,255,58,.35)", borderRadius: 999, padding: "2px 6px", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                              Extra
+                            </span>
+                          )}
+                          <span className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: done ? "var(--success)" : active ? "var(--lime)" : "var(--text-dim)", flexShrink: 0 }}>
+                            {isInterval ? "○" : `${e.sets.length}/${e.target?.sets ?? "—"}`}
+                          </span>
+                          {done && !isInterval && <Icon name="check" size={13} color="var(--success)" />}
+                        </button>
+                        {e.alternatives.length > 0 && onSwapEx && (
+                          <div style={{ padding: "0 12px 8px", paddingLeft: isSuperset ? 14 : 12, borderBottom: isLast ? "none" : "1px solid var(--line)" }}>
+                            <ExerciseAltChips alternatives={e.alternatives} onOpen={() => onSwapEx(realIdx)} />
+                          </div>
                         )}
-                        <span className="ta-mono" style={{ fontSize: 11, fontWeight: 600, color: done ? "var(--success)" : active ? "var(--lime)" : "var(--text-dim)", flexShrink: 0 }}>
-                          {isInterval ? "○" : `${e.sets.length}/${e.target?.sets ?? "—"}`}
-                        </span>
-                        {done && !isInterval && <Icon name="check" size={13} color="var(--success)" />}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

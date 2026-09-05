@@ -1,7 +1,6 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { Icon } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 import type { SheetRow } from "./_types";
 
@@ -17,13 +16,14 @@ export function LoggerSheetRepsRow({
   deleteSet: (setNumber: number) => Promise<void>;
 }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 70px 68px", gap: 6, alignItems: "center" }}>
       <div className="ta-mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--text-mute)" }}>{row.setNumber}</div>
       <input
         type="number"
         inputMode="decimal"
         value={row.kg}
-        onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value } : r))}
+        onChange={(e) => setSheetRows((prev) => prev.map((r) => r.setNumber === row.setNumber ? { ...r, kg: e.target.value, suggestionLabel: null } : r))}
         placeholder={row.kgPlaceholder ?? "—"}
         style={{ textAlign: "center", background: "var(--bg-2)", border: "1px solid var(--line-2)", borderRadius: 10, padding: "10px 0", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--text)", width: "100%", outline: "none" }}
       />
@@ -49,6 +49,12 @@ export function LoggerSheetRepsRow({
         </button>
       ) : (
         <div />
+      )}
+      </div>
+      {row.suggestionLabel && !row.isSaved && (
+        <div className="ta-mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--lime)", letterSpacing: ".04em", padding: "4px 0 0 46px" }}>
+          {row.suggestionLabel}
+        </div>
       )}
     </div>
   );

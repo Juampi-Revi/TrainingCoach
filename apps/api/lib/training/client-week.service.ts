@@ -23,7 +23,7 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
   });
 
   if (!assignment) {
-    return { plan: null, weekNumber: 0, totalWeeks: 0, assignmentStatus: "active", workouts: [] };
+    return { plan: null, weekNumber: 0, totalWeeks: 0, assignmentStatus: "active", workouts: [], mediaUrls: [] };
   }
 
   const plan = assignment.plan;
@@ -43,7 +43,21 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
               title: true,
               description: true,
               tags: true,
-              workoutExercises: { select: { id: true }, orderBy: { sortOrder: "asc" } },
+              workoutExercises: {
+                orderBy: { sortOrder: "asc" },
+                select: {
+                  id: true,
+                  exercise: {
+                    select: {
+                      media: {
+                        select: { url: true },
+                        take: 1,
+                        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -140,11 +154,20 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
     };
   });
 
+  const mediaUrls = [...new Set(
+    (planWeek?.workouts ?? []).flatMap((pw) =>
+      pw.workoutTemplate.workoutExercises
+        .map((we) => we.exercise.media[0]?.url)
+        .filter((url): url is string => !!url),
+    ),
+  )];
+
   return {
     plan: { id: plan.id, title: plan.title },
     weekNumber,
     totalWeeks,
     assignmentStatus: assignment.status as ClientWeekResponse["assignmentStatus"],
     workouts,
+    mediaUrls,
   };
 }
