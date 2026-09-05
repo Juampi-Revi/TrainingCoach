@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         workoutExercises: {
           orderBy: { sortOrder: "asc" },
           include: {
-            exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true, youtubeUrl: true, isSystem: true } },
+            exercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true, youtubeUrl: true, isSystem: true, source: true, sourceId: true } },
             _count: { select: { alternatives: true } },
           },
         },

@@ -12,6 +12,7 @@
     "test:coverage": "vitest --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@bryllim/workout-guide": "^1.0.0",
     "@regen/types": "workspace:*",
     "canvas-confetti": "^1.9.4",
     "next": "^16.2.3",

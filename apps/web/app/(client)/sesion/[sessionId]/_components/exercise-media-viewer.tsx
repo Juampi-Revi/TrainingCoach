@@ -22,6 +22,7 @@ interface ExerciseMediaViewerProps {
   media: MediaItem[];
   exerciseName: string;
   youtubeUrl?: string | null;
+  guideUrl?: string | null;
   onOpenLightbox?: () => void;
 }
 
@@ -29,6 +30,7 @@ export function ExerciseMediaViewer({
   media,
   exerciseName,
   youtubeUrl,
+  guideUrl,
   onOpenLightbox,
 }: ExerciseMediaViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -44,7 +46,7 @@ export function ExerciseMediaViewer({
   // Get hero image (primary or first)
   const heroImage = images.find((img) => img.isPrimary) || images[0];
   
-  if (allMedia.length === 0 && !youtubeUrl) {
+  if (allMedia.length === 0 && !youtubeUrl && !guideUrl) {
     return null;
   }
 
@@ -125,6 +127,16 @@ export function ExerciseMediaViewer({
             onError={() => {
               setFailedImageIds((prev) => ({ ...prev, [heroImage.id]: true }));
             }}
+          />
+        ) : guideUrl ? (
+          <Image
+            src={guideUrl}
+            alt={exerciseName}
+            fill
+            sizes="100vw"
+            style={{ objectFit: "contain", opacity: 0.95, padding: 16 }}
+            priority
+            unoptimized
           />
         ) : null}
         

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Icon, ConfirmModal } from "@/components/ui";
+import { ExerciseThumbnail } from "@/components/shared/exercise-thumbnail";
+import { resolveExerciseIllustration } from "@/lib/workout-guide";
 import { MUSCLE_LABEL, GROUP_COLORS } from "@/lib/constants";
 import type { WE } from "./_types";
 import type { BlockType, IntervalType } from "@regen/types";
@@ -65,43 +66,14 @@ export function ExerciseRow({ we, blockType, intervalType, selected, onSelect, o
           </button>
         </div>
 
-        <div style={{ position: "relative", width: 52, height: 52, borderRadius: 8, background: we.exercise.thumbnailUrl ? "var(--bg-2)" : hasVideo ? "var(--danger)" : "var(--bg-2)", border: we.exercise.thumbnailUrl || hasVideo ? "1px solid var(--line-2)" : "1px dashed var(--line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-          {we.exercise.thumbnailUrl ? (
-            <Image unoptimized src={we.exercise.thumbnailUrl} alt="" fill sizes="52px" style={{ objectFit: "cover" }} />
-          ) : hasVideo ? (
-            <div style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              background: "rgba(255,255,255,0.95)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <Icon name="play" size={14} color="var(--bg)" />
-            </div>
-          ) : (
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              background: "var(--bg-3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "1px dashed var(--line-2)",
-            }}>
-              <Icon name="dumbbell" size={16} color="var(--text-mute)" />
-            </div>
-          )}
-          {/* Group badge */}
+        <div style={{ position: "relative" }}>
+          <ExerciseThumbnail exercise={we.exercise} size={52} fallbackIcon={hasVideo ? "play" : "dumbbell"} />
           {gc && (
               <div style={{ position: "absolute", top: 2, left: 2, width: 16, height: 16, borderRadius: 3, background: gc, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "var(--bg)", fontFamily: "var(--font-mono)" }}>
               {we.supersetGroup}
             </div>
           )}
-          {/* Video indicator (only when thumbnail exists) */}
-          {hasVideo && we.exercise.thumbnailUrl && (
+          {hasVideo && resolveExerciseIllustration(we.exercise) && (
             <div style={{ position: "absolute", bottom: 2, right: 2, width: 16, height: 16, borderRadius: 8, background: "var(--danger)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Icon name="play" size={8} color="var(--bg-1)" />
             </div>

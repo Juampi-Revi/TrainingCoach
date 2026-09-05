@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Badge, Button, Icon, StateBlock } from "@/components/ui";
+import { ExerciseThumbnail } from "@/components/shared/exercise-thumbnail";
 import { EXERCISE_DIFFICULTY_LABEL, EXERCISE_OBJECTIVE_LABEL, MUSCLE_LABEL } from "@/lib/constants";
 import type { ExerciseLibraryItem } from "../_hooks/use-exercise-library";
 
@@ -75,18 +75,7 @@ export function ExerciseLibraryGrid({
           </button>
 
           <div style={{ height: 100, background: "var(--bg-2)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {ex.thumbnailUrl ? (
-              <Image
-                unoptimized
-                src={ex.thumbnailUrl}
-                alt={ex.name}
-                fill
-                sizes="(max-width: 600px) 100vw, 220px"
-                style={{ objectFit: "cover" }}
-              />
-            ) : (
-              <Icon name="dumbbell" size={28} color="var(--text-dim)" />
-            )}
+            <ExerciseThumbnail exercise={ex} size={100} borderRadius={0} className="ta-exercise-thumb" />
           </div>
 
           {!ex.isSystem && (

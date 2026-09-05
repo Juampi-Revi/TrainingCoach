@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Icon, StateBlock } from "@/components/ui";
@@ -21,6 +21,7 @@ import { useToast } from "@/lib/toast";
 import { clearOfflineSets } from "./_lib/offline-idb";
 import { precacheUrls } from "@/lib/precache-media";
 import { sessionWorkSplit, exerciseSubtitle } from "./_lib/session-view";
+import { resolveExerciseIllustration } from "@/lib/workout-guide";
 import "./_styles.css";
 
 export default function SessionInProgressPage() {
@@ -231,7 +232,11 @@ export default function SessionInProgressPage() {
   const nextEx = session.exercises[currentExIdx + 1] ?? null;
   const exSubtitle = exerciseSubtitle(ex, workExercises);
 
-  const hasMedia = (ex?.media?.length ?? 0) > 0;
+  const exerciseIllustration = useMemo(
+    () => (ex ? resolveExerciseIllustration({ ...ex.exercise, media: ex.media }) : null),
+    [ex],
+  );
+  const hasMedia = (ex?.media?.length ?? 0) > 0 || !!exerciseIllustration?.url || !!ex?.exercise.youtubeUrl;
   const bottomBarVisible = !(warmupExists && !warmupDone) && !loggerOpen;
   const bottomBarPadding = bottomBarVisible
     ? keyboardOffset + (completedExs === requiredExercises.length ? 140 : 180)
@@ -257,6 +262,7 @@ export default function SessionInProgressPage() {
           media={(ex.media || []).map(m => ({ ...m, mediaType: m.mediaType as "image" | "video" }))}
           exerciseName={ex.exercise.name}
           youtubeUrl={ex.exercise.youtubeUrl}
+          guideUrl={exerciseIllustration?.kind === "guide" ? exerciseIllustration.url : null}
           onOpenLightbox={() => setMediaOpen(true)}
         />
       )}

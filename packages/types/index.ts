@@ -150,6 +150,8 @@ export interface ExerciseSummary {
   equipment: string | null;
   isSystem: boolean;
   thumbnailUrl: string | null;
+  source?: string | null;
+  sourceId?: string | null;
 }
 
 export interface ExerciseTarget {
@@ -213,7 +215,7 @@ export interface WorkoutTemplateDetail {
     sortOrder: number;
     supersetGroup: string | null;
     workoutBlockId: string;
-    exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean };
+    exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean; source?: string | null; sourceId?: string | null };
     targetSets: number | null;
     targetReps: string | null;
     durationSeconds: number | null;
@@ -237,7 +239,7 @@ export interface SessionExercise {
   sortOrder: number;
   supersetGroup: string | null;
   block: WorkoutBlockSummary;
-  exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null };
+  exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; source?: string | null; sourceId?: string | null };
   media: { id: string; url: string; mediaType: string }[];
   alternatives: { exerciseId: string; name: string; primaryMuscle: string | null; equipment: string | null }[];
   target: ExerciseTarget | null;

@@ -10,6 +10,8 @@ export type ExerciseLibraryItem = {
   isSystem: boolean;
   isBasic: boolean;
   thumbnailUrl: string | null;
+  source?: string | null;
+  sourceId?: string | null;
   youtubeUrl?: string | null;
   isFavorite?: boolean;
   hasImage?: boolean;

@@ -5,7 +5,7 @@ export interface WE {
   sortOrder: number;
   supersetGroup: string | null;
   workoutBlockId: string;
-  exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean };
+  exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; isSystem?: boolean; source?: string | null; sourceId?: string | null };
   labels: WorkoutTemplateDetail["exercises"][number]["labels"];
   targetSets: number | null;
   targetReps: string | null;
@@ -31,6 +31,8 @@ export interface ExerciseOption {
   objective?: string | null;
   isSystem: boolean;
   thumbnailUrl: string | null;
+  source?: string | null;
+  sourceId?: string | null;
   youtubeUrl?: string | null;
   isFavorite?: boolean;
 }

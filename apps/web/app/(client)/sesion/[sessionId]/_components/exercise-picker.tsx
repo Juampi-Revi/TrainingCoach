@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Icon } from "@/components/ui";
+import { ExerciseThumbnail } from "@/components/shared/exercise-thumbnail";
 import { MUSCLE_LABEL } from "@/lib/constants";
 import type { SessionExercise } from "@regen/types";
 
@@ -11,6 +12,8 @@ interface ExerciseOption {
   name: string;
   primaryMuscle: string | null;
   thumbnailUrl: string | null;
+  source?: string | null;
+  sourceId?: string | null;
 }
 
 export function ExercisePicker({
@@ -76,9 +79,7 @@ export function ExercisePicker({
             <div key={opt.id} onClick={() => handleAdd(opt)}
               style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid var(--line)", cursor: adding === opt.id ? "wait" : "pointer", opacity: adding === opt.id ? 0.5 : 1 }}
             >
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg-2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon name="dumbbell" size={16} color="var(--text-mute)" />
-              </div>
+              <ExerciseThumbnail exercise={opt} size={36} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{opt.name}</div>
                 {opt.primaryMuscle && <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 1 }}>{MUSCLE_LABEL[opt.primaryMuscle] ?? opt.primaryMuscle}</div>}

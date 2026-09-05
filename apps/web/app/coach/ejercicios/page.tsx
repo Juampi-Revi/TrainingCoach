@@ -9,6 +9,7 @@ import { DesktopShell } from "@/components/layout/desktop-shell";
 import { useExerciseLibrary } from "./_hooks/use-exercise-library";
 import { ExerciseFormModal } from "./_components/exercise-form-modal";
 import { ExerciseLibraryGrid } from "./_components/exercise-library-grid";
+import { WorkoutGuideCredit } from "@/components/shared/workout-guide-credit";
 import { AddToWorkoutBlockModal } from "./_components/add-to-workout-block-modal";
 import { ExerciseLibraryFilters, type ExerciseLibraryMediaFilter } from "./_components/exercise-library-filters";
 import type { WorkoutTemplateDetail } from "@regen/types";
@@ -189,6 +190,9 @@ export default function EjerciciosPage() {
               </Button>
             </div>
           )}
+          <div style={{ marginTop: 20 }}>
+            <WorkoutGuideCredit compact />
+          </div>
         </div>
       </DesktopShell>
 

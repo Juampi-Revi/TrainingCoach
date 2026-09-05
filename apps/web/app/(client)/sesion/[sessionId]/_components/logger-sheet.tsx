@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tabs } from "@/components/ui";
 import type { SessionExercise } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef } from "./_types";
@@ -12,6 +12,7 @@ import { SheetSnap } from "./sheet-snap";
 import { LoggerQuickPresets } from "./logger-quick-presets";
 import { LoggerTechniquePreview } from "./logger-technique-preview";
 import { useSounds } from "../_hooks/use-sounds";
+import { useExerciseIllustrationFrames } from "../_hooks/use-exercise-illustration-frames";
 
 export function LoggerSheet({
   ex,
@@ -59,10 +60,10 @@ export function LoggerSheet({
   const wakeLockRef = useRef<{ release?: () => Promise<void> } | null>(null);
   const lastCountdownRef = useRef<number | null>(null);
   const { playCountdown, playComplete, playStart } = useSounds();
-  const techniqueImageUrl = useMemo(() => {
-    const img = ex.media.find((m) => m.mediaType === "image");
-    return img?.url ?? ex.exercise.thumbnailUrl ?? null;
-  }, [ex.exercise.thumbnailUrl, ex.media]);
+  const { url: techniqueImageUrl, kind: techniqueKind } = useExerciseIllustrationFrames(
+    { ...ex.exercise, media: ex.media },
+    true,
+  );
 
   useEffect(() => {
     if (activeTimerRow == null) {
@@ -115,6 +116,7 @@ export function LoggerSheet({
           url={techniqueImageUrl}
           exerciseName={ex.exercise.name}
           hidden={!!hiddenTechniqueUrls[techniqueImageUrl]}
+          variant={techniqueKind === "guide" ? "guide" : "media"}
           onHide={() => {
             setHiddenTechniqueUrls((prev) => ({ ...prev, [techniqueImageUrl]: true }));
           }}

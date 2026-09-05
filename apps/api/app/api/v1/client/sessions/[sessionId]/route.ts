@@ -90,6 +90,8 @@ export async function GET(
                 primaryMuscle: true,
                 equipment: true,
                 youtubeUrl: true,
+                source: true,
+                sourceId: true,
                 media: {
                   select: {
                     id: true,
@@ -202,6 +204,8 @@ export async function GET(
           equipment: ex.performedExercise.equipment,
           thumbnailUrl: ex.performedExercise.media[0]?.url ?? null,
           youtubeUrl: ex.performedExercise.youtubeUrl ?? null,
+          source: ex.performedExercise.source ?? null,
+          sourceId: ex.performedExercise.sourceId ?? null,
         },
         media: ex.performedExercise.media.map((m) => {
           if (m.mediaType === "image" && m.publicId) {

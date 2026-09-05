@@ -8,11 +8,13 @@ export function LoggerTechniquePreview({
   exerciseName,
   hidden,
   onHide,
+  variant = "media",
 }: {
   url: string;
   exerciseName: string;
   hidden: boolean;
   onHide: () => void;
+  variant?: "media" | "guide";
 }) {
   if (hidden) return null;
   return (
@@ -35,7 +37,7 @@ export function LoggerTechniquePreview({
           alt={`Técnica de ${exerciseName}`}
           fill
           sizes="(max-width: 540px) calc(100vw - 32px), 320px"
-          style={{ objectFit: "cover" }}
+          style={{ objectFit: variant === "guide" ? "contain" : "cover", padding: variant === "guide" ? 12 : 0 }}
           unoptimized
           onError={onHide}
         />
