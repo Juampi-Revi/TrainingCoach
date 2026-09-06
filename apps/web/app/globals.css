@@ -78,15 +78,15 @@ body::-webkit-scrollbar { display: none; }
 a { color: inherit; }
 a:visited { color: inherit; }
 
-*:focus-visible {
+*:focus-visible:not(.ta-input-inner) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 button:focus-visible,
 a:focus-visible,
-input:focus-visible,
 textarea:focus-visible,
-select:focus-visible {
+select:focus-visible,
+input:focus-visible:not(.ta-input-inner) {
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
@@ -120,12 +120,16 @@ select:focus-visible {
 .ta-group-badge:hover { opacity: 0.8; }
 
 /* ─── Input focus ─────────────────────────────────────────── */
-.ta-input-inner:focus {
-  outline: none;
+.ta-input-wrap .ta-input-inner,
+.ta-input-wrap .ta-input-inner:focus,
+.ta-input-wrap .ta-input-inner:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
   background: transparent;
 }
 .ta-input-wrap:focus-within {
   border-color: var(--lime) !important;
+  box-shadow: none;
 }
 
 /* ─── Animations ──────────────────────────────────────────── */

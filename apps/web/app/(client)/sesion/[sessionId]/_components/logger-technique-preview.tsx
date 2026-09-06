@@ -9,14 +9,44 @@ export function LoggerTechniquePreview({
   hidden,
   onHide,
   variant = "media",
+  compact = false,
 }: {
   url: string;
   exerciseName: string;
   hidden: boolean;
   onHide: () => void;
   variant?: "media" | "guide";
+  compact?: boolean;
 }) {
   if (hidden) return null;
+  if (compact) {
+    return (
+      <div style={{ padding: "0 0 10px", display: "flex", justifyContent: "center" }}>
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 220,
+            height: 72,
+            position: "relative",
+            borderRadius: 12,
+            overflow: "hidden",
+            border: "1px solid var(--line-2)",
+            background: "var(--bg-2)",
+          }}
+        >
+          <Image
+            src={url}
+            alt={`Técnica de ${exerciseName}`}
+            fill
+            sizes="220px"
+            style={{ objectFit: variant === "guide" ? "contain" : "cover", padding: variant === "guide" ? 6 : 0 }}
+            unoptimized
+            onError={onHide}
+          />
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "16px 16px 10px", pointerEvents: "none" }}>
       <div

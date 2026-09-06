@@ -60,6 +60,7 @@ export function Input({
             background: "transparent",
             border: "none",
             outline: "none",
+            boxShadow: "none",
             fontFamily: "var(--font-sans)",
             fontSize: 15,
             color: "var(--text)",

@@ -14,14 +14,76 @@ function nearest(ratio: number) {
   return best;
 }
 
-export function SheetSnap({
+function SheetFit({
   children,
+  footer,
   onBackdrop,
 }: {
   children: ReactNode;
+  footer?: ReactNode;
   onBackdrop: () => void;
 }) {
-  const [idx, setIdx] = useState(1);
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", flexDirection: "column", justifyContent: "flex-end", zIndex: 1300 }}
+      onClick={onBackdrop}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 540,
+          margin: "0 auto",
+          background: "var(--bg-1)",
+          borderRadius: "16px 16px 0 0",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ flexShrink: 0, padding: "10px 0 6px" }} aria-hidden>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: "var(--line-2)", margin: "0 auto" }} />
+        </div>
+        <div
+          className="ta-scroll"
+          style={{
+            overflowY: "auto",
+            maxHeight: "min(68dvh, calc(100dvh - 180px))",
+            padding: "0 14px 12px",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {children}
+        </div>
+        {footer && (
+          <div
+            style={{
+              flexShrink: 0,
+              padding: "10px 14px",
+              paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
+              borderTop: "1px solid var(--line)",
+              background: "var(--bg-1)",
+            }}
+          >
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SheetSnapDraggable({
+  children,
+  footer,
+  onBackdrop,
+  initialSnapIndex,
+}: {
+  children: ReactNode;
+  footer?: ReactNode;
+  onBackdrop: () => void;
+  initialSnapIndex: number;
+}) {
+  const [idx, setIdx] = useState(initialSnapIndex);
   const drag = useRef<{ startY: number; startH: number } | null>(null);
   const [liveH, setLiveH] = useState<number | null>(null);
 
@@ -82,10 +144,50 @@ export function SheetSnap({
         >
           <div style={{ width: 40, height: 4, borderRadius: 99, background: "var(--line-2)", margin: "0 auto" }} />
         </div>
-        <div style={{ flex: 1, overflow: "auto", padding: "0 14px 18px", paddingBottom: "calc(18px + env(safe-area-inset-bottom))" }}>
+        <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 14px 12px", WebkitOverflowScrolling: "touch" }}>
           {children}
         </div>
+        {footer && (
+          <div
+            style={{
+              flexShrink: 0,
+              padding: "10px 14px",
+              paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
+              borderTop: "1px solid var(--line)",
+              background: "var(--bg-1)",
+            }}
+          >
+            {footer}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+export function SheetSnap({
+  children,
+  footer,
+  onBackdrop,
+  initialSnapIndex = 1,
+  fitContent = false,
+}: {
+  children: ReactNode;
+  footer?: ReactNode;
+  onBackdrop: () => void;
+  initialSnapIndex?: number;
+  fitContent?: boolean;
+}) {
+  if (fitContent) {
+    return (
+      <SheetFit footer={footer} onBackdrop={onBackdrop}>
+        {children}
+      </SheetFit>
+    );
+  }
+  return (
+    <SheetSnapDraggable footer={footer} onBackdrop={onBackdrop} initialSnapIndex={initialSnapIndex}>
+      {children}
+    </SheetSnapDraggable>
   );
 }

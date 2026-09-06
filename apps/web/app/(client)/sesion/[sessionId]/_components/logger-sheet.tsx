@@ -110,13 +110,29 @@ export function LoggerSheet({
   }, [activeTimerRow]);
 
   return (
-    <SheetSnap onBackdrop={onClose}>
+    <SheetSnap
+      onBackdrop={onClose}
+      fitContent
+      footer={
+        !isCardioPure ? (
+          <LoggerFooter
+            sheetSaving={sheetSaving}
+            onClose={onClose}
+            saveSheet={saveSheet}
+            ex={ex}
+            sheetRows={sheetRows}
+            effortMode={effortMode}
+          />
+        ) : undefined
+      }
+    >
       {techniqueImageUrl && (
         <LoggerTechniquePreview
           url={techniqueImageUrl}
           exerciseName={ex.exercise.name}
           hidden={!!hiddenTechniqueUrls[techniqueImageUrl]}
           variant={techniqueKind === "guide" ? "guide" : "media"}
+          compact
           onHide={() => {
             setHiddenTechniqueUrls((prev) => ({ ...prev, [techniqueImageUrl]: true }));
           }}
@@ -124,7 +140,7 @@ export function LoggerSheet({
       )}
 
       <div>
-        <LoggerHeader ex={ex} lastRef={lastRef} />
+        <LoggerHeader ex={ex} lastRef={lastRef} compact />
 
         {isCardioPure ? (
           <LoggerCardioTimer
@@ -267,15 +283,6 @@ export function LoggerSheet({
                 + Agregar serie
               </button>
             </div>
-
-            <LoggerFooter
-              sheetSaving={sheetSaving}
-              onClose={onClose}
-              saveSheet={saveSheet}
-              ex={ex}
-              sheetRows={sheetRows}
-              effortMode={effortMode}
-            />
           </>
         )}
       </div>

@@ -122,6 +122,12 @@ export default function SessionInProgressPage() {
     return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
   }, []);
 
+  const ex = session?.exercises[currentExIdx];
+  const exerciseIllustration = useMemo(
+    () => (ex ? resolveExerciseIllustration({ ...ex.exercise, media: ex.media }) : null),
+    [ex],
+  );
+
   function goToEx(i: number) {
     const target = session?.exercises[i];
     if (target && (target?.alternatives?.length ?? 0) > 0 && (target?.sets?.length ?? 0) === 0) {
@@ -220,7 +226,6 @@ export default function SessionInProgressPage() {
     );
   }
 
-  const ex = session.exercises[currentExIdx];
   const { warmupExercises, workExercises, requiredExercises, completedExs, extraBlockCount, extraGroupCount } = sessionWorkSplit(session);
   const warmupExists = warmupExercises.length > 0;
   const warmupTargetMs = null;
@@ -231,11 +236,6 @@ export default function SessionInProgressPage() {
   const headerExNum = headerExIdx >= 0 ? headerExIdx + 1 : currentExIdx + 1;
   const nextEx = session.exercises[currentExIdx + 1] ?? null;
   const exSubtitle = exerciseSubtitle(ex, workExercises);
-
-  const exerciseIllustration = useMemo(
-    () => (ex ? resolveExerciseIllustration({ ...ex.exercise, media: ex.media }) : null),
-    [ex],
-  );
   const hasMedia = (ex?.media?.length ?? 0) > 0 || !!exerciseIllustration?.url || !!ex?.exercise.youtubeUrl;
   const bottomBarVisible = !(warmupExists && !warmupDone) && !loggerOpen;
   const bottomBarPadding = bottomBarVisible
