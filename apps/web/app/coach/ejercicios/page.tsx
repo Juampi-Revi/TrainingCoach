@@ -11,6 +11,7 @@ import { ExerciseFormModal } from "./_components/exercise-form-modal";
 import { ExerciseLibraryGrid } from "./_components/exercise-library-grid";
 import { WorkoutGuideCredit } from "@/components/shared/workout-guide-credit";
 import { AddToWorkoutBlockModal } from "./_components/add-to-workout-block-modal";
+import type { ExerciseLibraryCatalogFilter } from "./_hooks/exercise-library.types";
 import { ExerciseLibraryFilters, type ExerciseLibraryMediaFilter } from "./_components/exercise-library-filters";
 import type { WorkoutTemplateDetail } from "@regen/types";
 
@@ -26,7 +27,7 @@ export default function EjerciciosPage() {
   const [difficulty, setDifficulty] = useState<string>("");
   const [objective, setObjective] = useState<string>("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [basicsOnly, setBasicsOnly] = useState(false);
+  const [catalog, setCatalog] = useState<ExerciseLibraryCatalogFilter>("all");
   const [media, setMedia] = useState<ExerciseLibraryMediaFilter>("any");
   const [modal, setModal] = useState<{ open: true; exercise?: import("./_hooks/use-exercise-library").ExerciseLibraryItem; tab?: "info" | "media" } | null>(null);
 
@@ -70,11 +71,11 @@ export default function EjerciciosPage() {
       difficulties: difficulty ? [difficulty] : [],
       objectives: objective ? [objective] : [],
       favoritesOnly,
-      basicsOnly,
+      catalog,
       media,
-      limit: 60,
+      limit: 80,
     }),
-    [q, muscle, equipment, difficulty, objective, favoritesOnly, basicsOnly, media],
+    [q, muscle, equipment, difficulty, objective, favoritesOnly, catalog, media],
   );
 
   const { items, facets, setFavorite, reload, loadMore, hasMore, loadingMore } = useExerciseLibrary(query);
@@ -96,7 +97,7 @@ export default function EjerciciosPage() {
       <DesktopShell
         active="library"
         title="Ejercicios"
-        subtitle={`${list.length} ejercicios`}
+        subtitle={items ? `${list.length}${hasMore ? "+" : ""} ejercicios` : "Ejercicios"}
         coachName={user?.name ?? "Coach"}
         actions={
           <>
@@ -147,8 +148,8 @@ export default function EjerciciosPage() {
             setObjective={setObjective}
             favoritesOnly={favoritesOnly}
             setFavoritesOnly={setFavoritesOnly}
-            basicsOnly={basicsOnly}
-            setBasicsOnly={setBasicsOnly}
+            catalog={catalog}
+            setCatalog={setCatalog}
             media={media}
             setMedia={setMedia}
             facets={facets ? { muscles: facets.muscles ?? [], equipments: facets.equipments ?? [] } : null}
@@ -159,7 +160,7 @@ export default function EjerciciosPage() {
               setDifficulty("");
               setObjective("");
               setFavoritesOnly(false);
-              setBasicsOnly(false);
+              setCatalog("all");
               setMedia("any");
             }}
           />

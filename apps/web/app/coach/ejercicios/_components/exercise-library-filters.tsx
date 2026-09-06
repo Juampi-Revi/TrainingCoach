@@ -1,6 +1,7 @@
 "use client";
 import { Icon } from "@/components/ui";
 import { EXERCISE_DIFFICULTY_LABEL, EXERCISE_OBJECTIVE_LABEL, MUSCLE_LABEL } from "@/lib/constants";
+import type { ExerciseLibraryCatalogFilter } from "../_hooks/exercise-library.types";
 
 export type ExerciseLibraryMediaFilter = "any" | "complete" | "missing" | "missingImage" | "missingVideo";
 
@@ -96,8 +97,8 @@ export function ExerciseLibraryFilters({
   setObjective,
   favoritesOnly,
   setFavoritesOnly,
-  basicsOnly,
-  setBasicsOnly,
+  catalog,
+  setCatalog,
   media,
   setMedia,
   facets,
@@ -115,14 +116,18 @@ export function ExerciseLibraryFilters({
   setObjective: (v: string) => void;
   favoritesOnly: boolean;
   setFavoritesOnly: (v: boolean) => void;
-  basicsOnly: boolean;
-  setBasicsOnly: (v: boolean) => void;
+  catalog: ExerciseLibraryCatalogFilter;
+  setCatalog: (v: ExerciseLibraryCatalogFilter) => void;
   media: ExerciseLibraryMediaFilter;
   setMedia: (v: ExerciseLibraryMediaFilter) => void;
   facets: { muscles: string[]; equipments: string[] } | null;
   onClear: () => void;
 }) {
-  const showClear = muscle || equipment || difficulty || objective || favoritesOnly || basicsOnly || media !== "any" || q.trim();
+  const showClear = muscle || equipment || difficulty || objective || favoritesOnly || catalog !== "all" || media !== "any" || q.trim();
+
+  function toggleCatalog(next: ExerciseLibraryCatalogFilter) {
+    setCatalog(catalog === next ? "all" : next);
+  }
 
   return (
     <>
@@ -150,9 +155,15 @@ export function ExerciseLibraryFilters({
         </SelectField>
       </div>
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <Chip active={catalog === "illustrated"} tone="lime" icon="image" label="Con ilustración" onClick={() => toggleCatalog("illustrated")} />
+        <Chip active={catalog === "basic"} tone="lime" icon="bolt" label="Básicos" onClick={() => toggleCatalog("basic")} />
+        <Chip active={catalog === "guide"} tone="lime" icon="target" label="Guía visual" onClick={() => toggleCatalog("guide")} />
+        <Chip active={catalog === "mine"} tone="lime" icon="user" label="Propios" onClick={() => toggleCatalog("mine")} />
         <Chip active={favoritesOnly} tone="lime" icon="star" label="Favoritos" onClick={() => setFavoritesOnly(!favoritesOnly)} />
-        <Chip active={basicsOnly} tone="lime" icon="bolt" label="Básicos" onClick={() => setBasicsOnly(!basicsOnly)} />
+      </div>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
         <Chip active={media === "complete"} tone="success" icon="check" label="Media completa" onClick={() => setMedia(media === "complete" ? "any" : "complete")} />
         <Chip active={media === "missing"} tone="warn" icon="alert" label="Falta media" onClick={() => setMedia(media === "missing" ? "any" : "missing")} />
         <Chip active={media === "missingImage"} tone="warn" icon="image" label="Falta imagen" onClick={() => setMedia(media === "missingImage" ? "any" : "missingImage")} />

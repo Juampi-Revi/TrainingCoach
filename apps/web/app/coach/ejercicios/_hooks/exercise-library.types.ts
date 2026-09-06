@@ -1,5 +1,7 @@
 "use client";
 
+export type ExerciseLibraryCatalogFilter = "all" | "basic" | "guide" | "mine" | "illustrated";
+
 export type ExerciseLibraryItem = {
   id: string;
   name: string;
@@ -10,9 +12,10 @@ export type ExerciseLibraryItem = {
   isSystem: boolean;
   isBasic: boolean;
   isGuide?: boolean;
-  thumbnailUrl: string | null;
+  hasIllustration?: boolean;
   source?: string | null;
   sourceId?: string | null;
+  thumbnailUrl: string | null;
   youtubeUrl?: string | null;
   isFavorite?: boolean;
   hasImage?: boolean;
@@ -33,7 +36,7 @@ export type ExerciseLibraryQuery = {
   difficulties: string[];
   objectives: string[];
   favoritesOnly: boolean;
-  basicsOnly: boolean;
+  catalog: ExerciseLibraryCatalogFilter;
   media: "any" | "complete" | "missing" | "missingImage" | "missingVideo";
   limit?: number;
 };

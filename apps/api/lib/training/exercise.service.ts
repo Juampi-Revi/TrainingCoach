@@ -9,6 +9,9 @@ type ListArgs = {
   objectives: string[] | null;
   favoritesOnly: boolean;
   basicsOnly?: boolean;
+  guideOnly?: boolean;
+  mineOnly?: boolean;
+  illustratedOnly?: boolean;
   limit: number;
   offset?: number;
   mediaFilter?: "any" | "complete" | "missing" | "missingImage" | "missingVideo";
@@ -28,6 +31,42 @@ function looksLikeSchemaOutOfDate(msg: string): boolean {
 const BASIC_SOURCE = "regen_basic_v1";
 const GUIDE_SOURCE = "bryllim/workout-guide";
 
+function buildExerciseListWhere(args: ListArgs) {
+  const shared = {
+    ...(args.q ? { name: { contains: args.q, mode: "insensitive" as const } } : {}),
+    ...(args.muscles?.length ? { primaryMuscle: { in: args.muscles } } : {}),
+    ...(args.equipments?.length ? { equipment: { in: args.equipments } } : {}),
+    ...(args.difficulties?.length ? { difficulty: { in: args.difficulties } } : {}),
+    ...(args.objectives?.length ? { objective: { in: args.objectives } } : {}),
+    ...(args.favoritesOnly ? { favoritedBy: { some: { coachUserId: args.coachUserId } } } : {}),
+  };
+
+  if (args.mineOnly) {
+    return { coachUserId: args.coachUserId, isSystem: false, ...shared };
+  }
+  if (args.guideOnly) {
+    return { source: GUIDE_SOURCE, isSystem: true, ...shared };
+  }
+  if (args.basicsOnly) {
+    return { source: BASIC_SOURCE, ...shared };
+  }
+  if (args.illustratedOnly) {
+    return {
+      OR: [
+        { source: BASIC_SOURCE },
+        { source: GUIDE_SOURCE },
+        { media: { some: { mediaType: "image" } } },
+      ],
+      ...shared,
+    };
+  }
+
+  return {
+    OR: [{ isSystem: true }, { coachUserId: args.coachUserId }],
+    ...shared,
+  };
+}
+
 export async function listCoachExercises(args: ListArgs) {
   const {
     coachUserId,
@@ -38,6 +77,9 @@ export async function listCoachExercises(args: ListArgs) {
     objectives,
     favoritesOnly,
     basicsOnly = false,
+    guideOnly = false,
+    mineOnly = false,
+    illustratedOnly = false,
     limit,
     offset = 0,
     mediaFilter = "any",
@@ -47,16 +89,22 @@ export async function listCoachExercises(args: ListArgs) {
 
   try {
     const exercises = await prisma.exercise.findMany({
-      where: {
-        OR: [{ isSystem: true }, { coachUserId }],
-        ...(basicsOnly ? { source: BASIC_SOURCE } : {}),
-        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-        ...(muscles?.length ? { primaryMuscle: { in: muscles } } : {}),
-        ...(equipments?.length ? { equipment: { in: equipments } } : {}),
-        ...(difficulties?.length ? { difficulty: { in: difficulties } } : {}),
-        ...(objectives?.length ? { objective: { in: objectives } } : {}),
-        ...(favoritesOnly ? { favoritedBy: { some: { coachUserId } } } : {}),
-      },
+      where: buildExerciseListWhere({
+        coachUserId,
+        q,
+        muscles,
+        equipments,
+        difficulties,
+        objectives,
+        favoritesOnly,
+        basicsOnly,
+        guideOnly,
+        mineOnly,
+        illustratedOnly,
+        limit,
+        offset,
+        mediaFilter,
+      }),
       orderBy: [{ name: "asc" }],
       take,
       select: {
@@ -107,6 +155,7 @@ export async function listCoachExercises(args: ListArgs) {
         isFavorite: e.favoritedBy.length > 0,
         hasImage,
         hasVideo,
+        hasIllustration: isBasic || isGuide || hasImage,
       };
     });
 
@@ -136,13 +185,22 @@ export async function listCoachExercises(args: ListArgs) {
     if (favoritesOnly) return [];
 
     const exercises = await prisma.exercise.findMany({
-      where: {
-        OR: [{ isSystem: true }, { coachUserId }],
-        ...(basicsOnly ? { source: BASIC_SOURCE } : {}),
-        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-        ...(muscles?.length ? { primaryMuscle: { in: muscles } } : {}),
-        ...(equipments?.length ? { equipment: { in: equipments } } : {}),
-      },
+      where: buildExerciseListWhere({
+        coachUserId,
+        q,
+        muscles,
+        equipments,
+        difficulties: null,
+        objectives: null,
+        favoritesOnly,
+        basicsOnly,
+        guideOnly,
+        mineOnly,
+        illustratedOnly,
+        limit,
+        offset,
+        mediaFilter,
+      }),
       orderBy: [{ isSystem: "desc" }, { name: "asc" }],
       take,
       select: {
@@ -190,6 +248,7 @@ export async function listCoachExercises(args: ListArgs) {
         isFavorite: false,
         hasImage,
         hasVideo,
+        hasIllustration: isBasic || isGuide || hasImage,
       };
     });
 

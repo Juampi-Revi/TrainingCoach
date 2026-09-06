@@ -4,6 +4,8 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import type { ExerciseFacets, ExerciseLibraryItem, ExerciseLibraryQuery } from "./exercise-library.types";
 export type { ExerciseFacets, ExerciseLibraryItem, ExerciseLibraryQuery } from "./exercise-library.types";
+import { catalogQueryFlags } from "./exercise-library-catalog";
+
 function qs(query: ExerciseLibraryQuery, offset: number) {
   const p = new URLSearchParams();
   const q = query.q.trim();
@@ -13,9 +15,13 @@ function qs(query: ExerciseLibraryQuery, offset: number) {
   if (query.difficulties.length) p.set("difficulty", query.difficulties.join(","));
   if (query.objectives.length) p.set("objective", query.objectives.join(","));
   if (query.favoritesOnly) p.set("favorites", "true");
-  if (query.basicsOnly) p.set("basic", "true");
+  const catalog = catalogQueryFlags(query.catalog);
+  if (catalog.basicsOnly) p.set("basic", "true");
+  if (catalog.guideOnly) p.set("guide", "true");
+  if (catalog.mineOnly) p.set("mine", "true");
+  if (catalog.illustratedOnly) p.set("illustrated", "true");
   if (query.media !== "any") p.set("media", query.media);
-  p.set("limit", String(Math.min(100, query.limit ?? 60)));
+  p.set("limit", String(Math.min(100, query.limit ?? 80)));
   if (offset) p.set("offset", String(offset));
   const s = p.toString();
   return s ? `?${s}` : "";
@@ -30,7 +36,7 @@ export function useExerciseLibrary(query: ExerciseLibraryQuery) {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const baseUrl = useMemo(() => `/coach/exercises${qs(query, 0)}`, [query]);
-  const pageSize = Math.min(100, query.limit ?? 60);
+  const pageSize = Math.min(100, query.limit ?? 80);
   const fetchPage = useCallback(async (nextOffset: number, append: boolean) => {
     const res = await api.get<ExerciseLibraryItem[]>(`/coach/exercises${qs(query, nextOffset)}`);
     setHasMore(res.length >= pageSize);

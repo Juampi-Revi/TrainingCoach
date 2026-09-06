@@ -120,6 +120,10 @@ export function ExerciseLibraryGrid({
               {ex.objective && <Badge tone="neutral" size="sm">{EXERCISE_OBJECTIVE_LABEL[ex.objective] ?? ex.objective}</Badge>}
               {!ex.isSystem && <Badge tone="limeSoft" size="sm">Propio</Badge>}
               {ex.isBasic && <Badge tone="limeSoft" size="sm" icon="bolt">Básico</Badge>}
+              {ex.isGuide && <Badge tone="info" size="sm" icon="target">Guía</Badge>}
+              {ex.hasIllustration && !ex.hasImage && (ex.isBasic || ex.isGuide) && (
+                <Badge tone="neutral" size="sm" icon="image">Ilustrado</Badge>
+              )}
               {ex.hasImage !== undefined && (
                 <Badge tone={ex.hasImage ? "success" : "warn"} size="sm" icon="image">
                   IMG

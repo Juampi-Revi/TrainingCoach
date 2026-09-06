@@ -56,8 +56,11 @@ export async function GET(req: NextRequest) {
     const objectives = toStringList(searchParams.get("objective"));
     const favoritesOnly = toBool(searchParams.get("favorites")) ?? false;
     const basicsOnly = toBool(searchParams.get("basic")) ?? false;
+    const guideOnly = toBool(searchParams.get("guide")) ?? false;
+    const mineOnly = toBool(searchParams.get("mine")) ?? false;
+    const illustratedOnly = toBool(searchParams.get("illustrated")) ?? false;
     const mediaFilter = toMediaFilter(searchParams.get("media"));
-    const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "50"));
+    const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "80"));
     const offset = Math.max(0, Math.min(5000, toInt(searchParams.get("offset")) ?? 0));
 
     const items = await listCoachExercises({
@@ -69,6 +72,9 @@ export async function GET(req: NextRequest) {
       objectives,
       favoritesOnly,
       basicsOnly,
+      guideOnly,
+      mineOnly,
+      illustratedOnly,
       limit,
       offset,
       mediaFilter,
