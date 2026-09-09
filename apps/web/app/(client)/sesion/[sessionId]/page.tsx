@@ -17,8 +17,9 @@ import { SessionOverlays } from "./_components/session-overlays";
 import { useSession } from "./_hooks/use-session";
 import { useSetLogger } from "./_hooks/use-set-logger";
 import { useBlockExecution } from "./_hooks/use-block-execution";
-import { useToast } from "@/lib/toast";
+import { useCompleteSession } from "./_hooks/use-complete-session";
 import { clearOfflineSets } from "./_lib/offline-idb";
+import { clearPendingComplete } from "./_lib/session-complete";
 import { precacheUrls } from "@/lib/precache-media";
 import { sessionWorkSplit, exerciseSubtitle } from "./_lib/session-view";
 import { resolveExerciseIllustration } from "@/lib/workout-guide";
@@ -26,7 +27,6 @@ import "./_styles.css";
 
 export default function SessionInProgressPage() {
   const { api } = useAuth();
-  const toast = useToast();
   const router = useRouter();
   const { sessionId } = useParams<{ sessionId: string }>();
 
@@ -41,6 +41,8 @@ export default function SessionInProgressPage() {
     load, flushQueue, enqueue,
     toggleWarmup, resetWarmup, finishWarmup,
   } = useSession(sessionId);
+
+  const { completing, completeSession } = useCompleteSession({ sessionId, flushQueue, load });
 
   const {
     effortMode, setEffortMode,
@@ -91,7 +93,6 @@ export default function SessionInProgressPage() {
     precacheUrls(urls);
   }, [session]);
 
-  const [completing, setCompleting] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [showEarlyFinish, setShowEarlyFinish] = useState(false);
@@ -148,28 +149,6 @@ export default function SessionInProgressPage() {
     // Don't auto-open tools — the user should click "Iniciar" or "Registrar series" explicitly
   }
 
-  async function completeSession(sessionNotes?: string) {
-    setCompleting(true);
-    try {
-      const remaining = await flushQueue();
-      if (remaining > 0) {
-        toast.error("Todavía hay series pendientes de sincronizar antes de cerrar la sesión");
-        setCompleting(false);
-        return;
-      }
-      load();
-      await api.patch(`/client/sessions/${sessionId}`, {
-        status: "completed",
-        ...(sessionNotes ? { sessionNotes } : {}),
-      });
-      router.replace(`/sesion/${sessionId}/completada`);
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "No se pudo cerrar la sesión");
-      setCompleting(false);
-    }
-  }
-
   async function resetSession() {
     if (!session?.workoutTemplate) return;
     setResetting(true);
@@ -188,6 +167,7 @@ export default function SessionInProgressPage() {
       try { localStorage.removeItem(briefingKey); } catch {}
       try { localStorage.removeItem(clockKey); } catch {}
       void clearOfflineSets(sessionId);
+      clearPendingComplete(sessionId);
       router.replace(`/sesion/${res.id}`);
     } catch (e) {
       console.error(e);

@@ -31,6 +31,8 @@ export default function LoginPage() {
           setError("Email o contraseña incorrectos");
         } else if (e.status === 500) {
           setError("Error en el servidor. Intentá en unos segundos.");
+        } else if (e.status === 0) {
+          setError(e.message);
         } else if (e.status === 429) {
           setError("Demasiados intentos. Esperá unos minutos.");
         } else {
