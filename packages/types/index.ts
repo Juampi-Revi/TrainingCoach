@@ -645,6 +645,7 @@ export interface MealIdeaItem {
   grams: number;
   portionLabel: string;
   servingLabel: string | null;
+  servingGrams: number | null;
   kcal: number;
   proteinG: number;
   carbsG: number;

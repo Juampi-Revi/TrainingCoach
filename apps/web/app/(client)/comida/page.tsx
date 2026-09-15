@@ -10,7 +10,7 @@ import { FoodHistory } from "./_components/food-history";
 import { NutritionSummary } from "./_components/nutrition-summary";
 import { MacroRings } from "./_components/macro-rings";
 import { MacrosCalculator } from "./_components/macros-calculator";
-import { MacroFoodLogger } from "./_components/macro-food-logger";
+import { MacroFoodLogger, type PlateFood } from "./_components/macro-food-logger";
 import { MealIdeas } from "./_components/meal-ideas";
 import "./_styles.css";
 
@@ -41,6 +41,7 @@ export default function ComidaPage() {
   const nutrition = useNutritionToday();
   const [tab, setTab] = useState<string>("Hoy");
   const [mode, setMode] = useState("Macros");
+  const [plateSeed, setPlateSeed] = useState<PlateFood[] | null>(null);
 
   const good = dashboard?.foodGood ?? 0;
   const regular = dashboard?.foodRegular ?? 0;
@@ -85,7 +86,11 @@ export default function ComidaPage() {
             <Tabs variant="pills" tabs={["Macros", "Rápido"]} active={mode} onChange={setMode} />
             <div className="comida-logger-wrapper">
               {mode === "Macros" ? (
-                <MacroFoodLogger onSaved={refreshAll} />
+                <MacroFoodLogger
+                  onSaved={refreshAll}
+                  incoming={plateSeed}
+                  onIncomingUsed={() => setPlateSeed(null)}
+                />
               ) : (
                 <QuickFoodLogger embedded onSaved={refreshAll} />
               )}
@@ -94,6 +99,10 @@ export default function ComidaPage() {
               remaining={nutrition.data?.remaining ?? null}
               hasTarget={Boolean(nutrition.data?.target)}
               onLogged={refreshAll}
+              onAddToPlate={(items) => {
+                setMode("Macros");
+                setPlateSeed(items);
+              }}
             />
             <FoodHistory
               entries={todayEntries}

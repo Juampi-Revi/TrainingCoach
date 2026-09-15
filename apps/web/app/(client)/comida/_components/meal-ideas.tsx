@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import type { MacroTotals, MealIdea, MealIdeasResponse, MealType } from "@regen/types";
+import type { MacroTotals, MealIdea, MealIdeaItem, MealIdeasResponse, MealType } from "@regen/types";
+import type { PlateFood } from "./macro-food-logger";
 
 const SLOTS: Array<{ id: MealType; label: string }> = [
   { id: "breakfast", label: "Desayuno" },
@@ -29,10 +30,12 @@ export function MealIdeas({
   remaining,
   hasTarget,
   onLogged,
+  onAddToPlate,
 }: {
   remaining: MacroTotals | null;
   hasTarget: boolean;
   onLogged: () => Promise<void>;
+  onAddToPlate?: (items: PlateFood[]) => void;
 }) {
   const { api } = useAuth();
   const toast = useToast();
@@ -62,6 +65,11 @@ export function MealIdeas({
   }, [load, remaining?.proteinG]);
 
   async function useIdea(idea: MealIdea) {
+    if (onAddToPlate) {
+      onAddToPlate(idea.items.map(ideaItemToPlate));
+      toast.success("Sumado al plato. Ajustá gramos o porciones arriba.");
+      return;
+    }
     setSavingId(idea.id);
     try {
       await api.post("/client/food", {
@@ -105,7 +113,7 @@ export function MealIdeas({
         <p className="ideas-copy">Ya cubriste la proteína de hoy. Si igual vas a comer, registrala a mano abajo.</p>
       ) : (
         <p className="ideas-copy">
-          Para {mealName} te faltan <strong>{need} g</strong> de proteína. Elegí un plato y lo cargamos con las porciones.
+          Para {mealName} te faltan <strong>{need} g</strong> de proteína. Sumalo al plato y ajustá las porciones.
         </p>
       )}
       {loading && <div className="ideas-muted">Armando ideas…</div>}
@@ -130,7 +138,7 @@ export function MealIdeas({
             {Math.round(idea.totals.kcal)} kcal · C {Math.round(idea.totals.carbsG)} · G {Math.round(idea.totals.fatG)}
           </div>
           <Button size="sm" onClick={() => void useIdea(idea)} disabled={savingId != null}>
-            {savingId === idea.id ? "Sumando…" : "Registrar este plato"}
+            {savingId === idea.id ? "Sumando…" : onAddToPlate ? "Sumar al plato" : "Registrar este plato"}
           </Button>
         </article>
       ))}
@@ -153,4 +161,24 @@ export function MealIdeas({
       `}</style>
     </div>
   );
+}
+
+function ideaItemToPlate(item: MealIdeaItem): PlateFood {
+  const grams = Math.max(1, item.grams);
+  return {
+    key: `${item.foodItemId}-${item.foodId}-${Date.now()}`,
+    foodItemId: item.foodItemId,
+    name: item.name,
+    grams,
+    servingLabel: item.servingLabel,
+    servingGrams: item.servingGrams,
+    kcalPer100g: (item.kcal / grams) * 100,
+    proteinPer100g: (item.proteinG / grams) * 100,
+    carbsPer100g: (item.carbsG / grams) * 100,
+    fatPer100g: (item.fatG / grams) * 100,
+    kcal: item.kcal,
+    proteinG: item.proteinG,
+    carbsG: item.carbsG,
+    fatG: item.fatG,
+  };
 }

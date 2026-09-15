@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Input } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import type { CatalogFoodItem, CreateFoodLogItemInput, MealType } from "@regen/types";
+import type { CatalogFoodItem, MealType } from "@regen/types";
 import { BarcodeScanner } from "./barcode-scanner";
+import { PlateItemRow } from "./plate-item-row";
 
 const MEALS: Array<{ id: MealType; label: string }> = [
   { id: "breakfast", label: "Desayuno" },
@@ -22,20 +23,87 @@ function mealFromClock(): MealType {
   return "dinner";
 }
 
-interface DraftItem extends CreateFoodLogItemInput {
+export interface PlateFood {
   key: string;
+  foodItemId: string | null;
+  name: string;
+  grams: number;
+  servingLabel: string | null;
+  servingGrams: number | null;
+  kcalPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
 }
 
-export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+function withGrams(item: PlateFood, grams: number): PlateFood {
+  const g = Math.max(1, round1(grams));
+  const factor = g / 100;
+  return {
+    ...item,
+    grams: g,
+    kcal: round1(item.kcalPer100g * factor),
+    proteinG: round1(item.proteinPer100g * factor),
+    carbsG: round1(item.carbsPer100g * factor),
+    fatG: round1(item.fatPer100g * factor),
+  };
+}
+
+function fromCatalog(item: CatalogFoodItem, grams: number): PlateFood {
+  return withGrams({
+    key: `${item.id}-${Date.now()}`,
+    foodItemId: item.id,
+    name: item.name,
+    grams,
+    servingLabel: item.servingLabel,
+    servingGrams: item.servingGrams,
+    kcalPer100g: item.kcalPer100g,
+    proteinPer100g: item.proteinPer100g,
+    carbsPer100g: item.carbsPer100g,
+    fatPer100g: item.fatPer100g,
+    kcal: 0,
+    proteinG: 0,
+    carbsG: 0,
+    fatG: 0,
+  }, grams);
+}
+
+export function MacroFoodLogger({
+  onSaved,
+  incoming,
+  onIncomingUsed,
+}: {
+  onSaved: () => Promise<void>;
+  incoming?: PlateFood[] | null;
+  onIncomingUsed?: () => void;
+}) {
   const { api } = useAuth();
   const toast = useToast();
   const [meal, setMeal] = useState<MealType>(mealFromClock);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<CatalogFoodItem[]>([]);
-  const [draft, setDraft] = useState<DraftItem[]>([]);
+  const [draft, setDraft] = useState<PlateFood[]>([]);
   const [scanning, setScanning] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!incoming?.length) return;
+    setDraft((prev) => {
+      let next = prev;
+      for (const item of incoming) next = upsertFood(next, item);
+      return next;
+    });
+    onIncomingUsed?.();
+  }, [incoming, onIncomingUsed]);
 
   async function search(q: string) {
     setQuery(q);
@@ -51,22 +119,26 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
     }
   }
 
-  function addItem(item: CatalogFoodItem, amount?: number) {
-    const grams = amount && amount > 0 ? amount : (item.servingGrams ?? 100);
-    const factor = grams / 100;
-    setDraft((prev) => [...prev, {
-      key: `${item.id}-${Date.now()}`,
-      foodItemId: item.id,
-      name: item.name,
-      grams,
-      servingLabel: item.servingLabel,
-      kcal: Math.round(item.kcalPer100g * factor * 10) / 10,
-      proteinG: Math.round(item.proteinPer100g * factor * 10) / 10,
-      carbsG: Math.round(item.carbsPer100g * factor * 10) / 10,
-      fatG: Math.round(item.fatPer100g * factor * 10) / 10,
-    }]);
+  function addItem(item: CatalogFoodItem) {
+    const grams = item.servingGrams && item.servingGrams > 0 ? item.servingGrams : 100;
+    setDraft((prev) => upsertFood(prev, fromCatalog(item, grams)));
     setQuery("");
     setHits([]);
+  }
+
+  function setItemGrams(key: string, grams: number) {
+    if (!Number.isFinite(grams) || grams <= 0) return;
+    setDraft((prev) => prev.map((item) => (item.key === key ? withGrams(item, grams) : item)));
+  }
+
+  function setItemUnits(item: PlateFood, units: number) {
+    if (!item.servingGrams || item.servingGrams <= 0) return;
+    setItemGrams(item.key, units * item.servingGrams);
+  }
+
+  function bumpUnits(item: PlateFood, delta: number) {
+    const step = item.servingGrams && item.servingGrams > 0 ? item.servingGrams : 10;
+    setItemGrams(item.key, item.grams + delta * step);
   }
 
   async function onBarcode(code: string) {
@@ -86,7 +158,16 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
     try {
       await api.post("/client/food", {
         mealType: meal,
-        items: draft.map(({ key: _key, ...item }) => item),
+        items: draft.map((item) => ({
+          foodItemId: item.foodItemId,
+          name: item.name,
+          grams: item.grams,
+          servingLabel: item.servingLabel,
+          kcal: item.kcal,
+          proteinG: item.proteinG,
+          carbsG: item.carbsG,
+          fatG: item.fatG,
+        })),
       });
       toast.success("Comida sumada");
       setDraft([]);
@@ -99,10 +180,10 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
   }
 
   const totals = draft.reduce((acc, i) => ({
-    kcal: acc.kcal + (i.kcal ?? 0),
-    p: acc.p + (i.proteinG ?? 0),
-    c: acc.c + (i.carbsG ?? 0),
-    f: acc.f + (i.fatG ?? 0),
+    kcal: acc.kcal + i.kcal,
+    p: acc.p + i.proteinG,
+    c: acc.c + i.carbsG,
+    f: acc.f + i.fatG,
   }), { kcal: 0, p: 0, c: 0, f: 0 });
 
   return (
@@ -129,11 +210,14 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
       {draft.length > 0 && (
         <div className="mfl-draft">
           {draft.map((item) => (
-            <div key={item.key} className="mfl-line">
-              <span>{item.name} · {item.grams} g</span>
-              <span className="ta-mono">{Math.round(item.kcal ?? 0)} kcal</span>
-              <button type="button" onClick={() => setDraft((prev) => prev.filter((d) => d.key !== item.key))}>×</button>
-            </div>
+            <PlateItemRow
+              key={item.key}
+              item={item}
+              onGrams={(grams) => setItemGrams(item.key, grams)}
+              onUnits={(units) => setItemUnits(item, units)}
+              onBump={(delta) => bumpUnits(item, delta)}
+              onRemove={() => setDraft((prev) => prev.filter((d) => d.key !== item.key))}
+            />
           ))}
           <div className="mfl-total ta-mono">{Math.round(totals.kcal)} kcal · P {Math.round(totals.p)} · C {Math.round(totals.c)} · G {Math.round(totals.f)}</div>
         </div>
@@ -151,10 +235,17 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
         .mfl-search :global(label) { flex: 1; }
         .mfl-hint { font-size: 12px; color: var(--text-mute); line-height: 1.4; }
         .mfl-hit { display: flex; justify-content: space-between; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); text-align: left; }
-        .mfl-line { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 13px; }
-        .mfl-line button { border: 0; background: none; color: var(--text-mute); font-size: 18px; cursor: pointer; }
+        .mfl-draft { display: flex; flex-direction: column; gap: 8px; }
         .mfl-total { font-size: 12px; color: var(--lime); }
       `}</style>
     </div>
   );
+}
+
+function upsertFood(draft: PlateFood[], incoming: PlateFood): PlateFood[] {
+  const match = incoming.foodItemId
+    ? draft.find((item) => item.foodItemId === incoming.foodItemId)
+    : undefined;
+  if (!match) return [...draft, incoming];
+  return draft.map((item) => (item.key === match.key ? withGrams(item, item.grams + incoming.grams) : item));
 }

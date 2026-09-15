@@ -17,6 +17,7 @@ export interface BuiltMealIdeaItem {
   grams: number;
   portionLabel: string;
   servingLabel: string | null;
+  servingGrams: number | null;
   kcal: number;
   proteinG: number;
   carbsG: number;
@@ -136,6 +137,7 @@ function buildFromGrams(template: MealIdeaTemplate, scale: number, foods: Map<st
       grams,
       portionLabel: portionLabel(food, grams),
       servingLabel: food.servingLabel ?? null,
+      servingGrams: food.servingGrams ?? null,
       kcal: macros.kcal,
       proteinG: macros.proteinG,
       carbsG: macros.carbsG,
