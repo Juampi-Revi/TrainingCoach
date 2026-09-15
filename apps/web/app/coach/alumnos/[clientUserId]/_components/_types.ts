@@ -72,6 +72,16 @@ export interface FoodItem {
   mealType: string | null;
   quality: "good" | "regular" | "poor" | null;
   macroTags: string[];
+  items?: Array<{
+    id: string;
+    name: string;
+    grams: number;
+    kcal: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+  }>;
+  totals?: { kcal: number; proteinG: number; carbsG: number; fatG: number };
   coachComments: FoodCoachComment[];
 }
 

@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
-import { ok, unauthorized, withHandler } from "@/lib/api-response";
+import { err, ok, unauthorized, withHandler } from "@/lib/api-response";
 import { notify } from "@/lib/notify";
+import { buildLogItems } from "@/lib/health/nutrition.service";
+import { foodEntryInclude, serializeFoodEntry } from "@/lib/health/food-log.mapper";
 
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
@@ -16,46 +18,10 @@ export async function GET(req: NextRequest) {
       where: { clientUserId: auth.user.sub },
       orderBy: { loggedAt: "desc" },
       take,
-      select: {
-        id: true,
-        loggedAt: true,
-        text: true,
-        photoUrl: true,
-        source: true,
-        mealType: true,
-        quality: true,
-        macroTags: true,
-        coachComments: {
-          orderBy: { createdAt: "desc" },
-          take: 5,
-          select: {
-            id: true,
-            text: true,
-            createdAt: true,
-            coach: { select: { id: true, displayName: true } },
-          },
-        },
-      },
+      include: foodEntryInclude,
     });
 
-    return ok({
-      items: items.map((i) => ({
-        id: i.id,
-        loggedAt: i.loggedAt,
-        text: i.text,
-        photoUrl: i.photoUrl,
-        source: i.source,
-        mealType: i.mealType,
-        quality: i.quality,
-        macroTags: i.macroTags,
-        coachComments: i.coachComments.map((c) => ({
-          id: c.id,
-          text: c.text,
-          createdAt: c.createdAt,
-          coach: { id: c.coach.id, name: c.coach.displayName },
-        })),
-      })),
-    });
+    return ok({ items: items.map(serializeFoodEntry) });
   });
 }
 
@@ -75,10 +41,25 @@ export async function POST(req: NextRequest) {
     const mealType = typeof body.mealType === "string" && body.mealType.trim() ? body.mealType.trim() : null;
     const quality = typeof body.quality === "string" && body.quality.trim() ? body.quality.trim() : null;
     const macroTags = Array.isArray(body.macroTags) ? body.macroTags.filter((t: unknown) => typeof t === "string") : [];
+    const rawItems = Array.isArray(body.items) ? body.items : [];
+    const items = await buildLogItems(rawItems);
+    if (!mealType) return err("Elegí el tipo de comida", 400);
+    if (!quality && items.length === 0) return err("Calidad o alimentos requeridos", 400);
 
     const created = await prisma.foodLogEntry.create({
-      data: { clientUserId: auth.user.sub, loggedAt, text, photoUrl, source, sourceRef, mealType, quality, macroTags },
-      select: { id: true, loggedAt: true, text: true, photoUrl: true, source: true, mealType: true, quality: true, macroTags: true },
+      data: {
+        clientUserId: auth.user.sub,
+        loggedAt,
+        text,
+        photoUrl,
+        source,
+        sourceRef,
+        mealType,
+        quality,
+        macroTags,
+        items: items.length ? { create: items } : undefined,
+      },
+      include: foodEntryInclude,
     });
 
     const rel = await prisma.coachClient.findFirst({
@@ -94,11 +75,11 @@ export async function POST(req: NextRequest) {
         userId: rel.coachUserId,
         type: "food_logged",
         title: `${client?.displayName ?? client?.email ?? "Tu alumno"} registró una comida`,
-        body: text ?? (photoUrl ? "Con foto" : "Sin descripción"),
+        body: text ?? (items[0]?.name ?? (photoUrl ? "Con foto" : "Sin descripción")),
         linkUrl: `/coach/alumnos/${auth.user.sub}`,
       });
     }
 
-    return ok(created, 201);
+    return ok(serializeFoodEntry(created), 201);
   });
 }

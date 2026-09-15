@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-workout-guide": "tsx prisma/seed-workout-guide.ts",
+    "db:seed-foods": "tsx prisma/seed-foods.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"

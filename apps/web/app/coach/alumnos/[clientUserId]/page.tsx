@@ -218,6 +218,7 @@ export default function AthleteDetailPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 <HealthTab health={tabData.health} healthLoading={tabData.healthLoading} onSelectDay={tabData.setNoteDay} />
                 <FoodTab
+                  clientUserId={clientUserId}
                   food={tabData.food}
                   foodLoading={tabData.foodLoading}
                   foodCommentDrafts={tabData.foodCommentDrafts}

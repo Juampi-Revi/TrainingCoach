@@ -11,6 +11,9 @@ interface FoodHistoryProps {
   entries: FoodLogEntry[] | null;
   loading: boolean;
   onRefresh: () => void;
+  title?: string;
+  emptyTitle?: string;
+  emptyBody?: string;
 }
 
 const MEAL_LABELS: Record<string, string> = {
@@ -62,7 +65,14 @@ function groupByDay(entries: FoodLogEntry[]): Map<string, FoodLogEntry[]> {
   return groups;
 }
 
-export function FoodHistory({ entries, loading, onRefresh }: FoodHistoryProps) {
+export function FoodHistory({
+  entries,
+  loading,
+  onRefresh,
+  title = "Historial",
+  emptyTitle = "Sin comidas registradas",
+  emptyBody = "Registrá tu primera comida arriba.",
+}: FoodHistoryProps) {
   const { api } = useAuth();
   const toast = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -84,7 +94,7 @@ export function FoodHistory({ entries, loading, onRefresh }: FoodHistoryProps) {
   if (loading) {
     return (
       <div className="food-history">
-        <div className="fh-header">Historial</div>
+        <div className="fh-header">{title}</div>
         <div className="fh-loading">
           {[1, 2, 3].map((i) => (
             <div key={i} className="fh-skeleton">
@@ -128,8 +138,8 @@ export function FoodHistory({ entries, loading, onRefresh }: FoodHistoryProps) {
   if (!entries || entries.length === 0) {
     return (
       <div className="food-history">
-        <div className="fh-header">Historial</div>
-        <StateBlock kind="empty" title="Sin comidas registradas" body="Registrá tu primera comida arriba." />
+        <div className="fh-header">{title}</div>
+        <StateBlock kind="empty" title={emptyTitle} body={emptyBody} />
         <style jsx>{`
           .food-history { width: 100%; }
           .fh-header {
@@ -152,7 +162,7 @@ export function FoodHistory({ entries, loading, onRefresh }: FoodHistoryProps) {
 
   return (
     <div className="food-history">
-      <div className="fh-header">Historial · {entries.length} comidas</div>
+      <div className="fh-header">{title} · {entries.length} comidas</div>
 
       <div className="fh-days">
         {sortedDays.map((day) => {
@@ -221,6 +231,20 @@ export function FoodHistory({ entries, loading, onRefresh }: FoodHistoryProps) {
                       {/* Text */}
                       {entry.text && (
                         <div className="fh-text">{entry.text}</div>
+                      )}
+
+                      {entry.items && entry.items.length > 0 && (
+                        <div className="fh-items">
+                          {entry.items.map((item) => (
+                            <div key={item.id} className="fh-item">
+                              <span>{item.name} · {item.grams} g</span>
+                              <span className="ta-mono">{Math.round(item.kcal)} kcal</span>
+                            </div>
+                          ))}
+                          <div className="fh-item-total ta-mono">
+                            {Math.round(entry.totals?.kcal ?? 0)} kcal · P {Math.round(entry.totals?.proteinG ?? 0)} · C {Math.round(entry.totals?.carbsG ?? 0)} · G {Math.round(entry.totals?.fatG ?? 0)}
+                          </div>
+                        </div>
                       )}
 
                       {/* Photo */}
@@ -487,6 +511,10 @@ export function FoodHistory({ entries, loading, onRefresh }: FoodHistoryProps) {
           white-space: pre-wrap;
           line-height: 1.5;
         }
+
+        .fh-items { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+        .fh-item, .fh-item-total { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
+        .fh-item-total { color: var(--lime); font-weight: 700; }
         
         @media (min-width: 900px) {
           .fh-text {

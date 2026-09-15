@@ -1,10 +1,20 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { QuickFoodLogger } from "@/app/(client)/panel/_components/quick-food-logger";
+import { Tabs } from "@/components/ui";
 import { useFoodData } from "./_hooks/use-food-data";
+import { useNutritionToday } from "./_hooks/use-nutrition";
 import { FoodHistory } from "./_components/food-history";
 import { NutritionSummary } from "./_components/nutrition-summary";
+import { MacroRings } from "./_components/macro-rings";
+import { MacrosCalculator } from "./_components/macros-calculator";
+import { MacroFoodLogger } from "./_components/macro-food-logger";
+import { MealIdeas } from "./_components/meal-ideas";
+import "./_styles.css";
+
+const PAGE_TABS = ["Hoy", "Objetivo", "Historial"] as const;
 
 function ChevronLeftIcon({ size = 20 }: { size?: number }) {
   return (
@@ -21,19 +31,31 @@ function weekLabel(weekStart: string): string {
   return `${fmt(s)} – ${fmt(e)}`;
 }
 
+function isToday(iso: string): boolean {
+  return new Date(iso).toDateString() === new Date().toDateString();
+}
+
 export default function ComidaPage() {
   const router = useRouter();
   const { entries, dashboard, loading, refresh } = useFoodData();
+  const nutrition = useNutritionToday();
+  const [tab, setTab] = useState<string>("Hoy");
+  const [mode, setMode] = useState("Macros");
 
   const good = dashboard?.foodGood ?? 0;
   const regular = dashboard?.foodRegular ?? 0;
   const poor = dashboard?.foodPoor ?? 0;
+  const todayEntries = useMemo(() => (entries ?? []).filter((e) => isToday(e.loggedAt)), [entries]);
+  const pastEntries = useMemo(() => (entries ?? []).filter((e) => !isToday(e.loggedAt)), [entries]);
+
+  async function refreshAll() {
+    await Promise.all([refresh(), nutrition.refetch()]);
+  }
 
   return (
     <div className="comida-page">
-      {/* Header */}
       <div className="comida-header">
-        <button onClick={() => router.push("/panel")} className="comida-back">
+        <button onClick={() => router.push("/panel")} className="comida-back" aria-label="Volver">
           <ChevronLeftIcon />
         </button>
         <div>
@@ -46,289 +68,90 @@ export default function ComidaPage() {
         </div>
       </div>
 
-      {/* Content - usa TODO el ancho disponible */}
       <div className="comida-content">
-        {/* Logger - full width hero */}
-        <div className="comida-logger-wrapper">
-          <QuickFoodLogger embedded onSaved={refresh} />
-        </div>
+        <Tabs variant="pills" tabs={[...PAGE_TABS]} active={tab} onChange={setTab} />
 
-        {/* Stats grid - 3 columnas en desktop */}
-        <div className="comida-stats-grid">
-          <div className="stat-card">
-            <div className="stat-label" style={{ color: "var(--success)" }}>BUENAS</div>
-            <div className="stat-value" style={{ color: "var(--success)" }}>{good}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label" style={{ color: "#FF8E72" }}>REGULARES</div>
-            <div className="stat-value" style={{ color: "#FF8E72" }}>{regular}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label" style={{ color: "var(--danger)" }}>POBRES</div>
-            <div className="stat-value" style={{ color: "var(--danger)" }}>{poor}</div>
-          </div>
-          <div className="stat-card total">
-            <div className="stat-label">TOTAL</div>
-            <div className="stat-value" style={{ color: "var(--lime)" }}>{good + regular + poor}</div>
-          </div>
-        </div>
+        {tab === "Hoy" && (
+          <>
+            <MacroRings
+              consumed={nutrition.data?.consumed ?? { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 }}
+              target={nutrition.data?.target ?? null}
+            />
+            {!nutrition.data?.target && (
+              <button type="button" className="comida-setup" onClick={() => setTab("Objetivo")}>
+                Todavía no hay objetivo. Calculalo en Objetivo — usamos tu peso y altura.
+              </button>
+            )}
+            <Tabs variant="pills" tabs={["Macros", "Rápido"]} active={mode} onChange={setMode} />
+            <div className="comida-logger-wrapper">
+              {mode === "Macros" ? (
+                <MacroFoodLogger onSaved={refreshAll} />
+              ) : (
+                <QuickFoodLogger embedded onSaved={refreshAll} />
+              )}
+            </div>
+            <MealIdeas
+              remaining={nutrition.data?.remaining ?? null}
+              hasTarget={Boolean(nutrition.data?.target)}
+              onLogged={refreshAll}
+            />
+            <FoodHistory
+              entries={todayEntries}
+              loading={loading}
+              onRefresh={refreshAll}
+              title="Comidas de hoy"
+              emptyTitle="Todavía no cargaste nada hoy"
+              emptyBody="Sumá un alimento o registrá uno de los platos de arriba."
+            />
+          </>
+        )}
 
-        {/* Nutrition + History - 2 columnas en desktop */}
-        <div className="comida-bottom-grid">
-          <div className="comida-nutrition-section">
-            <NutritionSummary good={good} regular={regular} poor={poor} />
-          </div>
-          <div className="comida-history-section">
-            <FoodHistory entries={entries} loading={loading} onRefresh={refresh} />
-          </div>
-        </div>
+        {tab === "Objetivo" && (
+          <MacrosCalculator
+            profile={nutrition.data?.profile ?? null}
+            target={nutrition.data?.target ?? null}
+            onSaved={refreshAll}
+          />
+        )}
+
+        {tab === "Historial" && (
+          <>
+            <div className="comida-stats-grid">
+              <div className="stat-card">
+                <div className="stat-label" style={{ color: "var(--success)" }}>BUENAS</div>
+                <div className="stat-value" style={{ color: "var(--success)" }}>{good}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label" style={{ color: "var(--warn)" }}>REGULARES</div>
+                <div className="stat-value" style={{ color: "var(--warn)" }}>{regular}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label" style={{ color: "var(--danger)" }}>POBRES</div>
+                <div className="stat-value" style={{ color: "var(--danger)" }}>{poor}</div>
+              </div>
+              <div className="stat-card total">
+                <div className="stat-label">TOTAL</div>
+                <div className="stat-value" style={{ color: "var(--lime)" }}>{good + regular + poor}</div>
+              </div>
+            </div>
+            <div className="comida-bottom-grid">
+              <div className="comida-nutrition-section">
+                <NutritionSummary good={good} regular={regular} poor={poor} />
+              </div>
+              <div className="comida-history-section">
+                <FoodHistory
+                  entries={pastEntries}
+                  loading={loading}
+                  onRefresh={refreshAll}
+                  title="Días anteriores"
+                  emptyTitle="Sin historial todavía"
+                  emptyBody="Las comidas de hoy se ven en Hoy. Acá aparecen los días previos."
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
-
-      <style jsx>{`
-        .comida-page {
-          min-height: 100dvh;
-          background: var(--bg);
-          padding-bottom: calc(100px + env(safe-area-inset-bottom));
-        }
-
-        /* Mobile first - todo apilado */
-        .comida-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px;
-          border-bottom: 1px solid var(--line);
-        }
-
-        .comida-back {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          background: var(--bg-1);
-          border: 1px solid var(--line-2);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--text-mute);
-          cursor: pointer;
-          transition: all 0.2s;
-          flex-shrink: 0;
-        }
-
-        .comida-back:hover {
-          border-color: var(--lime);
-          color: var(--lime);
-        }
-
-        .comida-title {
-          font-size: 18px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-        }
-
-        .comida-subtitle {
-          font-size: 11px;
-          color: var(--text-mute);
-          margin-top: 2px;
-        }
-
-        .comida-content {
-          padding: 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .comida-logger-wrapper,
-        .comida-nutrition-section,
-        .comida-history-section {
-          width: 100%;
-        }
-
-        .comida-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 8px;
-        }
-
-        .stat-card {
-          background: var(--bg-1);
-          border: 1px solid var(--line);
-          border-radius: 12px;
-          padding: 12px 8px;
-          text-align: center;
-        }
-
-        .stat-card.total {
-          background: var(--bg-2);
-          border-color: var(--line-2);
-        }
-
-        .stat-label {
-          font-family: var(--font-mono);
-          font-size: 8px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          margin-bottom: 4px;
-          color: var(--text-mute);
-        }
-
-        .stat-value {
-          font-family: var(--font-mono);
-          font-size: 20px;
-          font-weight: 700;
-          letter-spacing: -0.02em;
-        }
-
-        /* Tablet - un poco más de espacio */
-        @media (min-width: 640px) {
-          .comida-header {
-            padding: 20px 24px;
-          }
-
-          .comida-title {
-            font-size: 22px;
-          }
-
-          .comida-subtitle {
-            font-size: 12px;
-          }
-
-          .comida-content {
-            padding: 20px 24px;
-            gap: 20px;
-          }
-
-          .stat-card {
-            padding: 16px 12px;
-          }
-
-          .stat-label {
-            font-size: 9px;
-            margin-bottom: 6px;
-          }
-
-          .stat-value {
-            font-size: 28px;
-          }
-        }
-
-        /* Desktop - full width, 2 columnas abajo */
-        @media (min-width: 900px) {
-          .comida-page {
-            padding-bottom: 32px;
-          }
-
-          .comida-header {
-            padding: 24px 32px;
-          }
-
-          .comida-back {
-            width: 40px;
-            height: 40px;
-          }
-
-          .comida-title {
-            font-size: 26px;
-          }
-
-          .comida-subtitle {
-            font-size: 13px;
-            margin-top: 4px;
-          }
-
-          .comida-content {
-            padding: 24px 32px;
-            gap: 24px;
-          }
-
-          /* Stats más grandes */
-          .comida-stats-grid {
-            gap: 16px;
-          }
-
-          .stat-card {
-            padding: 20px 16px;
-            border-radius: 14px;
-          }
-
-          .stat-label {
-            font-size: 10px;
-            letter-spacing: 0.1em;
-            margin-bottom: 8px;
-          }
-
-          .stat-value {
-            font-size: 36px;
-          }
-
-          /* Bottom: Nutrition + History lado a lado */
-          .comida-bottom-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 24px;
-            align-items: start;
-          }
-
-          .comida-nutrition-section {
-            position: sticky;
-            top: 24px;
-          }
-        }
-
-        /* Large desktop - más padding, elementos más grandes */
-        @media (min-width: 1400px) {
-          .comida-header {
-            padding: 32px 48px;
-          }
-
-          .comida-content {
-            padding: 32px 48px;
-            gap: 32px;
-          }
-
-          .comida-stats-grid {
-            gap: 20px;
-          }
-
-          .stat-card {
-            padding: 28px 24px;
-          }
-
-          .stat-label {
-            font-size: 11px;
-            margin-bottom: 12px;
-          }
-
-          .stat-value {
-            font-size: 48px;
-          }
-
-          .comida-bottom-grid {
-            grid-template-columns: 1fr 2fr;
-            gap: 32px;
-          }
-
-          .comida-nutrition-section {
-            top: 32px;
-          }
-        }
-
-        /* Extra large - ultra wide */
-        @media (min-width: 1800px) {
-          .comida-header {
-            padding: 32px 64px;
-          }
-
-          .comida-content {
-            padding: 32px 64px;
-          }
-
-          .comida-bottom-grid {
-            grid-template-columns: 400px 1fr;
-          }
-        }
-      `}</style>
     </div>
   );
 }

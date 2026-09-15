@@ -3,8 +3,10 @@
 import Image from "next/image";
 import { Badge, Button, StateBlock } from "@/components/ui";
 import type { FoodItem } from "./_types";
+import { CoachNutritionPanel } from "./coach-nutrition-panel";
 
 interface FoodTabProps {
+  clientUserId: string;
   food: FoodItem[] | null;
   foodLoading: boolean;
   foodCommentDrafts: Record<string, string>;
@@ -13,9 +15,10 @@ interface FoodTabProps {
   onReload: () => void;
 }
 
-export function FoodTab({ food, foodLoading, foodCommentDrafts, onDraftChange, onPostComment, onReload }: FoodTabProps) {
+export function FoodTab({ clientUserId, food, foodLoading, foodCommentDrafts, onDraftChange, onPostComment, onReload }: FoodTabProps) {
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <CoachNutritionPanel clientUserId={clientUserId} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>Comidas</div>
         <Button variant="ghost" size="sm" onClick={onReload}>Recargar</Button>
@@ -57,6 +60,11 @@ export function FoodTab({ food, foodLoading, foodCommentDrafts, onDraftChange, o
                   <div style={{ fontSize: 13, color: "var(--text-mute)" }}>—</div>
                 )}
               </div>
+              {f.totals && f.totals.kcal > 0 && (
+                <div className="ta-mono" style={{ fontSize: 11, color: "var(--lime)", marginTop: 6 }}>
+                  {Math.round(f.totals.kcal)} kcal · P {Math.round(f.totals.proteinG)} · C {Math.round(f.totals.carbsG)} · G {Math.round(f.totals.fatG)}
+                </div>
+              )}
 
               {f.coachComments?.length ? (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)" }}>

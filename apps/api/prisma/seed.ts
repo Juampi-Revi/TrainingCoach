@@ -777,6 +777,10 @@ async function main() {
   const guideResult = await seedWorkoutGuideCatalog()
   console.log(`  Workout Guide catalog: ${guideResult.created} created, ${guideResult.updated} updated`)
 
+  const { seedSystemFoods } = await import("../lib/health/food-catalog.service")
+  const foodResult = await seedSystemFoods()
+  console.log(`  Food catalog: ${foodResult.created} created, ${foodResult.updated} updated`)
+
   console.log('\nSeed completed successfully')
 }
 

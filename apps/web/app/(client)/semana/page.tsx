@@ -9,6 +9,7 @@ import { Avatar, Button, Icon, StateBlock } from "@/components/ui";
 import type { ClientWeekResponse } from "@regen/types";
 import { WeekWorkoutCard } from "./_components/week-workout-card";
 import { AfterTodaySection } from "./_components/after-today-section";
+import { WeekEffortCard } from "./_components/week-effort-card";
 import { weekContext, workoutBriefing, nextWorkoutMessage, todayStrip } from "./_lib/week-helpers";
 import { precacheUrls } from "@/lib/precache-media";
 
@@ -181,6 +182,7 @@ export default function SemanaPage() {
         <div style={{ fontSize: 12, color: "var(--text-mute)", marginBottom: 18, lineHeight: 1.5 }}>
           {weekContext(data.weekNumber, data.totalWeeks)}
         </div>
+        <WeekEffortCard />
       </div>
 
       <div style={{ padding: "0 20px" }}>

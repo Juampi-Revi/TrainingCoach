@@ -102,7 +102,8 @@ apps/api/
 │       └── google-health.ts # Google Health / Fitbit API
 └── prisma/
     └── models: HealthProviderConnection, HealthSyncedActivity,
-              DailyHealthEntry, HealthGoal, BodyMetricEntry
+              DailyHealthEntry, HealthGoal, BodyMetricEntry, NutritionTarget,
+              FoodItem, FoodLogEntry, FoodLogItem
 
 apps/web/
 ├── app/

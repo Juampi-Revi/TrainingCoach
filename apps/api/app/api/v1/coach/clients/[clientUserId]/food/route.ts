@@ -24,24 +24,12 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       where: { clientUserId },
       orderBy: { loggedAt: "desc" },
       take,
-      select: {
-        id: true,
-        loggedAt: true,
-        text: true,
-        photoUrl: true,
-        source: true,
-        mealType: true,
-        quality: true,
-        macroTags: true,
+      include: {
+        items: { orderBy: { sortOrder: "asc" } },
         coachComments: {
           orderBy: { createdAt: "desc" },
           take: 10,
-          select: {
-            id: true,
-            text: true,
-            createdAt: true,
-            coach: { select: { id: true, displayName: true } },
-          },
+          include: { coach: { select: { id: true, displayName: true } } },
         },
       },
     });
@@ -56,6 +44,27 @@ export async function GET(req: NextRequest, { params }: Ctx) {
         mealType: i.mealType,
         quality: i.quality,
         macroTags: i.macroTags,
+        items: i.items.map((item) => ({
+          id: item.id,
+          foodItemId: item.foodItemId,
+          name: item.name,
+          grams: Number(item.grams),
+          servingLabel: item.servingLabel,
+          kcal: Number(item.kcal),
+          proteinG: Number(item.proteinG),
+          carbsG: Number(item.carbsG),
+          fatG: Number(item.fatG),
+          sortOrder: item.sortOrder,
+        })),
+        totals: i.items.reduce(
+          (acc, item) => ({
+            kcal: acc.kcal + Number(item.kcal),
+            proteinG: acc.proteinG + Number(item.proteinG),
+            carbsG: acc.carbsG + Number(item.carbsG),
+            fatG: acc.fatG + Number(item.fatG),
+          }),
+          { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+        ),
         coachComments: i.coachComments.map((c) => ({
           id: c.id,
           text: c.text,

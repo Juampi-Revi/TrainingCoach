@@ -523,6 +523,19 @@ export interface ClientToday {
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 export type FoodQuality = "good" | "regular" | "poor";
 
+export interface FoodLogItem {
+  id: string;
+  foodItemId: string | null;
+  name: string;
+  grams: number;
+  servingLabel: string | null;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  sortOrder: number;
+}
+
 export interface FoodLogEntry {
   id: string;
   loggedAt: string;
@@ -532,6 +545,8 @@ export interface FoodLogEntry {
   text: string | null;
   photoUrl: string | null;
   source?: string;
+  items: FoodLogItem[];
+  totals: MacroTotals;
   coachComments?: Array<{
     id: string;
     text: string;
@@ -540,11 +555,143 @@ export interface FoodLogEntry {
   }>;
 }
 
+export interface CreateFoodLogItemInput {
+  foodItemId?: string | null;
+  name: string;
+  grams: number;
+  servingLabel?: string | null;
+  kcal?: number;
+  proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
+}
+
 export interface CreateFoodLogRequest {
   mealType: MealType;
-  quality: FoodQuality;
+  quality?: FoodQuality;
   macroTags?: string[];
   text?: string;
+  items?: CreateFoodLogItemInput[];
+}
+
+export type NutritionGoal = "lose" | "maintain" | "gain";
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "very" | "extra";
+export type BiologicalSex = "male" | "female";
+
+export interface MacroTotals {
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
+export interface NutritionProfile {
+  sex: BiologicalSex | null;
+  birthYear: number | null;
+  heightCm: number | null;
+  activityLevel: ActivityLevel | null;
+  weightKg: number | null;
+}
+
+export interface NutritionTarget {
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  goal: NutritionGoal;
+  proteinPerKg: number;
+  activityLevel: ActivityLevel | null;
+  updatedByRole: "coach" | "client";
+  updatedAt: string;
+  notes: string | null;
+}
+
+export interface CalculateMacrosRequest {
+  sex: BiologicalSex;
+  ageYears: number;
+  heightCm: number;
+  weightKg: number;
+  activityLevel: ActivityLevel;
+  goal: NutritionGoal;
+  proteinPerKg?: number;
+}
+
+export interface CatalogFoodItem {
+  id: string;
+  name: string;
+  category: string;
+  kcalPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  servingLabel: string | null;
+  servingGrams: number | null;
+  source: string;
+  barcode: string | null;
+}
+
+export interface NutritionToday {
+  profile: NutritionProfile;
+  target: NutritionTarget | null;
+  consumed: MacroTotals;
+  remaining: MacroTotals | null;
+  meals: FoodLogEntry[];
+}
+
+export interface MealIdeaItem {
+  foodItemId: string;
+  foodId: string;
+  name: string;
+  grams: number;
+  portionLabel: string;
+  servingLabel: string | null;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
+export interface MealIdea {
+  id: string;
+  title: string;
+  blurb: string;
+  mealType: MealType;
+  items: MealIdeaItem[];
+  totals: MacroTotals;
+}
+
+export interface MealIdeasResponse {
+  mealType: MealType;
+  remaining: MacroTotals | null;
+  done: boolean;
+  ideas: MealIdea[];
+}
+
+export type SetEffortKind = "warmup" | "filler" | "stimulating" | "failure" | "unknown";
+
+export interface SetEffort {
+  kind: SetEffortKind;
+  rpe: number | null;
+  rir: number | null;
+  effectiveReps: number;
+  e1rm: number | null;
+}
+
+export interface SessionEffortSummary {
+  workSets: number;
+  classifiedSets: number;
+  stimulatingSets: number;
+  fillerSets: number;
+  failureSets: number;
+  warmupSets: number;
+  unknownSets: number;
+  effectiveReps: number;
+  byMuscle: Array<{ muscle: string; stimulatingSets: number; effectiveReps: number }>;
+}
+
+export interface WeekEffortSummary {
+  sessions: number;
+  summary: SessionEffortSummary;
 }
 
 // ─────────────────────────────────────────────────────────────

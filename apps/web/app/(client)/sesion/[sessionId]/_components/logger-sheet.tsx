@@ -11,6 +11,7 @@ import { LoggerHeader, LoggerFooter } from "./logger-parts";
 import { SheetSnap } from "./sheet-snap";
 import { LoggerQuickPresets } from "./logger-quick-presets";
 import { LoggerTechniquePreview } from "./logger-technique-preview";
+import { EffortCoachBanner } from "./effort-coach-banner";
 import { useSounds } from "../_hooks/use-sounds";
 import { useExerciseIllustrationFrames } from "../_hooks/use-exercise-illustration-frames";
 
@@ -238,6 +239,8 @@ export function LoggerSheet({
                 );
               })}
             </div>
+
+            <EffortCoachBanner ex={ex} rows={sheetRows} effortMode={effortMode} />
 
             <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
               <button

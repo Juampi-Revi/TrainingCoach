@@ -9,6 +9,8 @@ import type { SessionDetail } from "@regen/types";
 import { formatSecondsShort, summarizeEnduranceSteps } from "@/lib/constants";
 import { CompletadaHeroExtras, CompletadaNextStep } from "../_components/completada-next-step";
 import { CompletadaEnergyCard, CompletadaHighlights, CompletadaStatCard } from "../_components/completada-cards";
+import { EffortSummaryCard } from "../_components/effort-summary-card";
+import { summarizeSets } from "@/lib/effort";
 import "../_styles.css";
 
 function fmtDuration(ms: number) {
@@ -247,6 +249,18 @@ export default function SessionCompletadaPage() {
       </div>
 
       <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+
+        <EffortSummaryCard
+          title="SERIES EFECTIVAS"
+          summary={summarizeSets(workExercises.flatMap((e) => e.sets.map((s) => ({
+            reps: s.reps,
+            weight: s.weight != null ? Number(s.weight) : null,
+            rpe: s.rpe != null ? Number(s.rpe) : null,
+            rir: s.rir != null ? Number(s.rir) : null,
+            blockType: e.block?.type,
+            muscle: e.exercise.primaryMuscle,
+          }))))}
+        />
 
         <CompletadaNextStep sessionId={sessionId} />
 

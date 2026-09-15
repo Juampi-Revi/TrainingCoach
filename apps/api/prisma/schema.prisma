@@ -36,6 +36,11 @@ model User {
   lastWorkoutDate        DateTime?
   xp                     Int       @default(0)
   level                  Int       @default(1)
+
+  sex            String?   // 'male' | 'female'
+  birthYear      Int?
+  heightCm       Decimal?  @db.Decimal(5, 1)
+  activityLevel  String?   // 'sedentary' | 'light' | 'moderate' | 'very' | 'extra'
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -58,6 +63,8 @@ model User {
   healthCoachNotesAsClient HealthCoachNote[] @relation("HealthNotesClient")
   foodLogEntries        FoodLogEntry[]
   foodCoachCommentsAsCoach FoodCoachComment[] @relation("FoodCoachCommentCoach")
+  nutritionTarget       NutritionTarget?
+  createdFoodItems      FoodItem[]
   healthGoals           HealthGoal[]
   notifications         Notification[]
   pushSubscriptions     PushSubscription[]
@@ -696,8 +703,79 @@ model FoodLogEntry {
   client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
 
   coachComments FoodCoachComment[]
+  items         FoodLogItem[]
 
   @@index([clientUserId, loggedAt(sort: Desc)])
+}
+
+model NutritionTarget {
+  id              String   @id @default(uuid())
+  clientUserId    String   @unique
+  calories        Int
+  proteinG        Int
+  carbsG          Int
+  fatG            Int
+  goal            String   // 'lose' | 'maintain' | 'gain'
+  proteinPerKg    Decimal  @db.Decimal(3, 1)
+  activityLevel   String?
+  updatedByRole   String   // 'coach' | 'client'
+  updatedByUserId String
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client User @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@index([clientUserId])
+}
+
+model FoodItem {
+  id              String   @id @default(uuid())
+  name            String
+  nameNormalized  String
+  aliases         String[] @default([])
+  category        String
+  kcalPer100g     Decimal  @db.Decimal(7, 1)
+  proteinPer100g  Decimal  @db.Decimal(6, 1)
+  carbsPer100g    Decimal  @db.Decimal(6, 1)
+  fatPer100g      Decimal  @db.Decimal(6, 1)
+  servingLabel    String?
+  servingGrams    Decimal? @db.Decimal(7, 1)
+  source          String
+  sourceId        String?
+  barcode         String?
+  isSystem        Boolean  @default(false)
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdBy User?         @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  logItems  FoodLogItem[]
+
+  @@unique([source, sourceId])
+  @@index([nameNormalized])
+  @@index([barcode])
+  @@index([isSystem])
+}
+
+model FoodLogItem {
+  id             String   @id @default(uuid())
+  foodLogEntryId String
+  foodItemId     String?
+  name           String
+  grams          Decimal  @db.Decimal(8, 1)
+  servingLabel   String?
+  kcal           Decimal  @db.Decimal(8, 1)
+  proteinG       Decimal  @db.Decimal(7, 1)
+  carbsG         Decimal  @db.Decimal(7, 1)
+  fatG           Decimal  @db.Decimal(7, 1)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  entry FoodLogEntry @relation(fields: [foodLogEntryId], references: [id], onDelete: Cascade)
+  food  FoodItem?    @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+
+  @@index([foodLogEntryId, sortOrder])
 }
 
 model FoodCoachComment {

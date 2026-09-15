@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# After deploy, on the API host:
+#   cd apps/api && npx prisma migrate deploy && npm run db:seed-foods
 set -uo pipefail
 
 API="${API_BASE:-http://localhost:3013/api/v1}"
@@ -74,7 +76,20 @@ else bad "No client sessions in seed"; fi
 LB=$(curl -sf "$API/client/leaderboard?friendsOnly=true&metric=workouts&period=weekly" -H "Authorization: Bearer $CLTOKEN")
 if echo "$LB" | grep -q '"data"'; then ok "Leaderboard friends"; else bad "Leaderboard friends"; fi
 
-for path in /login /coach/ejercicios /panel /semana; do
+NUT=$(curl -sf "$API/client/nutrition" -H "Authorization: Bearer $CLTOKEN")
+if echo "$NUT" | grep -q '"consumed"'; then ok "Client nutrition today"; else bad "Client nutrition today"; fi
+
+CAT=$(curl -sf "$API/client/food/catalog?q=tostada" -H "Authorization: Bearer $CLTOKEN")
+CAT_OK=$(json 'import sys,json; d=json.load(sys.stdin).get("data",{}); items=d.get("items",[]); print(any("tostada" in (x.get("name","").lower()) for x in items))' "$CAT")
+if [ "$CAT_OK" = "True" ]; then ok "Food catalog search (tostada)"; else bad "Food catalog search (tostada)"; fi
+
+IDEAS=$(curl -sf "$API/client/nutrition/ideas?mealType=dinner" -H "Authorization: Bearer $CLTOKEN")
+if echo "$IDEAS" | grep -q '"ideas"'; then ok "Meal ideas"; else bad "Meal ideas"; fi
+
+EFFORT=$(curl -sf "$API/client/effort/week" -H "Authorization: Bearer $CLTOKEN")
+if echo "$EFFORT" | grep -q '"ok"'; then ok "Week effort"; else bad "Week effort"; fi
+
+for path in /login /coach/ejercicios /panel /semana /comida; do
   CODE=$(curl -sf -o /dev/null -w '%{http_code}' "$WEB$path")
   if [ "$CODE" = "200" ]; then ok "Web $path"; else bad "Web $path ($CODE)"; fi
 done

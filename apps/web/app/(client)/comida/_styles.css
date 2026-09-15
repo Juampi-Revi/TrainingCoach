@@ -1,0 +1,72 @@
+.comida-page {
+  min-height: 100dvh;
+  background: var(--bg);
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+
+.comida-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.comida-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-mute);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.comida-title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.comida-subtitle { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+.comida-content { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.comida-logger-wrapper, .comida-nutrition-section, .comida-history-section { width: 100%; }
+.comida-setup {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--line-2);
+  background: var(--bg-1);
+  color: var(--text-mute);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.comida-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+.stat-card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.stat-card.total { background: var(--bg-2); border-color: var(--line-2); }
+.stat-label { font-family: var(--font-mono); font-size: 8px; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 4px; color: var(--text-mute); }
+.stat-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+
+@media (min-width: 640px) {
+  .comida-header { padding: 20px 24px; }
+  .comida-title { font-size: 22px; }
+  .comida-content { padding: 20px 24px; gap: 20px; }
+  .stat-value { font-size: 28px; }
+}
+
+@media (min-width: 900px) {
+  .comida-page { padding-bottom: 32px; }
+  .comida-header { padding: 24px 32px; }
+  .comida-content { padding: 24px 32px; }
+  .comida-bottom-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; align-items: start; }
+  .comida-nutrition-section { position: sticky; top: 24px; }
+}
