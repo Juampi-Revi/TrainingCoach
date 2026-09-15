@@ -14,6 +14,14 @@ const MEALS: Array<{ id: MealType; label: string }> = [
   { id: "dinner", label: "Cena" },
 ];
 
+function mealFromClock(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 11) return "breakfast";
+  if (hour < 16) return "lunch";
+  if (hour < 19) return "snack";
+  return "dinner";
+}
+
 interface DraftItem extends CreateFoodLogItemInput {
   key: string;
 }
@@ -21,12 +29,10 @@ interface DraftItem extends CreateFoodLogItemInput {
 export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
   const { api } = useAuth();
   const toast = useToast();
-  const [meal, setMeal] = useState<MealType | null>(null);
+  const [meal, setMeal] = useState<MealType>(mealFromClock);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<CatalogFoodItem[]>([]);
   const [draft, setDraft] = useState<DraftItem[]>([]);
-  const [grams, setGrams] = useState("100");
-  const [selected, setSelected] = useState<CatalogFoodItem | null>(null);
   const [scanning, setScanning] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -45,20 +51,20 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
     }
   }
 
-  function addItem(item: CatalogFoodItem, amount: number) {
-    const factor = amount / 100;
+  function addItem(item: CatalogFoodItem, amount?: number) {
+    const grams = amount && amount > 0 ? amount : (item.servingGrams ?? 100);
+    const factor = grams / 100;
     setDraft((prev) => [...prev, {
       key: `${item.id}-${Date.now()}`,
       foodItemId: item.id,
       name: item.name,
-      grams: amount,
+      grams,
       servingLabel: item.servingLabel,
       kcal: Math.round(item.kcalPer100g * factor * 10) / 10,
       proteinG: Math.round(item.proteinPer100g * factor * 10) / 10,
       carbsG: Math.round(item.carbsPer100g * factor * 10) / 10,
       fatG: Math.round(item.fatPer100g * factor * 10) / 10,
     }]);
-    setSelected(null);
     setQuery("");
     setHits([]);
   }
@@ -67,16 +73,15 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
     setScanning(false);
     try {
       const item = await api.get<CatalogFoodItem>(`/client/food/barcode/${code}`);
-      setSelected(item);
-      setGrams(item.servingGrams ? String(item.servingGrams) : "100");
+      addItem(item);
       toast.success(item.name);
     } catch {
-      toast.error("No encontramos ese código. Probá buscarlo o cargalo a mano.");
+      toast.error("No encontramos ese código. Probá buscarlo.");
     }
   }
 
   async function save() {
-    if (!meal || draft.length === 0) return;
+    if (draft.length === 0) return;
     setSaving(true);
     try {
       await api.post("/client/food", {
@@ -85,7 +90,6 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
       });
       toast.success("Comida sumada");
       setDraft([]);
-      setMeal(null);
       await onSaved();
     } catch {
       toast.error("No se pudo guardar la comida");
@@ -113,26 +117,15 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
         <Button variant="outline" size="sm" onClick={() => setScanning(true)}>Barcode</Button>
       </div>
       {searching && <div className="mfl-hint">Buscando…</div>}
+      {!searching && query.trim().length >= 2 && hits.length === 0 && (
+        <div className="mfl-hint">No encontramos “{query}”. Tocá un resultado cuando aparezca, o usá barcode.</div>
+      )}
       {hits.map((hit) => (
-        <button key={hit.id} type="button" className="mfl-hit" onClick={() => { setSelected(hit); setGrams(hit.servingGrams ? String(hit.servingGrams) : "100"); }}>
+        <button key={hit.id} type="button" className="mfl-hit" onClick={() => addItem(hit)}>
           <span>{hit.name}</span>
-          <span className="ta-mono">{hit.kcalPer100g} kcal/100g</span>
+          <span className="ta-mono">{hit.servingLabel ?? `${hit.kcalPer100g} kcal/100g`}</span>
         </button>
       ))}
-      {selected && (
-        <div className="mfl-add">
-          <div>{selected.name}</div>
-          <div className="mfl-add-row">
-            <Input type="number" suffix="g" value={grams} onChange={(e) => setGrams(e.target.value)} />
-            {selected.servingGrams && (
-              <Button variant="outline" size="sm" onClick={() => setGrams(String(selected.servingGrams))}>
-                {selected.servingLabel ?? `${selected.servingGrams} g`}
-              </Button>
-            )}
-            <Button size="sm" onClick={() => addItem(selected, Number(grams) || 0)}>Sumar</Button>
-          </div>
-        </div>
-      )}
       {draft.length > 0 && (
         <div className="mfl-draft">
           {draft.map((item) => (
@@ -145,21 +138,19 @@ export function MacroFoodLogger({ onSaved }: { onSaved: () => Promise<void> }) {
           <div className="mfl-total ta-mono">{Math.round(totals.kcal)} kcal · P {Math.round(totals.p)} · C {Math.round(totals.c)} · G {Math.round(totals.f)}</div>
         </div>
       )}
-      <Button onClick={() => void save()} disabled={!meal || draft.length === 0 || saving}>
-        {saving ? "Guardando…" : "Registrar comida"}
+      <Button onClick={() => void save()} disabled={draft.length === 0 || saving}>
+        {saving ? "Guardando…" : draft.length === 1 ? "Registrar alimento" : "Registrar comida"}
       </Button>
       {scanning && <BarcodeScanner onDetect={(code) => void onBarcode(code)} onClose={() => setScanning(false)} />}
       <style jsx>{`
         .mfl { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; }
-        .mfl-meals, .mfl-search, .mfl-add-row { display: flex; gap: 8px; }
+        .mfl-meals, .mfl-search { display: flex; gap: 8px; }
         .mfl-meals button { flex: 1; padding: 8px 0; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text-mute); font-weight: 700; font-size: 12px; }
         .mfl-meals button.on { border-color: var(--lime); color: var(--lime); background: color-mix(in srgb, var(--lime) 12%, transparent); }
         .mfl-search { align-items: flex-end; }
         .mfl-search :global(label) { flex: 1; }
-        .mfl-hint { font-size: 12px; color: var(--text-mute); }
+        .mfl-hint { font-size: 12px; color: var(--text-mute); line-height: 1.4; }
         .mfl-hit { display: flex; justify-content: space-between; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); text-align: left; }
-        .mfl-add { padding: 10px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--bg-2); display: flex; flex-direction: column; gap: 8px; font-weight: 700; }
-        .mfl-add-row { align-items: flex-end; }
         .mfl-line { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 13px; }
         .mfl-line button { border: 0; background: none; color: var(--text-mute); font-size: 18px; cursor: pointer; }
         .mfl-total { font-size: 12px; color: var(--lime); }

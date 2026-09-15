@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { SYSTEM_FOODS } from "@/lib/health/food-catalog-data";
+import { ensureSystemFoods } from "@/lib/health/food-catalog.service";
 import { getNutritionToday } from "@/lib/health/nutrition.service";
 import {
   buildMealIdeas,
@@ -16,6 +17,7 @@ export function parseMealSlot(value: string | null): MealSlot | null {
 }
 
 export async function getMealIdeasForUser(clientUserId: string, requestedSlot?: string | null) {
+  await ensureSystemFoods();
   const slot = parseMealSlot(requestedSlot ?? null) ?? suggestedMealSlot();
   const today = await getNutritionToday(clientUserId);
   const remaining = today.remaining;

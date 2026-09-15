@@ -18,44 +18,56 @@ export interface CatalogFoodDTO {
   barcode: string | null;
 }
 
+let seedLock: Promise<unknown> | null = null;
+
+function systemFoodRow(food: (typeof SYSTEM_FOODS)[number]) {
+  const aliases = food.aliases ?? [];
+  return {
+    name: food.name,
+    nameNormalized: normalizeFoodName([food.name, ...aliases].join(" ")),
+    aliases,
+    category: food.category,
+    kcalPer100g: food.kcal,
+    proteinPer100g: food.p,
+    carbsPer100g: food.c,
+    fatPer100g: food.f,
+    servingLabel: food.servingLabel ?? null,
+    servingGrams: food.servingGrams ?? null,
+    barcode: null as string | null,
+    isSystem: true,
+  };
+}
+
 export async function seedSystemFoods() {
-  let created = 0;
-  let updated = 0;
-  for (const food of SYSTEM_FOODS) {
-    const aliases = food.aliases ?? [];
-    const nameNormalized = normalizeFoodName([food.name, ...aliases].join(" "));
-    const data = {
-      name: food.name,
-      nameNormalized,
-      aliases,
-      category: food.category,
-      kcalPer100g: food.kcal,
-      proteinPer100g: food.p,
-      carbsPer100g: food.c,
-      fatPer100g: food.f,
-      servingLabel: food.servingLabel ?? null,
-      servingGrams: food.servingGrams ?? null,
-      barcode: null as string | null,
-      isSystem: true,
-    };
-    const existing = await prisma.foodItem.findUnique({
-      where: { source_sourceId: { source: "system", sourceId: food.id } },
-      select: { id: true },
-    });
-    if (existing) {
-      await prisma.foodItem.update({ where: { id: existing.id }, data });
-      updated += 1;
-    } else {
-      await prisma.foodItem.create({
-        data: { ...data, source: "system", sourceId: food.id },
-      });
-      created += 1;
-    }
+  const existing = await prisma.foodItem.findMany({
+    where: { source: "system" },
+    select: { id: true, sourceId: true },
+  });
+  const idBySource = new Map(existing.flatMap((row) => (row.sourceId ? [[row.sourceId, row.id] as const] : [])));
+  const toCreate = SYSTEM_FOODS.filter((food) => !idBySource.has(food.id)).map((food) => ({
+    ...systemFoodRow(food),
+    source: "system",
+    sourceId: food.id,
+  }));
+  if (toCreate.length > 0) {
+    await prisma.foodItem.createMany({ data: toCreate });
   }
-  return { created, updated, total: SYSTEM_FOODS.length };
+  return { created: toCreate.length, updated: SYSTEM_FOODS.length - toCreate.length, total: SYSTEM_FOODS.length };
+}
+
+export async function ensureSystemFoods() {
+  const count = await prisma.foodItem.count({ where: { source: "system" } });
+  if (count >= SYSTEM_FOODS.length) return;
+  if (!seedLock) {
+    seedLock = seedSystemFoods().finally(() => {
+      seedLock = null;
+    });
+  }
+  await seedLock;
 }
 
 export async function searchFoods(query: string, userId: string, take = 20): Promise<CatalogFoodDTO[]> {
+  await ensureSystemFoods();
   const q = normalizeFoodName(query);
   if (q.length < 1) {
     const recent = await prisma.foodItem.findMany({
