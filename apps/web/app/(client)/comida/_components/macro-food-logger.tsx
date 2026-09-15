@@ -124,6 +124,7 @@ export function MacroFoodLogger({
     setDraft((prev) => upsertFood(prev, fromCatalog(item, grams)));
     setQuery("");
     setHits([]);
+    requestAnimationFrame(focusSearch);
   }
 
   function setItemGrams(key: string, grams: number) {
@@ -139,6 +140,10 @@ export function MacroFoodLogger({
   function bumpUnits(item: PlateFood, delta: number) {
     const step = item.servingGrams && item.servingGrams > 0 ? item.servingGrams : 10;
     setItemGrams(item.key, item.grams + delta * step);
+  }
+
+  function focusSearch() {
+    document.getElementById("mfl-food-search")?.focus();
   }
 
   async function onBarcode(code: string) {
@@ -169,7 +174,7 @@ export function MacroFoodLogger({
           fatG: item.fatG,
         })),
       });
-      toast.success("Comida sumada");
+      toast.success(`${mealName} registrado`);
       setDraft([]);
       await onSaved();
     } catch {
@@ -179,6 +184,7 @@ export function MacroFoodLogger({
     }
   }
 
+  const mealName = MEALS.find((m) => m.id === meal)?.label ?? "comida";
   const totals = draft.reduce((acc, i) => ({
     kcal: acc.kcal + i.kcal,
     p: acc.p + i.proteinG,
@@ -193,22 +199,9 @@ export function MacroFoodLogger({
           <button key={m.id} type="button" className={meal === m.id ? "on" : ""} onClick={() => setMeal(m.id)}>{m.label}</button>
         ))}
       </div>
-      <div className="mfl-search">
-        <Input placeholder="Buscar alimento…" value={query} onChange={(e) => void search(e.target.value)} />
-        <Button variant="outline" size="sm" onClick={() => setScanning(true)}>Barcode</Button>
-      </div>
-      {searching && <div className="mfl-hint">Buscando…</div>}
-      {!searching && query.trim().length >= 2 && hits.length === 0 && (
-        <div className="mfl-hint">No encontramos “{query}”. Tocá un resultado cuando aparezca, o usá barcode.</div>
-      )}
-      {hits.map((hit) => (
-        <button key={hit.id} type="button" className="mfl-hit" onClick={() => addItem(hit)}>
-          <span>{hit.name}</span>
-          <span className="ta-mono">{hit.servingLabel ?? `${hit.kcalPer100g} kcal/100g`}</span>
-        </button>
-      ))}
-      {draft.length > 0 && (
+      {draft.length > 0 ? (
         <div className="mfl-draft">
+          <div className="mfl-plate">Tu {mealName.toLowerCase()}</div>
           {draft.map((item) => (
             <PlateItemRow
               key={item.key}
@@ -221,9 +214,38 @@ export function MacroFoodLogger({
           ))}
           <div className="mfl-total ta-mono">{Math.round(totals.kcal)} kcal · P {Math.round(totals.p)} · C {Math.round(totals.c)} · G {Math.round(totals.f)}</div>
         </div>
+      ) : (
+        <p className="mfl-hint">Armá el plato completo: huevos, tostadas, fruta, queso… y registralo todo junto.</p>
+      )}
+      <div className="mfl-search">
+        <Input
+          id="mfl-food-search"
+          autoComplete="off"
+          enterKeyHint="search"
+          label={draft.length > 0 ? "Sumá otro alimento" : undefined}
+          placeholder={draft.length > 0 ? "Tostadas, fruta, queso…" : "Buscar y sumar al plato…"}
+          value={query}
+          onChange={(e) => void search(e.target.value)}
+        />
+        <Button variant="outline" size="sm" onClick={() => setScanning(true)}>Barcode</Button>
+      </div>
+      {searching && <div className="mfl-hint">Buscando…</div>}
+      {!searching && query.trim().length >= 2 && hits.length === 0 && (
+        <div className="mfl-hint">No encontramos “{query}”. Tocá un resultado cuando aparezca, o usá barcode.</div>
+      )}
+      {hits.map((hit) => (
+        <button key={hit.id} type="button" className="mfl-hit" onClick={() => addItem(hit)}>
+          <span>{hit.name}</span>
+          <span className="ta-mono">{hit.servingLabel ?? `${hit.kcalPer100g} kcal/100g`}</span>
+        </button>
+      ))}
+      {draft.length > 0 && hits.length === 0 && query.trim().length < 2 && (
+        <p className="mfl-hint">Seguí buscando para sumar más. Guardá el {mealName.toLowerCase()} cuando esté listo.</p>
       )}
       <Button onClick={() => void save()} disabled={draft.length === 0 || saving}>
-        {saving ? "Guardando…" : draft.length === 1 ? "Registrar alimento" : "Registrar comida"}
+        {saving
+          ? "Guardando…"
+          : `Registrar ${mealName.toLowerCase()}${draft.length > 1 ? ` · ${draft.length} alimentos` : ""}`}
       </Button>
       {scanning && <BarcodeScanner onDetect={(code) => void onBarcode(code)} onClose={() => setScanning(false)} />}
       <style jsx>{`
@@ -236,6 +258,8 @@ export function MacroFoodLogger({
         .mfl-hint { font-size: 12px; color: var(--text-mute); line-height: 1.4; }
         .mfl-hit { display: flex; justify-content: space-between; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); text-align: left; }
         .mfl-draft { display: flex; flex-direction: column; gap: 8px; }
+        .mfl-plate { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); }
+        .mfl-search p, .mfl-hint { margin: 0; }
         .mfl-total { font-size: 12px; color: var(--lime); }
       `}</style>
     </div>
