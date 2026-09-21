@@ -42,7 +42,7 @@ export default function SessionInProgressPage() {
     toggleWarmup, resetWarmup, finishWarmup,
   } = useSession(sessionId);
 
-  const { completing, completeSession } = useCompleteSession({ sessionId, flushQueue, load });
+  const { completing, completeSession } = useCompleteSession({ sessionId, flushQueue });
 
   const {
     effortMode, setEffortMode,

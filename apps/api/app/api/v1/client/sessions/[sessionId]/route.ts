@@ -2,24 +2,10 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, err, withHandler } from "@/lib/api-response";
-import { notifyCoachSessionCompleted } from "@/lib/training/session-notify";
 import { sessionPatchSchema } from "@/lib/schemas";
-import { updateWorkoutStreak } from "@/lib/gamification/streaks.service";
-import { awardXpFromSource, XP_REWARDS } from "@/lib/gamification/xp.service";
-import { checkMultipleMetrics } from "@/lib/badge-checker";
 import { mapWorkoutBlockStep } from "@/lib/training/endurance";
+import { awardCompletedSessionRewards } from "@/lib/training/session-rewards";
 import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
-
-// Helper function to get user's total workout count
-async function getUserWorkoutCount(userId: string): Promise<number> {
-  const count = await prisma.workoutSession.count({
-    where: {
-      clientUserId: userId,
-      status: "completed",
-    },
-  });
-  return count;
-}
 
 // GET /api/v1/client/sessions/:sessionId
 export async function GET(
@@ -323,6 +309,9 @@ export async function PATCH(
         id: true,
         status: true,
         performedAt: true,
+        energyRating: true,
+        sessionNotes: true,
+        completedAt: true,
         workoutTemplate: { select: { title: true } },
         exercises: {
           select: {
@@ -339,13 +328,16 @@ export async function PATCH(
     });
     if (!session) return notFound("Session not found");
 
+    const alreadyClosed = session.status === "completed" || session.status === "partial";
     const progressSummary = summarizeSessionProgress(session.exercises);
     const nextStatus =
-      body.status === undefined
+      alreadyClosed && body.status === "completed"
         ? undefined
-        : body.status === "completed"
-          ? resolveSessionStatus("completed", progressSummary)
-          : body.status;
+        : body.status === undefined
+          ? undefined
+          : body.status === "completed"
+            ? resolveSessionStatus("completed", progressSummary)
+            : body.status;
 
     const now = new Date();
     const finalCompletedAt =
@@ -376,57 +368,12 @@ export async function PATCH(
       select: { id: true, status: true, energyRating: true, sessionNotes: true, completedAt: true },
     });
 
-    // Handle gamification when session is completed
     if (nextStatus === "completed") {
-      const gamificationResults: {
-        streak?: { currentStreak: number; longestStreak: number };
-        xp?: { xpEarned: number; newTotal: number; newLevel: number; leveledUp: boolean };
-        badges?: string[];
-      } = {};
-
-      // Update workout streak
-      const streakStats = await updateWorkoutStreak(auth.user.sub);
-      gamificationResults.streak = {
-        currentStreak: streakStats.currentStreak,
-        longestStreak: streakStats.longestStreak,
-      };
-
-      // Award XP for completing workout
-      const xpSource = body.energyRating && body.energyRating >= 4
-        ? "COMPLETE_WORKOUT_WITH_HIGH_ENERGY"
-        : "COMPLETE_WORKOUT";
-      const xpResult = await awardXpFromSource(auth.user.sub, xpSource, false);
-      gamificationResults.xp = xpResult;
-
-      // Check for badge unlocks - pass metrics to check
-      const userStats = await prisma.user.findUnique({
-        where: { id: auth.user.sub },
-        select: { currentWorkoutStreak: true },
-      });
-      
-      const newBadges = await checkMultipleMetrics(auth.user.sub, [
-        { metric: "workouts_completed", value: await getUserWorkoutCount(auth.user.sub) },
-        { metric: "workout_streak", value: userStats?.currentWorkoutStreak ?? 0 },
-      ]);
-      
-      if (newBadges.length > 0) {
-        gamificationResults.badges = newBadges.map(b => b.id);
-        // Award XP for each new badge
-        for (const _badge of newBadges) {
-          await awardXpFromSource(auth.user.sub, "UNLOCK_BADGE", false);
-        }
-      }
-
-      await notifyCoachSessionCompleted({
-        clientUserId: auth.user.sub,
+      await awardCompletedSessionRewards({
+        userId: auth.user.sub,
         sessionId,
         workoutTitle: session.workoutTemplate?.title ?? null,
         energyRating: updated.energyRating,
-      });
-
-      return ok({
-        ...updated,
-        gamification: gamificationResults,
       });
     }
 

@@ -4,6 +4,11 @@ export const NETWORK_ERROR_MESSAGE =
 export const FETCH_TIMEOUT_MS = 12_000;
 export const RETRY_DELAYS_MS = [400, 1200];
 
+export type FetchRetryOptions = {
+  timeoutMs?: number;
+  delaysMs?: number[];
+};
+
 export function isRetryableStatus(status: number): boolean {
   return status === 0 || status === 408 || status === 502 || status === 503 || status === 504;
 }
@@ -24,7 +29,7 @@ function sleep(ms: number): Promise<void> {
 export async function fetchWithRetry(
   url: string,
   init: RequestInit,
-  options: { timeoutMs?: number; delaysMs?: number[] } = {},
+  options: FetchRetryOptions = {},
 ): Promise<Response> {
   const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
   const delays = options.delaysMs ?? RETRY_DELAYS_MS;

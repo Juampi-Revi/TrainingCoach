@@ -58,17 +58,20 @@ export async function checkAndAwardBadges(context: BadgeCheckContext): Promise<B
 
       newlyUnlocked.push(badge);
 
-      // Send push notification
-      await sendPushNotification(userId, {
-        title: "¡Nuevo logro desbloqueado! 🏆",
-        body: `Has desbloqueado: ${badge.name}`,
-        tag: "badge_unlocked",
-        data: {
-          url: "/cuenta/badges",
-          type: "badge",
-          badgeId: badge.id,
-        },
-      });
+      try {
+        await sendPushNotification(userId, {
+          title: "¡Nuevo logro desbloqueado! 🏆",
+          body: `Has desbloqueado: ${badge.name}`,
+          tag: "badge_unlocked",
+          data: {
+            url: "/cuenta/badges",
+            type: "badge",
+            badgeId: badge.id,
+          },
+        });
+      } catch (error) {
+        console.error("[badge-checker] push failed after badge was saved", error);
+      }
     }
   }
 

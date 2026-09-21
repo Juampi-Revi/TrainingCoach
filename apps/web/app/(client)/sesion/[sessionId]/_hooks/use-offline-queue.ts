@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
 import {
   countOfflineSets,
   deleteOfflineSet,
@@ -54,8 +55,13 @@ export function useOfflineQueue({
           await api.put(`/client/sessions/${sessionId}/exercises/${item.wseId}/sets/${item.setNumber}`, item.body);
           if (item.id != null) await deleteOfflineSet(item.id);
           flushed += 1;
-        } catch {
-          remaining += 1;
+        } catch (e: unknown) {
+          if (e instanceof ApiError && e.status === 404) {
+            if (item.id != null) await deleteOfflineSet(item.id);
+            flushed += 1;
+          } else {
+            remaining += 1;
+          }
         }
       }
       setOfflineCount(remaining);

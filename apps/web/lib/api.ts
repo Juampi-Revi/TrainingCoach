@@ -1,4 +1,4 @@
-import { fetchWithRetry, NETWORK_ERROR_MESSAGE } from "./api-fetch";
+import { fetchWithRetry, NETWORK_ERROR_MESSAGE, type FetchRetryOptions } from "./api-fetch";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3003/api/v1";
 
@@ -45,7 +45,12 @@ export class ApiClient {
     this.token = token;
   }
 
-  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    retry?: FetchRetryOptions,
+  ): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -57,7 +62,7 @@ export class ApiClient {
         method,
         headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
-      });
+      }, retry);
     } catch {
       throw new ApiError(NETWORK_ERROR_MESSAGE, 0);
     }
@@ -95,8 +100,8 @@ export class ApiClient {
     return this.request<T>("PUT", path, body);
   }
 
-  patch<T>(path: string, body?: unknown) {
-    return this.request<T>("PATCH", path, body);
+  patch<T>(path: string, body?: unknown, retry?: FetchRetryOptions) {
+    return this.request<T>("PATCH", path, body, retry);
   }
 
   del<T>(path: string, body?: unknown) {

@@ -35,3 +35,7 @@ export function clearPendingComplete(sessionId: string): void {
     /* ignore */
   }
 }
+
+export function isClosedSessionStatus(status: string): boolean {
+  return status === "completed" || status === "partial";
+}

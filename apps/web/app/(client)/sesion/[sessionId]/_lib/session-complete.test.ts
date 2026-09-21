@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { clearPendingComplete, readPendingComplete, savePendingComplete } from "./session-complete";
+import { clearPendingComplete, isClosedSessionStatus, readPendingComplete, savePendingComplete } from "./session-complete";
 
 describe("session-complete queue", () => {
   afterEach(() => {
@@ -17,5 +17,11 @@ describe("session-complete queue", () => {
     expect(readPendingComplete("sess-1")).toEqual({ sessionNotes: "buena pata" });
     clearPendingComplete("sess-1");
     expect(readPendingComplete("sess-1")).toBeNull();
+  });
+
+  it("treats completed and partial as already closed", () => {
+    expect(isClosedSessionStatus("completed")).toBe(true);
+    expect(isClosedSessionStatus("partial")).toBe(true);
+    expect(isClosedSessionStatus("in_progress")).toBe(false);
   });
 });
