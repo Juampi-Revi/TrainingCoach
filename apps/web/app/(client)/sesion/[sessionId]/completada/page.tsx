@@ -11,6 +11,12 @@ import { CompletadaHeroExtras, CompletadaNextStep } from "../_components/complet
 import { CompletadaEnergyCard, CompletadaHighlights, CompletadaStatCard } from "../_components/completada-cards";
 import { EffortSummaryCard } from "../_components/effort-summary-card";
 import { summarizeSets } from "@/lib/effort";
+import {
+  clearPendingComplete,
+  isClosedSessionStatus,
+  readPendingComplete,
+  savePendingComplete,
+} from "../_lib/session-complete";
 import "../_styles.css";
 
 function fmtDuration(ms: number) {
@@ -56,20 +62,42 @@ export default function SessionCompletadaPage() {
   const [completedAtInput, setCompletedAtInput] = useState<string>("");
 
   useEffect(() => {
-    api
-      .get<SessionDetail>(`/client/sessions/${sessionId}`)
-      .then((s) => {
+    let cancelled = false;
+    async function load() {
+      const pending = readPendingComplete(sessionId);
+      if (pending) {
+        try {
+          await api.patch(`/client/sessions/${sessionId}`, {
+            status: "completed",
+            ...(pending.sessionNotes ? { sessionNotes: pending.sessionNotes } : {}),
+          }, { timeoutMs: 15_000, delaysMs: [] });
+          clearPendingComplete(sessionId);
+        } catch { /* retry on next open */ }
+      }
+      try {
+        const s = await api.get<SessionDetail>(`/client/sessions/${sessionId}`);
+        if (cancelled) return;
+        if (!isClosedSessionStatus(s.status)) {
+          try {
+            await api.patch(`/client/sessions/${sessionId}`, { status: "completed" }, { timeoutMs: 15_000, delaysMs: [] });
+            clearPendingComplete(sessionId);
+          } catch {
+            savePendingComplete(sessionId);
+          }
+        }
         setSession(s);
-        // Map legacy 1-10 values to 1-5 range
         setEnergy(s.energyRating != null ? Math.ceil(s.energyRating / 2) : null);
         setNotes(s.sessionNotes ?? "");
         setPerformedAtInput(toLocalInputValue(new Date(s.performedAt)));
         setCompletedAtInput(s.completedAt ? toLocalInputValue(new Date(s.completedAt)) : "");
-      })
-      .catch(() => {
+      } catch {
         toast.error("No se pudo cargar la sesión");
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
   }, [api, sessionId, toast]);
 
   async function save() {
@@ -82,6 +110,7 @@ export default function SessionCompletadaPage() {
       if (comp && comp.getTime() < perf.getTime()) throw new Error("La hora de fin no puede ser anterior al inicio");
 
       await api.patch(`/client/sessions/${sessionId}`, {
+        status: "completed",
         energyRating: energy,
         sessionNotes: notes || null,
         performedAt: perf.toISOString(),

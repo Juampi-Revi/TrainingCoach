@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import { NETWORK_ERROR_MESSAGE, isNetworkError } from "@/lib/api-fetch";
 import {
   clearPendingComplete,
   isClosedSessionStatus,
@@ -25,8 +24,7 @@ export function useCompleteSession({
   const [completing, setCompleting] = useState(false);
   const inflight = useRef(false);
 
-  const goToDone = useCallback(() => {
-    clearPendingComplete(sessionId);
+  const leaveLogger = useCallback(() => {
     router.replace(`/sesion/${sessionId}/completada`);
   }, [router, sessionId]);
 
@@ -39,6 +37,14 @@ export function useCompleteSession({
     }
   }, [api, sessionId]);
 
+  const closeOnServer = useCallback(async (sessionNotes?: string) => {
+    await api.patch(`/client/sessions/${sessionId}`, {
+      status: "completed",
+      ...(sessionNotes ? { sessionNotes } : {}),
+    }, { timeoutMs: 15_000, delaysMs: [] });
+    clearPendingComplete(sessionId);
+  }, [api, sessionId]);
+
   const completeSession = useCallback(async (sessionNotes?: string) => {
     if (inflight.current) return;
     inflight.current = true;
@@ -47,29 +53,28 @@ export function useCompleteSession({
       let remaining = await flushQueue();
       if (remaining > 0) remaining = await flushQueue();
       if (remaining > 0) {
-        if (await alreadyClosed()) { goToDone(); return; }
-        toast.error("Todavía hay series pendientes. Revisá tu conexión y reintentá Finalizar.");
+        if (await alreadyClosed()) {
+          clearPendingComplete(sessionId);
+          leaveLogger();
+          return;
+        }
+        toast.error("No se pudieron subir todas las series. Reintentá Finalizar.");
         setCompleting(false);
         return;
       }
-      await api.patch(`/client/sessions/${sessionId}`, {
-        status: "completed",
-        ...(sessionNotes ? { sessionNotes } : {}),
-      }, { timeoutMs: 25_000, delaysMs: [] });
-      goToDone();
-    } catch (e) {
-      if (await alreadyClosed()) { goToDone(); return; }
-      if (isNetworkError(e)) {
+      try {
+        await closeOnServer(sessionNotes);
+      } catch {
         savePendingComplete(sessionId, sessionNotes);
-        toast.error(`${NETWORK_ERROR_MESSAGE} Tus series están guardadas.`);
-      } else {
-        toast.error(e instanceof Error ? e.message : "No se pudo cerrar la sesión");
       }
+      leaveLogger();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo cerrar la sesión");
       setCompleting(false);
     } finally {
       inflight.current = false;
     }
-  }, [alreadyClosed, api, flushQueue, goToDone, sessionId, toast]);
+  }, [alreadyClosed, closeOnServer, flushQueue, leaveLogger, sessionId, toast]);
 
   useEffect(() => {
     const pending = readPendingComplete(sessionId);
