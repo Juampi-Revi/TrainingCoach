@@ -13,7 +13,6 @@ import {
   uniqueStoredBlocks,
 } from "@/lib/training/session-prescription";
 import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
-import { expireStaleInProgressSessions } from "@/lib/training/stale-sessions.service";
 
 // GET /api/v1/client/sessions/:sessionId
 export async function GET(
@@ -25,7 +24,6 @@ export async function GET(
     if (!auth.ok) return unauthorized(auth.message);
 
     const { sessionId } = await params;
-    await expireStaleInProgressSessions(auth.user.sub);
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, clientUserId: auth.user.sub },
       include: {
@@ -290,16 +288,13 @@ export async function PATCH(
     });
     if (!session) return notFound("Session not found");
 
-    const alreadyClosed = session.status === "completed" || session.status === "partial";
     const progressSummary = summarizeSessionProgress(session.exercises.map((ex) => progressExercise(ex)));
     const nextStatus =
-      alreadyClosed && body.status === "completed"
+      body.status === undefined || session.status === "discarded"
         ? undefined
-        : body.status === undefined
-          ? undefined
-          : body.status === "completed"
-            ? resolveSessionStatus("completed", progressSummary)
-            : body.status;
+        : body.status === "completed"
+          ? resolveSessionStatus("completed", progressSummary)
+          : body.status;
 
     const now = new Date();
     const finalCompletedAt =

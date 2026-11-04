@@ -32,10 +32,16 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         _max: { setNumber: true },
       });
       const nextSetNumber = (agg._max.setNumber ?? 0) + 1;
-      return tx.workoutSet.create({
+      const created = await tx.workoutSet.create({
         data: { workoutSessionExerciseId: se.id, setNumber: nextSetNumber },
         select: { id: true, setNumber: true },
       });
+      await tx.workoutSession.update({
+        where: { id: sessionId },
+        data: { status: "in_progress" },
+        select: { id: true },
+      });
+      return created;
     });
 
     return ok({ id: newSet.id, setNumber: newSet.setNumber }, 201);

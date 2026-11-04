@@ -46,28 +46,35 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     const body = await req.json().catch(() => ({}));
     const { reps, durationSeconds, weight, rpe, rir, notes } = body;
 
-    const result = await prisma.workoutSet.upsert({
-      where: { workoutSessionExerciseId_setNumber: { workoutSessionExerciseId: se.id, setNumber } },
-      update: {
-        reps: parseOptionalInt(reps),
-        durationSeconds: parseOptionalInt(durationSeconds),
-        weight: parseOptionalDecimal(weight),
-        rpe: parseOptionalDecimal(rpe),
-        rir: parseOptionalDecimal(rir),
-        notes: notes?.trim() || null,
-      },
-      create: {
-        workoutSessionExerciseId: se.id,
-        setNumber,
-        reps: parseOptionalInt(reps),
-        durationSeconds: parseOptionalInt(durationSeconds),
-        weight: parseOptionalDecimal(weight),
-        rpe: parseOptionalDecimal(rpe),
-        rir: parseOptionalDecimal(rir),
-        notes: notes?.trim() || null,
-      },
-      select: { id: true, setNumber: true, reps: true, durationSeconds: true, weight: true, rpe: true, rir: true, notes: true },
-    });
+    const [result] = await prisma.$transaction([
+      prisma.workoutSet.upsert({
+        where: { workoutSessionExerciseId_setNumber: { workoutSessionExerciseId: se.id, setNumber } },
+        update: {
+          reps: parseOptionalInt(reps),
+          durationSeconds: parseOptionalInt(durationSeconds),
+          weight: parseOptionalDecimal(weight),
+          rpe: parseOptionalDecimal(rpe),
+          rir: parseOptionalDecimal(rir),
+          notes: notes?.trim() || null,
+        },
+        create: {
+          workoutSessionExerciseId: se.id,
+          setNumber,
+          reps: parseOptionalInt(reps),
+          durationSeconds: parseOptionalInt(durationSeconds),
+          weight: parseOptionalDecimal(weight),
+          rpe: parseOptionalDecimal(rpe),
+          rir: parseOptionalDecimal(rir),
+          notes: notes?.trim() || null,
+        },
+        select: { id: true, setNumber: true, reps: true, durationSeconds: true, weight: true, rpe: true, rir: true, notes: true },
+      }),
+      prisma.workoutSession.update({
+        where: { id: sessionId },
+        data: { status: "in_progress" },
+        select: { id: true },
+      }),
+    ]);
 
     return ok({
       id: result.id,
