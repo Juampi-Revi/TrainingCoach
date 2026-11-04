@@ -48,3 +48,9 @@ export function resolveSessionStatus(status: string, summary: SessionProgressSum
 
   return "in_progress";
 }
+
+/** How to close a leftover in-progress session when the day is over. */
+export function staleSessionCloseStatus(summary: SessionProgressSummary): SessionStatus {
+  if (summary.setsCount <= 0) return "discarded";
+  return resolveSessionStatus("completed", summary);
+}

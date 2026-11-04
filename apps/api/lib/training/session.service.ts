@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildPrescription } from "@/lib/training/session-prescription";
+import { expireStaleInProgressSessions } from "./stale-sessions.service";
 
 const activeAssignment = (clientUserId: string) => ({
   plan: {
@@ -39,6 +40,7 @@ export async function resolveStartPlanWorkout(
 }
 
 export async function createSession(clientUserId: string, data: { workoutTemplateId?: string; performedAt?: string }) {
+  await expireStaleInProgressSessions(clientUserId);
   if (data.workoutTemplateId) {
     const active = await prisma.workoutSession.findFirst({
       where: { clientUserId, workoutTemplateId: data.workoutTemplateId, status: "in_progress" },

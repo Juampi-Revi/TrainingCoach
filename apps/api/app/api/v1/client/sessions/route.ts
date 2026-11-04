@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, forbidden, withHandler } from "@/lib/api-response";
 import { buildPrescription, progressExercise } from "@/lib/training/session-prescription";
 import { resolveStartPlanWorkout } from "@/lib/training/session.service";
+import { expireStaleInProgressSessions } from "@/lib/training/stale-sessions.service";
 import type { Prisma } from "@prisma/client";
 import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
 
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest) {
   return withHandler(async () => {
     const auth = requireRole(req, "client");
     if (!auth.ok) return unauthorized(auth.message);
+
+    await expireStaleInProgressSessions(auth.user.sub);
 
     const { searchParams } = req.nextUrl;
     const limit = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
@@ -141,6 +144,7 @@ export async function POST(req: NextRequest) {
       return ok({ id: session.id, created: true }, 201);
     }
 
+    await expireStaleInProgressSessions(auth.user.sub);
     const linked = await resolveStartPlanWorkout(auth.user.sub, workoutTemplateIdStr, planWeekWorkoutIdStr);
     if (linked.planChanged) return err("Tu coach actualizó el plan", 409);
     const resolvedPwwId = linked.pwwId;

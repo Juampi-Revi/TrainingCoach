@@ -9,7 +9,7 @@ const HARDCODED_BETA_EMAILS = [
 export function assistantBetaEmails(): string[] {
   const fromEnv = (process.env.ASSISTANT_BETA_EMAILS ?? "")
     .split(",")
-    .map((value) => value.trim().toLowerCase())
+    .map((value) => value.trim().replace(/^['"]|['"]$/g, "").trim().toLowerCase())
     .filter(Boolean);
   return [...new Set([...HARDCODED_BETA_EMAILS, ...fromEnv])];
 }

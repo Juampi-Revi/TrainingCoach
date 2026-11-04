@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveSessionStatus, summarizeSessionProgress } from "./session-status";
+import { resolveSessionStatus, staleSessionCloseStatus, summarizeSessionProgress } from "./session-status";
 
 describe("session-status", () => {
   it("marks completed sessions as partial when sets are still missing", () => {
@@ -28,5 +28,17 @@ describe("session-status", () => {
     ]);
 
     expect(resolveSessionStatus("completed", summary)).toBe("completed");
+  });
+
+  it("discards leftover sessions with no logged sets", () => {
+    expect(staleSessionCloseStatus({ setsCount: 0, targetSetsCount: 4 })).toBe("discarded");
+  });
+
+  it("closes leftover sessions as partial when some sets were logged", () => {
+    expect(staleSessionCloseStatus({ setsCount: 2, targetSetsCount: 6 })).toBe("partial");
+  });
+
+  it("closes leftover sessions as completed when every set was logged", () => {
+    expect(staleSessionCloseStatus({ setsCount: 6, targetSetsCount: 6 })).toBe("completed");
   });
 });

@@ -13,6 +13,7 @@ import {
   uniqueStoredBlocks,
 } from "@/lib/training/session-prescription";
 import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
+import { expireStaleInProgressSessions } from "@/lib/training/stale-sessions.service";
 
 // GET /api/v1/client/sessions/:sessionId
 export async function GET(
@@ -24,6 +25,7 @@ export async function GET(
     if (!auth.ok) return unauthorized(auth.message);
 
     const { sessionId } = await params;
+    await expireStaleInProgressSessions(auth.user.sub);
     const session = await prisma.workoutSession.findFirst({
       where: { id: sessionId, clientUserId: auth.user.sub },
       include: {

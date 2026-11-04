@@ -35,6 +35,10 @@ services:
       CLOUDINARY_CLOUD_NAME:   ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY:      ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET:   ${CLOUDINARY_API_SECRET:-}
+      ASSISTANT_BETA_EMAILS:   ${ASSISTANT_BETA_EMAILS:-}
+      OPENAI_API_KEY:          ${OPENAI_API_KEY:-}
+      OPENAI_MODEL:            ${OPENAI_MODEL:-gpt-6-luna}
+      MONTHLY_BUDGET_USD:      ${MONTHLY_BUDGET_USD:-20}
       NODE_ENV:                production
     depends_on:
       db:

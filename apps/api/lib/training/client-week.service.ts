@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { ClientWeekResponse, SessionStatus, WeekWorkout } from "@regen/types";
 import { progressExercise } from "./session-prescription";
 import { resolveSessionStatus, summarizeSessionProgress } from "./session-status";
+import { expireStaleInProgressSessions } from "./stale-sessions.service";
 
 function startOfDayUTC(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -65,6 +66,7 @@ function periodFromStart(startDate: Date, now: Date, periodDays: number) {
 
 export async function getClientWeek(args: { clientUserId: string; now?: Date }): Promise<ClientWeekResponse> {
   const now = args.now ?? new Date();
+  await expireStaleInProgressSessions(args.clientUserId, now);
 
   const assignment = await prisma.planAssignment.findFirst({
     where: { clientUserId: args.clientUserId, OR: [{ status: "active" }, { status: "paused" }] },
