@@ -25,6 +25,6 @@ export function assistantBetaEmails(): string[] {
 
 export function isAssistantBetaEmail(email: string | null | undefined): boolean {
   if (!email) return false;
-  if (process.env.NODE_ENV !== "production") return true;
+  if (runtimeEnv("NODE_ENV") !== "production") return true;
   return assistantBetaEmails().includes(email.toLowerCase());
 }
