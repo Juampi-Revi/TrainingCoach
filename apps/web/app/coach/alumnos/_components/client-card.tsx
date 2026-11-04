@@ -13,7 +13,7 @@ function daysSince(iso: string | undefined): number | null {
 export function clientStatus(c: CoachClientSummary): { label: string; tone: "success" | "warn" | "danger"; action: string } {
   const days = daysSince(c.lastSession?.performedAt ?? undefined);
   if (!c.assignment || c.assignment.status !== "active") return { label: "Sin plan", tone: "danger", action: "Asignar plan" };
-  if (days === null || days > 7) return { label: "Inactiva", tone: "danger", action: "Enviar mensaje" };
+  if (days === null || days > 7) return { label: "Inactiva", tone: "danger", action: "Ver entreno" };
   if (days > 3) return { label: "Atención", tone: "warn", action: "Revisar log" };
   return { label: "On track", tone: "success", action: "Ver progreso" };
 }

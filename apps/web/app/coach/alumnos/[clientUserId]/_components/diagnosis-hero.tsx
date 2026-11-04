@@ -72,7 +72,7 @@ export function DiagnosisHero({
   client: ClientDetail;
   clientUserId: string;
   week: WeeklySummary | null;
-  onMessage: () => void;
+  onMessage?: () => void;
   onAssignPlan: () => void;
 }) {
   const router = useRouter();
@@ -146,9 +146,11 @@ export function DiagnosisHero({
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button size="sm" variant="secondary" icon="msg" onClick={onMessage}>
-          Mensaje
-        </Button>
+        {onMessage && (
+          <Button size="sm" variant="secondary" icon="msg" onClick={onMessage}>
+            Mensaje
+          </Button>
+        )}
         <Button size="sm" variant="secondary" icon="calendar" onClick={onAssignPlan}>
           {hasPlan ? "Cambiar plan" : "Asignar plan"}
         </Button>

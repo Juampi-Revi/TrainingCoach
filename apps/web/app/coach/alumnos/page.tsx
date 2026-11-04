@@ -59,18 +59,8 @@ export default function AlumnosPage() {
 
   const selectedList = clients.filter((c) => selectedIds.has(c.id));
 
-  const handleClientAction = (action: string, client: CoachClientSummary) => {
-    if (action === "Asignar plan") {
-      router.push(`/coach/alumnos/${client.id}?tab=plan`);
-    } else if (action === "Enviar mensaje") {
-      router.push(`/coach/mensajes?client=${client.id}`);
-    } else if (action === "Revisar log") {
-      router.push(`/coach/alumnos/${client.id}?tab=log`);
-    } else if (action === "Ver progreso") {
-      router.push(`/coach/alumnos/${client.id}?tab=progress`);
-    } else if (action === "Ajustar plan") {
-      router.push(`/coach/alumnos/${client.id}?tab=plan`);
-    }
+  const handleClientAction = (_action: string, client: CoachClientSummary) => {
+    router.push(`/coach/alumnos/${client.id}`);
   };
 
   return (
@@ -88,12 +78,6 @@ export default function AlumnosPage() {
               </svg>
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)" }} />
             </div>
-            <Button variant="outline" icon="history" onClick={() => router.push("/coach/calendario")}>
-              Agenda
-            </Button>
-            <Button variant="outline" icon="users" onClick={() => router.push("/coach/alumnos/grupos")}>
-              Grupos
-            </Button>
             <Button icon="plus" onClick={() => setShowAdd(true)}>Agregar alumno</Button>
           </>
         }
@@ -126,10 +110,7 @@ export default function AlumnosPage() {
               <div style={{ flex: 1 }} />
               {selectedList.length === 1 && (
                 <>
-                  <Button size="sm" variant="secondary" icon="msg" onClick={() => router.push(`/coach/mensajes?client=${selectedList[0]!.id}`)}>
-                    Mensaje
-                  </Button>
-                  <Button size="sm" variant="secondary" icon="calendar" onClick={() => router.push(`/coach/alumnos/${selectedList[0]!.id}?tab=plan`)}>
+                  <Button size="sm" variant="secondary" icon="calendar" onClick={() => router.push(`/coach/alumnos/${selectedList[0]!.id}`)}>
                     Asignar plan
                   </Button>
                   <Button size="sm" variant="secondary" onClick={() => router.push(`/coach/alumnos/${selectedList[0]!.id}`)}>

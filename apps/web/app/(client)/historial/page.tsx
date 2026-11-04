@@ -85,10 +85,9 @@ function groupByWeek(sessions: SessionSummary[]) {
 
 // ─── Inline detail ────────────────────────────────────────────────────────────
 
-function SessionDetailInline({ detail, loading, onMessages }: {
+function SessionDetailInline({ detail, loading }: {
   detail: SessionDetail | null;
   loading: boolean;
-  onMessages: () => void;
 }) {
   if (loading) {
     return (
@@ -99,7 +98,7 @@ function SessionDetailInline({ detail, loading, onMessages }: {
   }
   if (!detail) return null;
 
-  const workExercises = detail.exercises.filter((e) => e.block.type !== "warmup");
+  const workExercises = detail.exercises.filter((e) => e.block?.type !== "warmup");
 
   return (
     <div style={{ paddingBottom: 12 }}>
@@ -177,19 +176,6 @@ function SessionDetailInline({ detail, loading, onMessages }: {
         ))
       )}
 
-      <button
-        onClick={onMessages}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          width: "100%", padding: "9px 12px", marginTop: 4,
-          borderRadius: 10, border: "1px solid var(--line-2)",
-          background: "transparent", color: "var(--text-mute)",
-          fontSize: 12, fontWeight: 600, cursor: "pointer",
-        }}
-      >
-        <Icon name="msg" size={14} />
-        Mensajes con el coach
-      </button>
     </div>
   );
 }
@@ -355,8 +341,8 @@ export default function HistorialPage() {
       ) : filtered.length === 0 ? (
         <StateBlock
           kind="empty"
-          title="Sin sesiones"
-          body="Completá tu primera sesión para verla acá."
+          title={completed.length === 0 ? "Sin sesiones" : "Nada en este período"}
+          body={completed.length === 0 ? "Completá tu primera sesión para verla acá." : "En Todo vas a ver las sesiones de otros meses."}
           cta={
             <Link href="/semana" style={{ textDecoration: "none" }}>
               <Button size="sm">Ir a la semana</Button>
@@ -504,7 +490,6 @@ export default function HistorialPage() {
                         <SessionDetailInline
                           detail={details[s.id] ?? null}
                           loading={isLoadingThis}
-                          onMessages={() => router.push(`/comentarios/${s.id}`)}
                         />
                       </div>
                     )}

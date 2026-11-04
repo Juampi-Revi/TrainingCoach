@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import type { SessionDetail } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef } from "../_components/_types";
+import { nextSupersetIndex } from "../_lib/session-view";
 import { useLoggerEffects } from "./use-logger-effects";
 import { useLoggerActions } from "./use-logger-actions";
 import { useSaveSheet } from "./use-save-sheet";
@@ -14,12 +15,14 @@ export function useSetLogger({
   session,
   enqueue,
   load,
+  setCurrentExIdx,
 }: {
   sessionId: string;
   currentExIdx: number;
   session: SessionDetail | null;
   enqueue: (item: { wseId: string; setNumber: number; body: Record<string, string> }) => Promise<void>;
   load: () => void;
+  setCurrentExIdx: (index: number) => void;
 }) {
   const { api } = useAuth();
 
@@ -78,9 +81,20 @@ export function useSetLogger({
     setLoggerOpen, setRestSeconds, setRestTotal, setRestFromLogger, setRestSuggestion, setLastSaved, setSheetSaving,
   });
 
+  const continueWorkout = useCallback(async (restSeconds: number) => {
+    const exercises = session?.exercises ?? [];
+    const nextIdx = nextSupersetIndex(exercises, currentExIdx);
+    const saved = await saveSheet(nextIdx == null ? { startRest: true, restSeconds } : undefined);
+    if (!saved || nextIdx == null) return;
+    const target = exercises[nextIdx];
+    if (!target) return;
+    setCurrentExIdx(nextIdx);
+    openLogger(target);
+  }, [session, currentExIdx, saveSheet, setCurrentExIdx, openLogger]);
+
   return {
     effortMode, setEffortMode, loggerOpen, setLoggerOpen, sheetRows, setSheetRows, sheetSaving,
     equipmentType, setEquipmentType, activeTimerRow, setActiveTimerRow, timerSecondsLeft, setTimerSecondsLeft, timerEndsAtMs, setTimerEndsAtMs,
-    restSeconds, setRestSeconds, restTotal, restSuggestion, lastRef, lastSaved, openLogger, saveSheet, deleteSet,
+    restSeconds, setRestSeconds, setRestTotal, restTotal, restSuggestion, lastRef, lastSaved, openLogger, saveSheet, deleteSet, continueWorkout,
   };
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, forbidden, err, withHandler } from "@/lib/api-response";
 import { mapWorkoutBlockStep, normalizeBlockSteps } from "@/lib/training/endurance";
+import { preserveAssignedSessions } from "@/lib/training/session-prescription";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string; blockId: string }> };
 
@@ -23,6 +24,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const { workoutTemplateId, blockId } = await params;
     const t = await ownsTemplate(auth.user.sub, workoutTemplateId);
     if (!t) return forbidden("Not your template");
+    await preserveAssignedSessions([workoutTemplateId]);
 
     const body = await req.json().catch(() => ({}));
     const {
@@ -151,6 +153,7 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
       include: { _count: { select: { exercises: true } } },
     });
     if (!block) return err("Block not found", 404);
+    await preserveAssignedSessions([workoutTemplateId]);
 
     // Delete block (exercises will be cascade deleted)
     await prisma.workoutBlock.delete({ where: { id: blockId } });

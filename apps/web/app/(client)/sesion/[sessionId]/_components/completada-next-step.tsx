@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Icon } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { celebrate } from "@/lib/celebration";
 import type { ClientWeekResponse, SessionDetail } from "@regen/types";
@@ -42,7 +42,7 @@ export function CompletadaHeroExtras({
   );
 }
 
-export function CompletadaNextStep({ sessionId }: { sessionId: string }) {
+export function CompletadaNextStep() {
   const { api } = useAuth();
   const router = useRouter();
   const [nextTitle, setNextTitle] = useState<string | null>(null);
@@ -72,10 +72,6 @@ export function CompletadaNextStep({ sessionId }: { sessionId: string }) {
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button size="md" style={{ flex: 1 }} onClick={() => router.push("/semana")}>
           Ver semana
-        </Button>
-        <Button size="md" variant="secondary" style={{ flex: 1 }} onClick={() => router.push(`/comentarios/${sessionId}`)}>
-          <Icon name="msg" size={14} />
-          Contar al coach
         </Button>
       </div>
     </div>

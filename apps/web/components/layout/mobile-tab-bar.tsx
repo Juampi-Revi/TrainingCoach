@@ -9,11 +9,9 @@ interface MobileTabBarProps {
 }
 
 const ITEMS: Array<{ id: TabId; icon: IconName; label: string; href: string }> = [
-  { id: "home",    icon: "home",    label: "Semana",   href: "/semana"   },
+  { id: "home",    icon: "home",    label: "Semana",    href: "/semana" },
   { id: "history", icon: "history", label: "Historial", href: "/historial" },
-  { id: "messages", icon: "msg",    label: "Mensajes", href: "/mensajes" },
-  { id: "chart",   icon: "chart",   label: "Progreso", href: "/progreso" },
-  { id: "me",      icon: "user",    label: "Yo",       href: "/cuenta"   },
+  { id: "me",      icon: "user",    label: "Cuenta",    href: "/cuenta" },
 ];
 
 export function MobileTabBar({ active }: MobileTabBarProps) {

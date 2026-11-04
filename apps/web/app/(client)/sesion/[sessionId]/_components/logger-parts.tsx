@@ -81,16 +81,27 @@ export function LoggerFooter({
   ex,
   sheetRows,
   effortMode,
+  advancesSuperset,
+  onContinue,
 }: {
   sheetSaving: boolean;
   onClose: () => void;
-  saveSheet: (opts?: { startRest?: boolean; rows?: SheetRow[] }) => Promise<void>;
+  saveSheet: (opts?: { startRest?: boolean; restSeconds?: number; rows?: SheetRow[] }) => Promise<boolean>;
   ex: SessionExercise;
   sheetRows: SheetRow[];
   effortMode: EffortMode;
+  advancesSuperset: boolean;
+  onContinue: (restSeconds: number) => void;
 }) {
   const lastEffort = [...sheetRows].reverse().find((r) => r.effort)?.effort;
   const restSec = recommendedRestSeconds(ex, lastEffort, effortMode);
+  const [restPick, setRestPick] = useState(String(restSec));
+
+  useEffect(() => {
+    setRestPick(String(recommendedRestSeconds(ex, undefined, effortMode)));
+    // Solo al cambiar de ejercicio: el alumno puede editar el número a mano.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ex.id]);
   const wasSaving = useRef(false);
   const [justSaved, setJustSaved] = useState(false);
 
@@ -112,9 +123,24 @@ export function LoggerFooter({
       >
         Cerrar
       </button>
+      <label style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 8px", borderRadius: 12, border: "1px solid var(--line-2)", color: "var(--text-mute)", fontSize: 12, fontWeight: 700 }}>
+        <input
+          type="number"
+          min={5}
+          inputMode="numeric"
+          aria-label="Segundos de descanso"
+          value={restPick}
+          onChange={(event) => setRestPick(event.target.value)}
+          style={{ width: 52, border: "none", background: "transparent", color: "var(--text)", fontSize: 14, fontWeight: 700, textAlign: "right" }}
+        />
+        s
+      </label>
       <button
         type="button"
-        onClick={() => saveSheet({ startRest: true })}
+        onClick={() => {
+          const seconds = Math.max(5, Math.round(Number(restPick) || restSec));
+          onContinue(seconds);
+        }}
         disabled={sheetSaving}
         style={{
           flex: 1, padding: "12px 0", borderRadius: 12,
@@ -125,7 +151,7 @@ export function LoggerFooter({
         }}
       >
         <Icon name="timer" size={13} color="var(--text-mute)" />
-        Descanso {restSec}s
+        {advancesSuperset ? "Siguiente" : "Descanso"}
       </button>
       <button
         type="button"

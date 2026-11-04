@@ -21,7 +21,7 @@ export async function GET(
           performedExerciseId: exerciseId,
           workoutSession: {
             clientUserId: auth.user.sub,
-            status: "completed",
+            status: { in: ["completed", "partial", "in_progress"] },
           },
         },
         weight: { not: null },

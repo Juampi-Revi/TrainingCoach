@@ -47,13 +47,6 @@ export default function CuentaPage() {
             </div>
             <Icon name="chevR" size={18} color="var(--text-dim)" />
           </div>
-          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/configuracion/notificaciones")}>
-            <div className="card-cuenta-left">
-              <Icon name="bell" size={20} color="var(--lime)" />
-              <span>Notificaciones</span>
-            </div>
-            <Icon name="chevR" size={18} color="var(--text-dim)" />
-          </div>
           <div className="card-cuenta-row">
             <div className="card-cuenta-left">
               <Icon name={theme === "dark" ? "sun" : "moon"} size={20} color="var(--lime)" />
@@ -62,34 +55,6 @@ export default function CuentaPage() {
             <button className={`toggle-tema ${theme}`} onClick={toggle} type="button">
               <span className="toggle-tema-knob" />
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Configuración de salud */}
-      <div className="cuenta-section">
-        <div className="section-label">Salud y actividad</div>
-        <div className="card-cuenta">
-          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/metas")}>
-            <div className="card-cuenta-left">
-              <Icon name="target" size={20} color="var(--lime)" />
-              <span>Metas</span>
-            </div>
-            <Icon name="chevR" size={18} color="var(--text-dim)" />
-          </div>
-          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/wearable")}>
-            <div className="card-cuenta-left">
-              <Icon name="watch" size={20} color="var(--lime)" />
-              <span>Dispositivos</span>
-            </div>
-            <Icon name="chevR" size={18} color="var(--text-dim)" />
-          </div>
-          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/mediciones")}>
-            <div className="card-cuenta-left">
-              <Icon name="activity" size={20} color="var(--lime)" />
-              <span>Mediciones</span>
-            </div>
-            <Icon name="chevR" size={18} color="var(--text-dim)" />
           </div>
         </div>
       </div>

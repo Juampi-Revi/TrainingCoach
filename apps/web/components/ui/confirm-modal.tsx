@@ -51,12 +51,26 @@ export function ConfirmModal({
         <p style={{ fontSize: 15, lineHeight: 1.55, color: "var(--text)", margin: "0 0 20px" }}>
           {message}
         </p>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Button variant="secondary" block onClick={onCancel}>{cancelLabel}</Button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <Button
+            variant="secondary"
+            block
+            onClick={onCancel}
+            style={{ whiteSpace: "normal", height: "auto", minHeight: 40, padding: "10px 14px", lineHeight: 1.25 }}
+          >
+            {cancelLabel}
+          </Button>
           <Button
             block
             onClick={onConfirm}
-            style={destructive ? { background: "var(--danger)", color: "#fff", border: "none" } : undefined}
+            style={{
+              whiteSpace: "normal",
+              height: "auto",
+              minHeight: 40,
+              padding: "10px 14px",
+              lineHeight: 1.25,
+              ...(destructive ? { background: "var(--danger)", color: "var(--text-on-danger)", border: "none" } : {}),
+            }}
           >
             {confirmLabel}
           </Button>

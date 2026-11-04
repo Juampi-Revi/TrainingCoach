@@ -128,9 +128,8 @@ export default function WorkoutsPage() {
           >
             {/* Header */}
             <div
+              className="coach-workout-grid"
               style={{
-                display: "grid",
-                gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px 32px",
                 padding: "10px 16px",
                 background: "var(--bg-2)",
                 borderBottom: "1px solid var(--line)",
@@ -143,9 +142,9 @@ export default function WorkoutsPage() {
               }}
             >
               <div>Nombre</div>
-              <div>Etiquetas</div>
-              <div style={{ textAlign: "center" }}>Ejercicios</div>
-              <div>Actualizado</div>
+              <div className="coach-workout-meta">Etiquetas</div>
+              <div className="coach-workout-meta" style={{ textAlign: "center" }}>Ejercicios</div>
+              <div className="coach-workout-meta">Actualizado</div>
               <div />
               <div />
               <div />
@@ -162,10 +161,8 @@ export default function WorkoutsPage() {
                 <div
                   key={t.id}
                   onClick={() => router.push(`/coach/workouts/${t.id}`)}
-                  className="ta-row"
+                  className="ta-row coach-workout-grid"
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "2.5fr 1.5fr 80px 120px 32px 32px 32px",
                     padding: "12px 16px",
                     borderBottom:
                       i < templates.length - 1 ? "1px solid var(--line)" : "none",
@@ -175,7 +172,7 @@ export default function WorkoutsPage() {
                   }}
                 >
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{t.title}</div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  <div className="coach-workout-meta" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {t.tags.slice(0, 2).map((tag) => (
                       <Badge key={tag} tone={tone} size="sm">
                         {tag}
@@ -183,13 +180,13 @@ export default function WorkoutsPage() {
                     ))}
                   </div>
                   <div
-                    className="ta-mono"
+                    className="ta-mono coach-workout-meta"
                     style={{ textAlign: "center", fontSize: 13 }}
                   >
                     {t.exerciseCount}
                   </div>
                   <div
-                    className="ta-mono"
+                    className="ta-mono coach-workout-meta"
                     style={{ fontSize: 11, color: "var(--text-mute)" }}
                   >
                     {new Date(t.updatedAt).toLocaleDateString("es", {

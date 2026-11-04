@@ -238,7 +238,7 @@ export interface SessionExercise {
   id: string;
   sortOrder: number;
   supersetGroup: string | null;
-  block: WorkoutBlockSummary;
+  block: WorkoutBlockSummary | null;
   exercise: { id: string; name: string; primaryMuscle: string | null; equipment: string | null; thumbnailUrl: string | null; youtubeUrl?: string | null; source?: string | null; sourceId?: string | null };
   media: { id: string; url: string; mediaType: string }[];
   alternatives: { exerciseId: string; name: string; primaryMuscle: string | null; equipment: string | null }[];

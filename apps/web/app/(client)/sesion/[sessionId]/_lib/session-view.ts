@@ -2,6 +2,18 @@ import { groupLabel } from "@/lib/constants";
 import { isSessionExerciseExtra } from "@/lib/workout-labels";
 import type { SessionDetail, SessionExercise } from "@regen/types";
 
+export function nextSupersetIndex(
+  exercises: Array<{ supersetGroup: string | null; block?: { id: string } | null }>,
+  index: number,
+): number | null {
+  const current = exercises[index];
+  if (!current?.supersetGroup) return null;
+  const next = exercises[index + 1];
+  if (!next || next.supersetGroup !== current.supersetGroup) return null;
+  if (current.block?.id && next.block?.id && current.block.id !== next.block.id) return null;
+  return index + 1;
+}
+
 export function sessionWorkSplit(session: SessionDetail) {
   const warmupExercises = session.exercises.filter((e) => e.block?.type === "warmup");
   const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
@@ -25,7 +37,7 @@ export function exerciseSubtitle(ex: SessionExercise | undefined, workExercises:
     return acc;
   }, {});
   const parts: string[] = [];
-  const isInterval = ex.block.type === "intervals";
+  const isInterval = ex.block?.type === "intervals";
   if (ex.supersetGroup) parts.push(`${ex.supersetGroup} · ${groupLabel(groupSizes[ex.supersetGroup] ?? 1).toUpperCase()}`);
   if (ex.target?.sets && !isInterval) parts.push(`${ex.target.sets} series`);
   if (ex.target?.intensityType && ex.target?.intensityTarget) {

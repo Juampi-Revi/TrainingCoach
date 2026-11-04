@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, forbidden, withHandler } from "@/lib/api-response";
+import { preserveAssignedSessions } from "@/lib/training/session-prescription";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string; weId: string }> };
 
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
     const { workoutTemplateId, weId } = await params;
     if (!(await verifyOwner(workoutTemplateId, weId, auth.user.sub))) return forbidden();
+    await preserveAssignedSessions([workoutTemplateId]);
 
     const body = await req.json().catch(() => ({}));
     const { exerciseId, note } = body;

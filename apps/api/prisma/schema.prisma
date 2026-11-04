@@ -513,6 +513,8 @@ model WorkoutSessionExercise {
   performedExerciseId String
   sortOrder           Int      @default(0)
   swapReason          String?
+  // Copia de bloque, superserie, series y descanso al empezar. No sigue los cambios del template.
+  prescription        Json?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

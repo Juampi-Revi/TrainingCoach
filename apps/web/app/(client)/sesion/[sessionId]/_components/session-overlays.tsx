@@ -13,6 +13,7 @@ import { ResetModal } from "./reset-modal";
 import { BlockRunnerOverlay } from "./block-runner-overlay";
 import { PreSelectSheet } from "./pre-select-sheet";
 import type { EffortMode, SheetRow, LastRef } from "./_types";
+import { nextSupersetIndex } from "../_lib/session-view";
 
 type BlockBucket = { block: WorkoutBlockSummary; exercises: SessionExercise[] };
 
@@ -41,6 +42,7 @@ export function SessionOverlays({
   lastRef,
   sheetSaving,
   saveSheet,
+  onContinue,
   deleteSet,
   warmupExists,
   warmupDone,
@@ -67,6 +69,7 @@ export function SessionOverlays({
   restTotal,
   restSuggestion,
   setRestSeconds,
+  setRestTotal,
   nextEx,
   showPicker,
   setShowPicker,
@@ -111,7 +114,9 @@ export function SessionOverlays({
   setTimerEndsAtMs: React.Dispatch<React.SetStateAction<number | null>>;
   lastRef: LastRef | null;
   sheetSaving: boolean;
-  saveSheet: (opts?: { startRest?: boolean; rows?: SheetRow[] }) => Promise<void>;
+  saveSheet: (opts?: { startRest?: boolean; restSeconds?: number; rows?: SheetRow[] }) => Promise<boolean>;
+  onContinue: (restSeconds: number) => void;
+  setRestTotal: (seconds: number) => void;
   deleteSet: (setNumber: number) => Promise<void>;
   warmupExists: boolean;
   warmupDone: boolean;
@@ -169,6 +174,8 @@ export function SessionOverlays({
           timerEndsAtMs={timerEndsAtMs} setTimerEndsAtMs={setTimerEndsAtMs}
           lastRef={lastRef} sheetSaving={sheetSaving}
           saveSheet={saveSheet} deleteSet={deleteSet}
+          advancesSuperset={nextSupersetIndex(session.exercises, session.exercises.findIndex((item) => item.id === ex.id)) != null}
+          onContinue={onContinue}
           onClose={() => setLoggerOpen(false)}
         />
       )}
@@ -216,6 +223,7 @@ export function SessionOverlays({
           suggestion={restSuggestion}
           onSkip={() => setRestSeconds(null)}
           onAdjust={(delta) => setRestSeconds((s) => (s != null ? Math.max(1, s + delta) : null))}
+          onSet={(seconds) => { setRestTotal(seconds); setRestSeconds(seconds); }}
         />
       )}
 

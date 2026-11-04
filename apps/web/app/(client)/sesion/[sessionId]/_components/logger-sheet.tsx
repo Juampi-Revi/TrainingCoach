@@ -34,6 +34,8 @@ export function LoggerSheet({
   sheetSaving,
   saveSheet,
   deleteSet,
+  advancesSuperset,
+  onContinue,
   onClose,
 }: {
   ex: SessionExercise;
@@ -52,8 +54,10 @@ export function LoggerSheet({
   setTimerEndsAtMs: React.Dispatch<React.SetStateAction<number | null>>;
   lastRef: LastRef | null;
   sheetSaving: boolean;
-  saveSheet: (opts?: { startRest?: boolean; rows?: SheetRow[] }) => Promise<void>;
+  saveSheet: (opts?: { startRest?: boolean; restSeconds?: number; rows?: SheetRow[] }) => Promise<boolean>;
   deleteSet: (setNumber: number) => Promise<void>;
+  advancesSuperset: boolean;
+  onContinue: (restSeconds: number) => void;
   onClose: () => void;
 }) {
   const isCardioPure = !!ex.target?.durationSeconds && !ex.target?.reps && !ex.target?.sets;
@@ -123,6 +127,8 @@ export function LoggerSheet({
             ex={ex}
             sheetRows={sheetRows}
             effortMode={effortMode}
+            advancesSuperset={advancesSuperset}
+            onContinue={onContinue}
           />
         ) : undefined
       }

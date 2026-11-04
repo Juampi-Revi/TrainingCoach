@@ -1,9 +1,59 @@
 import { prisma } from "@/lib/prisma";
 import type { ClientWeekResponse, SessionStatus, WeekWorkout } from "@regen/types";
+import { progressExercise } from "./session-prescription";
 import { resolveSessionStatus, summarizeSessionProgress } from "./session-status";
 
 function startOfDayUTC(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function openWorkout(session: {
+  id: string;
+  status: string;
+  performedAt: Date;
+  workoutTemplateId: string | null;
+  workoutTemplate: { id: string; title: string; description: string | null; tags: string[] } | null;
+  exercises: Parameters<typeof progressExercise>[0][];
+}): WeekWorkout {
+  const summary = summarizeSessionProgress(session.exercises.map((ex) => progressExercise(ex)));
+  return {
+    pwwId: `open-${session.id}`,
+    workoutTemplateId: session.workoutTemplate?.id ?? session.workoutTemplateId ?? session.id,
+    title: session.workoutTemplate?.title ?? "Entrenamiento en curso",
+    description: session.workoutTemplate?.description ?? null,
+    tags: session.workoutTemplate?.tags ?? [],
+    exerciseCount: session.exercises.length,
+    progressionNote: null,
+    session: {
+      id: session.id,
+      status: resolveSessionStatus(session.status, summary) as SessionStatus,
+      performedAt: session.performedAt.toISOString(),
+      setsCount: summary.setsCount,
+      targetSetsCount: summary.targetSetsCount,
+    },
+  };
+}
+
+async function openWorkouts(clientUserId: string): Promise<WeekWorkout[]> {
+  const sessions = await prisma.workoutSession.findMany({
+    where: { clientUserId, status: "in_progress" },
+    orderBy: { performedAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      performedAt: true,
+      workoutTemplateId: true,
+      workoutTemplate: { select: { id: true, title: true, description: true, tags: true } },
+      exercises: {
+        select: {
+          prescription: true,
+          _count: { select: { sets: true } },
+          workoutExercise: { select: { targetSets: true, workoutBlock: { select: { type: true } } } },
+        },
+      },
+    },
+  });
+  return sessions.map(openWorkout);
 }
 
 function periodFromStart(startDate: Date, now: Date, periodDays: number) {
@@ -23,7 +73,8 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
   });
 
   if (!assignment) {
-    return { plan: null, weekNumber: 0, totalWeeks: 0, assignmentStatus: "active", workouts: [], mediaUrls: [] };
+    const open = await openWorkouts(args.clientUserId);
+    return { plan: null, weekNumber: 0, totalWeeks: 0, assignmentStatus: "active", workouts: open, mediaUrls: [] };
   }
 
   const plan = assignment.plan;
@@ -73,8 +124,11 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
   const sessions = await prisma.workoutSession.findMany({
     where: {
       clientUserId: args.clientUserId,
-      performedAt: { gte: periodStart, lt: periodEnd },
       status: { not: "discarded" },
+      OR: [
+        { performedAt: { gte: periodStart, lt: periodEnd } },
+        { status: "in_progress" },
+      ],
     },
     select: {
       id: true,
@@ -82,8 +136,10 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
       planWeekWorkoutId: true,
       status: true,
       performedAt: true,
+      workoutTemplate: { select: { id: true, title: true, description: true, tags: true } },
       exercises: {
         select: {
+          prescription: true,
           _count: { select: { sets: true } },
           workoutExercise: { select: { targetSets: true, workoutBlock: { select: { type: true } } } },
         },
@@ -131,7 +187,7 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
     const templateSessions = sessionsByTemplate.get(tpl.id) ?? [];
     const fallback = templateSessions.shift() ?? null;
     const session = direct ?? fallback;
-    const summary = session ? summarizeSessionProgress(session.exercises) : null;
+    const summary = session ? summarizeSessionProgress(session.exercises.map((ex) => progressExercise(ex))) : null;
     const resolvedStatus = session && summary ? resolveSessionStatus(session.status, summary) : null;
 
     return {
@@ -153,6 +209,12 @@ export async function getClientWeek(args: { clientUserId: string; now?: Date }):
         : null,
     };
   });
+
+  const shownSessionIds = new Set(workouts.map((workout) => workout.session?.id).filter((id): id is string => !!id));
+  for (const session of sessions) {
+    if (session.status !== "in_progress" || shownSessionIds.has(session.id)) continue;
+    workouts.push(openWorkout(session));
+  }
 
   const mediaUrls = [...new Set(
     (planWeek?.workouts ?? []).flatMap((pw) =>

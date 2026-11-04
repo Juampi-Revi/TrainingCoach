@@ -107,15 +107,18 @@ export function SessionBottomBar({
                 background: "none",
                 border: "none",
                 cursor: completing ? "default" : "pointer",
-                padding: "6px 0",
+                padding: "8px 12px 4px",
                 color: "var(--text-mute)",
                 fontSize: 13,
                 fontWeight: 600,
+                lineHeight: 1.3,
+                textAlign: "center",
                 textDecoration: "underline",
                 textUnderlineOffset: 3,
+                whiteSpace: "normal",
               }}
             >
-              {completing ? "Completando…" : "Terminar incompleto…"}
+              {completing ? "Completando…" : "Terminar incompleto"}
             </button>
           </>
         )}

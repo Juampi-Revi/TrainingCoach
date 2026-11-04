@@ -157,13 +157,7 @@ export default function CoachSessionDetailPage() {
         </Button>
       }
     >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 380px",
-          height: "calc(100vh - 74px)",
-        }}
-      >
+      <div className="coach-session-split">
         {/* Left: exercises */}
         <div
           style={{
@@ -409,6 +403,8 @@ export default function CoachSessionDetailPage() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
               <div style={{ fontSize: 13, fontWeight: 600 }}>Comentarios</div>

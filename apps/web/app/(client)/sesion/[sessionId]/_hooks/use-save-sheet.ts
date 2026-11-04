@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import type { SessionDetail } from "@regen/types";
 import type { EffortMode, SheetRow } from "../_components/_types";
 import { recommendedRestSeconds, restSuggestionText } from "../_lib/recommended-rest";
@@ -43,14 +44,16 @@ export function useSaveSheet({
   setSheetSaving: (v: boolean) => void;
 }) {
   const { api } = useAuth();
+  const toast = useToast();
 
-  return useCallback(async (opts?: { startRest?: boolean; rows?: SheetRow[] }) => {
+  return useCallback(async (opts?: { startRest?: boolean; restSeconds?: number; rows?: SheetRow[] }) => {
     const ex = session?.exercises[currentExIdx];
-    if (!ex) return;
+    if (!ex) return false;
     setSheetSaving(true);
     const rowsToSave = opts?.rows ?? sheetRows;
     const timed = isTimedExercise(ex);
     const forceSave = opts?.rows != null;
+    let failed = 0;
     try {
       for (const row of rowsToSave) {
         if (!forceSave && !shouldPersistRow(row, timed)) continue;
@@ -63,25 +66,35 @@ export function useSaveSheet({
           try {
             await enqueue({ wseId: ex.id, setNumber: row.setNumber, body });
             setLastSaved("guardado offline");
-          } catch { /* ignore */ }
+          } catch {
+            failed += 1;
+          }
         }
+      }
+      if (failed > 0) {
+        toast.error("No se pudo guardar la serie");
+        return false;
       }
       setLastSaved(new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }));
       const lastFilled = lastFilledRow(rowsToSave, ex);
       if (lastFilled) setSheetRows((prev) => autofillNextRow(prev, lastFilled, effortMode, timed));
       load();
       if (opts?.startRest) {
-        const rest = recommendedRestSeconds(ex, lastFilled?.effort, effortMode);
+        const rest = opts.restSeconds && opts.restSeconds > 0
+          ? Math.round(opts.restSeconds)
+          : recommendedRestSeconds(ex, lastFilled?.effort, effortMode);
         setRestTotal(rest);
         setRestSeconds(rest);
         setRestSuggestion(restSuggestionText(ex, lastFilled?.effort, effortMode, rest));
         setRestFromLogger(true);
         setLoggerOpen(false);
       }
+      return true;
     } catch {
-      /* ignore */
+      toast.error("No se pudo guardar la serie");
+      return false;
     } finally {
       setSheetSaving(false);
     }
-  }, [session, currentExIdx, sheetRows, effortMode, equipmentType, enqueue, sessionId, api, load, setLastSaved, setSheetSaving, setRestTotal, setRestSeconds, setRestFromLogger, setRestSuggestion, setLoggerOpen, setSheetRows]);
+  }, [session, currentExIdx, sheetRows, effortMode, equipmentType, enqueue, sessionId, api, load, setLastSaved, setSheetSaving, setRestTotal, setRestSeconds, setRestFromLogger, setRestSuggestion, setLoggerOpen, setSheetRows, toast]);
 }

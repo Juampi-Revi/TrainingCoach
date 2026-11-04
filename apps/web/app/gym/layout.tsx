@@ -11,13 +11,10 @@ export default function GymLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
-    if (user?.role === "coach") { router.replace("/coach"); return; }
+    if (user?.role === "coach" || user?.role === "gym") { router.replace("/coach/alumnos"); return; }
     if (user?.role === "client") { router.replace("/semana"); return; }
   }, [ready, token, user, router]);
 
-  if (!ready) return null;
-  if (!token) return null;
-  if (user && user.role !== "gym") return null;
-
+  if (!ready || !token || user) return null;
   return <>{children}</>;
 }

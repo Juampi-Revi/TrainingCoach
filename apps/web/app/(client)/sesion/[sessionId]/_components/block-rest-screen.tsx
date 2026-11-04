@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Icon } from "@/components/ui";
 import type { WorkoutBlockSummary } from "@regen/types";
 import { blockTypeLabel, BLOCK_COLORS } from "@/lib/constants";
@@ -25,18 +25,7 @@ export function BlockRestScreen({
   onSkip,
   onStartNext,
 }: BlockRestScreenProps) {
-  const { playCountdown, playRestComplete } = useSounds();
-  const hasAutoStarted = useRef(false);
-
-  // Auto-start next block when rest is over
-  useEffect(() => {
-    if (restSecondsRemaining <= 0 && !hasAutoStarted.current) {
-      hasAutoStarted.current = true;
-      playRestComplete();
-      const t = setTimeout(onStartNext, 500);
-      return () => clearTimeout(t);
-    }
-  }, [restSecondsRemaining, onStartNext, playRestComplete]);
+  const { playCountdown } = useSounds();
 
   // Play countdown beeps for last 3 seconds
   useEffect(() => {

@@ -65,6 +65,8 @@
 
 html, body {
   height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
@@ -211,6 +213,26 @@ input:focus-visible:not(.ta-input-inner) {
 .coach-two-col   { display: grid; grid-template-columns: 1.6fr 1fr;     gap: 18px; }
 .coach-pad       { padding: 28px; }
 
+.coach-workout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(0, 1.5fr) 80px 120px 32px 32px 32px;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .coach-workout-grid {
+    grid-template-columns: minmax(0, 1fr) 32px 32px 32px;
+  }
+  .coach-workout-meta { display: none !important; }
+}
+
+.coach-session-split {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  height: calc(100vh - 74px);
+}
+
 @media (max-width: 767px) {
   .coach-layout   { min-height: 100dvh; }
   .coach-sidebar  { display: none !important; }
@@ -219,6 +241,7 @@ input:focus-visible:not(.ta-input-inner) {
   .coach-kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .coach-two-col  { grid-template-columns: 1fr; }
   .coach-pad      { padding: 16px; }
+  .coach-session-split { grid-template-columns: 1fr; height: auto; }
   /* hide non-essential action items in mobile headers */
   .coach-header-action-secondary { display: none !important; }
   /* show inline search on mobile */

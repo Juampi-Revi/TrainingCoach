@@ -239,8 +239,6 @@ export default function CoachDashboardPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {[
                     { icon: "users" as const, t: "Lista de alumnos", href: "/coach/alumnos" },
-                    { icon: "calendar" as const, t: "Agenda", href: "/coach/calendario" },
-                    { icon: "msg" as const, t: "Mensajes", href: "/coach/mensajes" },
                     { icon: "calendar" as const, t: "Planes", href: "/coach/planes" },
                     { icon: "book" as const, t: "Entrenamientos", href: "/coach/workouts" },
                     { icon: "dumbbell" as const, t: "Ejercicios", href: "/coach/ejercicios" },

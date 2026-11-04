@@ -11,8 +11,7 @@ export default function Page() {
   useEffect(() => {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
-    if (user?.role === "coach") { router.replace("/coach"); return; }
-    if (user?.role === "gym") { router.replace("/gym"); return; }
+    if (user?.role === "coach" || user?.role === "gym") { router.replace("/coach/alumnos"); return; }
     router.replace("/semana");
   }, [ready, token, user, router]);
 

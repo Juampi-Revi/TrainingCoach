@@ -34,7 +34,7 @@ export function WorkoutBlockHeader({
   const canMoveDown = bIdx < blocksSorted.length - 1;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "var(--bg-2)" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 10, padding: "12px 14px", background: "var(--bg-2)" }}>
       <div style={{
         width: 32, height: 32, borderRadius: 8,
         background: b.type === "warmup" ? "rgba(234,179,8,.12)" : b.type === "cooldown" ? "rgba(255,255,255,.08)" : b.type === "cardio" ? "rgba(255,255,255,.08)" : "rgba(215,255,58,.12)",
@@ -47,7 +47,7 @@ export function WorkoutBlockHeader({
           color={b.type === "warmup" ? "var(--warn)" : b.type === "cooldown" ? "var(--text-mute)" : b.type === "cardio" ? "var(--text-mute)" : "var(--lime)"}
         />
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: "1 1 180px", minWidth: 0 }}>
         <div className="ta-mono" style={{
           fontSize: 10, fontWeight: 800,
           color: b.type === "warmup" ? "var(--warn)" : b.type === "cooldown" ? "var(--text-mute)" : b.type === "cardio" ? "var(--text-mute)" : "var(--lime)",
@@ -71,7 +71,7 @@ export function WorkoutBlockHeader({
           </div>
         )}
       </div>
-      <div style={{ display: "flex", gap: 6 }}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         <Button variant="ghost" size="sm" icon="chevUp" title="Mover bloque arriba" ariaLabel="Mover bloque arriba" disabled={!canMoveUp} onClick={() => { if (!canMoveUp) return; const next = [...blocksSorted]; const swapIdx = bIdx - 1; [next[bIdx], next[swapIdx]] = [next[swapIdx]!, next[bIdx]!]; void onReorder(next); }} />
         <Button variant="ghost" size="sm" icon="chevD" title="Mover bloque abajo" ariaLabel="Mover bloque abajo" disabled={!canMoveDown} onClick={() => { if (!canMoveDown) return; const next = [...blocksSorted]; const swapIdx = bIdx + 1; [next[bIdx], next[swapIdx]] = [next[swapIdx]!, next[bIdx]!]; void onReorder(next); }} />
         <Button variant="outline" size="sm" onClick={onEdit}>

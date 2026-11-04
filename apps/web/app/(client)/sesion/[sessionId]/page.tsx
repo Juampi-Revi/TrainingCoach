@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
 import { Icon, StateBlock } from "@/components/ui";
 import { fmtDuration } from "@/lib/constants";
 import { SessionHeader } from "./_components/session-header";
@@ -53,14 +54,15 @@ export default function SessionInProgressPage() {
     activeTimerRow, setActiveTimerRow,
     timerSecondsLeft, setTimerSecondsLeft,
     timerEndsAtMs, setTimerEndsAtMs,
-    restSeconds, setRestSeconds,
+    restSeconds, setRestSeconds, setRestTotal,
     restTotal,
     restSuggestion,
     lastRef,
     lastSaved,
     openLogger,
     saveSheet, deleteSet,
-  } = useSetLogger({ sessionId, currentExIdx, session, enqueue, load });
+    continueWorkout,
+  } = useSetLogger({ sessionId, currentExIdx, session, enqueue, load, setCurrentExIdx });
 
   // Block execution management
   const {
@@ -172,6 +174,7 @@ export default function SessionInProgressPage() {
     } catch (e) {
       console.error(e);
       setResetting(false);
+      if (e instanceof ApiError && e.status === 409) router.replace("/semana");
     }
   }
 
@@ -276,7 +279,7 @@ export default function SessionInProgressPage() {
         }}
         onStartEx={(i) => {
           const target = session?.exercises[i];
-          if (target && target.block.type !== "warmup") {
+          if (target?.block && target.block.type !== "warmup") {
             openLogger(target);
           }
         }}
@@ -352,6 +355,8 @@ export default function SessionInProgressPage() {
         restTotal={restTotal}
         restSuggestion={restSuggestion}
         setRestSeconds={setRestSeconds}
+        setRestTotal={setRestTotal}
+        onContinue={continueWorkout}
         nextEx={nextEx}
         showPicker={showPicker}
         setShowPicker={setShowPicker}

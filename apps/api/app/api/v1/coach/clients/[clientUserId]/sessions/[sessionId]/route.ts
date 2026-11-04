@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, withHandler } from "@/lib/api-response";
+import { readPrescription } from "@/lib/training/session-prescription";
 
 type Ctx = { params: Promise<{ clientUserId: string; sessionId: string }> };
 
@@ -102,16 +103,29 @@ export async function GET(req: NextRequest, { params }: Ctx) {
           primaryMuscle: ex.performedExercise.primaryMuscle,
           thumbnailUrl: ex.performedExercise.media[0]?.url ?? null,
         },
-        target: ex.workoutExercise
-          ? {
-              sets: ex.workoutExercise.targetSets,
-              reps: ex.workoutExercise.targetReps,
-              intensityType: ex.workoutExercise.intensityType,
-              intensityTarget: ex.workoutExercise.intensityTarget ? String(ex.workoutExercise.intensityTarget) : null,
-              restSeconds: ex.workoutExercise.restSeconds,
-              notes: ex.workoutExercise.notes,
-            }
-          : null,
+        target: (() => {
+          const snap = readPrescription(ex.prescription)?.target;
+          if (snap) {
+            return {
+              sets: snap.sets,
+              reps: snap.reps,
+              intensityType: snap.intensityType,
+              intensityTarget: snap.intensityTarget,
+              restSeconds: snap.restSeconds,
+              notes: snap.notes,
+            };
+          }
+          return ex.workoutExercise
+            ? {
+                sets: ex.workoutExercise.targetSets,
+                reps: ex.workoutExercise.targetReps,
+                intensityType: ex.workoutExercise.intensityType,
+                intensityTarget: ex.workoutExercise.intensityTarget ? String(ex.workoutExercise.intensityTarget) : null,
+                restSeconds: ex.workoutExercise.restSeconds,
+                notes: ex.workoutExercise.notes,
+              }
+            : null;
+        })(),
         sets: ex.sets.map((s) => ({
           id: s.id,
           setNumber: s.setNumber,

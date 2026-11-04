@@ -4,26 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import { Button, ConfirmModal, StateBlock, Tabs } from "@/components/ui";
+import { Button, ConfirmModal, StateBlock } from "@/components/ui";
 import { DesktopShell } from "@/components/layout/desktop-shell";
 import { useClientDetail } from "./_hooks/use-client-detail";
 import { useTabData } from "./_hooks/use-tab-data";
 import { useOverviewData } from "./_hooks/use-overview-data";
-import { useProgressData } from "./_hooks/use-progress-data";
 import { AssignPlanModal } from "./_components/assign-plan-modal";
 import { ClientHeader } from "./_components/client-header";
 import { DiagnosisHero } from "./_components/diagnosis-hero";
-import { OverviewTab } from "./_components/overview-tab";
 import { SessionsList } from "./_components/sessions-list";
 import { useSessionsData } from "./_hooks/use-sessions-data";
-import { HealthTab } from "./_components/health-tab";
-import { FoodTab } from "./_components/food-tab";
-import { GoalsTab } from "./_components/goals-tab";
-import { MetricsTab } from "./_components/metrics-tab";
-import { ProgressTab } from "./_components/progress-tab";
 import { RightSidebar } from "./_components/right-sidebar";
-
-const TABS = ["Entrenos", "Resumen", "Actividad", "Progreso", "Privado"] as const;
 
 export default function AthleteDetailPage() {
   const { api, user } = useAuth();
@@ -45,9 +36,7 @@ export default function AthleteDetailPage() {
 
   const tabData = useTabData(clientUserId);
   const overview = useOverviewData(clientUserId);
-  const progressData = useProgressData(clientUserId);
 
-  const [tab, setTab] = useState("Entrenos");
   const [showAssign, setShowAssign] = useState(false);
   const [removingPlan, setRemovingPlan] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
@@ -57,24 +46,6 @@ export default function AthleteDetailPage() {
     overview.load(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function handleTabChange(next: string) {
-    setTab(next);
-    if (next === "Resumen") {
-      overview.load(false);
-    }
-    if (next === "Actividad") {
-      tabData.loadHealthData(false);
-      tabData.loadFoodData(false);
-    }
-    if (next === "Privado") {
-      tabData.loadGoalsData(false);
-      tabData.loadHealthData(false);
-    }
-    if (next === "Progreso") {
-      progressData.load(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -111,9 +82,6 @@ export default function AthleteDetailPage() {
           <>
             <Button variant="outline" size="sm" icon="chevL" onClick={() => router.push("/coach/alumnos")}>
               Volver
-            </Button>
-            <Button variant="outline" size="sm" icon="msg" onClick={() => router.push(`/coach/mensajes/${clientUserId}`)}>
-              Mensaje
             </Button>
             <Button variant="outline" size="sm" icon="calendar" onClick={() => setShowAssign(true)}>
               {client.assignment?.plan ? "Cambiar plan" : "Asignar plan"}
@@ -178,80 +146,28 @@ export default function AthleteDetailPage() {
             client={client}
             clientUserId={clientUserId}
             week={overview.week}
-            onMessage={() => router.push(`/coach/mensajes/${clientUserId}`)}
             onAssignPlan={() => setShowAssign(true)}
           />
 
-          <div style={{ display: "flex", gap: 20, padding: "14px 0 0" }}>
-            <Tabs tabs={[...TABS]} active={tab} onChange={handleTabChange} />
-          </div>
-
           <div className="coach-two-col" style={{ padding: "18px 0 28px" }}>
-            {tab === "Resumen" && (
-              <OverviewTab
-                client={client}
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Entrenos</div>
+              <SessionsList
+                sessions={sessions}
                 clientUserId={clientUserId}
-                today={overview.today}
-                week={overview.week}
-                month={overview.month}
-                loading={overview.loading}
-                onViewTraining={() => handleTabChange("Entrenos")}
+                loading={sessionsLoading}
+                loadingMore={sessionsLoadingMore}
+                hasMore={sessionsHasMore}
+                onLoadMore={loadMoreSessions}
+                statusFilter={sessionsStatusFilter}
+                onStatusFilterChange={setSessionsStatusFilter}
+                showStatus
               />
-            )}
-            {tab === "Entrenos" && (
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Entrenos</div>
-                <SessionsList
-                  sessions={sessions}
-                  clientUserId={clientUserId}
-                  loading={sessionsLoading}
-                  loadingMore={sessionsLoadingMore}
-                  hasMore={sessionsHasMore}
-                  onLoadMore={loadMoreSessions}
-                  statusFilter={sessionsStatusFilter}
-                  onStatusFilterChange={setSessionsStatusFilter}
-                  showStatus
-                />
-              </div>
-            )}
-            {tab === "Actividad" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                <HealthTab health={tabData.health} healthLoading={tabData.healthLoading} onSelectDay={tabData.setNoteDay} />
-                <FoodTab
-                  clientUserId={clientUserId}
-                  food={tabData.food}
-                  foodLoading={tabData.foodLoading}
-                  foodCommentDrafts={tabData.foodCommentDrafts}
-                  onDraftChange={(id, val) => tabData.setFoodCommentDrafts((prev) => ({ ...prev, [id]: val }))}
-                  onPostComment={tabData.postFoodComment}
-                  onReload={() => tabData.loadFoodData(true)}
-                />
-              </div>
-            )}
-            {tab === "Progreso" && (
-              <ProgressTab progress={progressData.progress} loading={progressData.loading} />
-            )}
-            {tab === "Privado" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                <GoalsTab
-                  goals={tabData.goals}
-                  shared={tabData.goalsShared}
-                  goalsLoading={tabData.goalsLoading}
-                  goalKind={tabData.goalKind}
-                  setGoalKind={tabData.setGoalKind}
-                  goalTarget={tabData.goalTarget}
-                  setGoalTarget={tabData.setGoalTarget}
-                  onAdd={tabData.addGoal}
-                  onDelete={tabData.deleteGoal}
-                  onReload={() => tabData.loadGoalsData(true)}
-                />
-                <MetricsTab health={tabData.health} healthLoading={tabData.healthLoading} />
-              </div>
-            )}
+            </div>
 
             <RightSidebar
               client={client}
-              tab={tab}
+              tab="Entrenos"
               noteDay={tabData.noteDay}
               setNoteDay={tabData.setNoteDay}
               noteText={tabData.noteText}

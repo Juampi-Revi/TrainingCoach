@@ -74,7 +74,7 @@ export function SessionsList({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {onStatusFilterChange && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}

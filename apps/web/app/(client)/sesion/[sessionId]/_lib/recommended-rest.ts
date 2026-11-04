@@ -9,8 +9,8 @@ export function recommendedRestSeconds(
   const coachRest = ex.target?.restSeconds;
   if (coachRest != null && coachRest > 0) return coachRest;
 
-  if (ex.block.type === "warmup") return 30;
-  if (ex.block.type === "cardio" || ex.block.type === "cooldown") return 45;
+  if (ex.block?.type === "warmup") return 30;
+  if (ex.block?.type === "cardio" || ex.block?.type === "cooldown") return 45;
 
   const raw = lastEffort != null ? Number(lastEffort) : NaN;
   if (Number.isFinite(raw)) {

@@ -12,6 +12,7 @@ export function RestTimerOverlay({
   suggestion,
   onSkip,
   onAdjust,
+  onSet,
 }: {
   seconds: number;
   total: number;
@@ -19,6 +20,7 @@ export function RestTimerOverlay({
   suggestion?: string | null;
   onSkip: () => void;
   onAdjust: (delta: number) => void;
+  onSet: (seconds: number) => void;
 }) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -30,6 +32,7 @@ export function RestTimerOverlay({
   const ringColor = ready ? phaseColor("work") : phaseColor("rest");
   const lastHaptic = useRef<number | null>(null);
   const [confirmEarly, setConfirmEarly] = useState(false);
+  const [draft, setDraft] = useState("");
 
   useEffect(() => {
     if (seconds > 0 && seconds <= 3 && lastHaptic.current !== seconds) {
@@ -122,6 +125,28 @@ export function RestTimerOverlay({
           </Button>
           <Button size="md" variant="secondary" onClick={() => onAdjust(15)}>+15s</Button>
         </div>
+        <form
+          style={{ display: "flex", gap: 8, alignItems: "center" }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const seconds = Math.round(Number(draft));
+            if (!Number.isFinite(seconds) || seconds < 5) return;
+            onSet(seconds);
+            setDraft("");
+          }}
+        >
+          <input
+            type="number"
+            min={5}
+            inputMode="numeric"
+            aria-label="Nuevo descanso en segundos"
+            placeholder="segundos"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            style={{ width: 96, padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line-2)", background: "var(--bg-1)", color: "var(--text)", fontSize: 14 }}
+          />
+          <Button size="md" variant="secondary" type="submit">Poner</Button>
+        </form>
 
         {suggestion && (
           <div

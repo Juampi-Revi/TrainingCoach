@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, forbidden, err, withHandler } from "@/lib/api-response";
 import { mapWorkoutBlockStep, normalizeBlockSteps } from "@/lib/training/endurance";
+import { preserveAssignedSessions } from "@/lib/training/session-prescription";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string }> };
 
@@ -164,6 +165,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     const { workoutTemplateId } = await params;
     const t = await ownsTemplate(auth.user.sub, workoutTemplateId);
     if (!t) return forbidden("Not your template");
+    await preserveAssignedSessions([workoutTemplateId]);
 
     const body = await req.json().catch(() => ({}));
     const { blockIds } = body;

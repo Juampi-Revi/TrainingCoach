@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, err, forbidden, withHandler } from "@/lib/api-response";
+import { buildPrescription, progressExercise } from "@/lib/training/session-prescription";
+import { resolveStartPlanWorkout } from "@/lib/training/session.service";
+import type { Prisma } from "@prisma/client";
 import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
 
 // GET /api/v1/client/sessions — history list
@@ -32,6 +35,7 @@ export async function GET(req: NextRequest) {
         workoutTemplate: { select: { id: true, title: true, tags: true } },
         exercises: {
           select: {
+            prescription: true,
             sets: { select: { reps: true, weight: true } },
             workoutExercise: { select: { targetSets: true, workoutBlock: { select: { type: true } } } },
           },
@@ -40,7 +44,7 @@ export async function GET(req: NextRequest) {
     });
 
     const items = sessions.map((s) => {
-      const summary = summarizeSessionProgress(s.exercises);
+      const summary = summarizeSessionProgress(s.exercises.map((ex) => progressExercise(ex)));
       return {
         id: s.id,
         status: resolveSessionStatus(s.status, summary),
@@ -137,30 +141,10 @@ export async function POST(req: NextRequest) {
       return ok({ id: session.id, created: true }, 201);
     }
 
-    let resolvedPwwId: string | null = null;
-    if (planWeekWorkoutIdStr) {
-      const pww = await prisma.planWeekWorkout.findFirst({
-        where: {
-          id: planWeekWorkoutIdStr,
-          planWeek: {
-            plan: {
-              assignments: {
-                some: {
-                  clientUserId: auth.user.sub,
-                  OR: [{ status: "active" }, { status: "paused" }],
-                },
-              },
-            },
-          },
-        },
-        select: { id: true, workoutTemplateId: true },
-      });
-      if (!pww) return err("planWeekWorkoutId inválido", 400);
-      if (pww.workoutTemplateId !== workoutTemplateIdStr) {
-        return err("planWeekWorkoutId no corresponde al workoutTemplateId", 400);
-      }
-      resolvedPwwId = pww.id;
-    } else {
+    const linked = await resolveStartPlanWorkout(auth.user.sub, workoutTemplateIdStr, planWeekWorkoutIdStr);
+    if (linked.planChanged) return err("Tu coach actualizó el plan", 409);
+    const resolvedPwwId = linked.pwwId;
+    if (!resolvedPwwId) {
       const authorized = await prisma.planAssignment.findFirst({
         where: {
           clientUserId: auth.user.sub,
@@ -180,21 +164,44 @@ export async function POST(req: NextRequest) {
 
     const template = await prisma.workoutTemplate.findUnique({
       where: { id: workoutTemplateIdStr },
-      include: { workoutExercises: { orderBy: { sortOrder: "asc" } } },
+      include: {
+        workoutExercises: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            workoutBlock: { include: { steps: { orderBy: { sortOrder: "asc" } }, _count: { select: { exercises: true } } } },
+            alternatives: {
+              orderBy: { priority: "asc" },
+              include: { alternativeExercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } } },
+            },
+          },
+        },
+      },
     });
     if (!template) return err("Workout template not found", 404);
 
-    // Open session for same template that is still in progress → return it
+    // Reuse the open session. A coach save nulls the old plan cell; reattach it.
     const existing = await prisma.workoutSession.findFirst({
       where: {
         clientUserId: auth.user.sub,
         workoutTemplateId: workoutTemplateIdStr,
         status: "in_progress",
-        ...(resolvedPwwId ? { planWeekWorkoutId: resolvedPwwId } : {}),
+        OR: [
+          ...(resolvedPwwId ? [{ planWeekWorkoutId: resolvedPwwId }] : []),
+          { planWeekWorkoutId: null },
+        ],
       },
-      select: { id: true },
+      orderBy: { performedAt: "desc" },
+      select: { id: true, planWeekWorkoutId: true },
     });
-    if (existing) return ok({ id: existing.id, created: false }, 200);
+    if (existing) {
+      if (resolvedPwwId && existing.planWeekWorkoutId !== resolvedPwwId) {
+        await prisma.workoutSession.update({
+          where: { id: existing.id },
+          data: { planWeekWorkoutId: resolvedPwwId },
+        });
+      }
+      return ok({ id: existing.id, created: false }, 200);
+    }
 
     const session = await prisma.workoutSession.create({
       data: {
@@ -209,6 +216,7 @@ export async function POST(req: NextRequest) {
             plannedExerciseId: we.exerciseId,
             performedExerciseId: we.exerciseId,
             sortOrder: idx,
+            prescription: buildPrescription(we) as unknown as Prisma.InputJsonValue,
           })),
         },
       },

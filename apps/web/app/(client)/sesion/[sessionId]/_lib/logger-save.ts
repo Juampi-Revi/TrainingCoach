@@ -74,6 +74,52 @@ export function lastFilledRow(rows: SheetRow[], ex: SessionExercise): SheetRow |
   return [...rows].reverse().find((r) => rowHasData(r, timed));
 }
 
+export function buildSheetRows(
+  ex: SessionExercise,
+  effortMode: EffortMode,
+  lastRef: { weight: string | null; reps: number | null; rpe: string | null; rir: string | null } | null,
+): SheetRow[] {
+  const existing = ex.sets ?? [];
+  const baseCount = Math.max(existing.length, ex.target?.sets ?? 0, 1);
+  return Array.from({ length: baseCount }, (_, idx) => {
+    const setNumber = idx + 1;
+    const saved = existing.find((set) => set.setNumber === setNumber);
+    if (saved?.weight != null || saved?.reps != null || saved?.durationSeconds != null) {
+      const effort = effortMode === "RPE" ? saved?.rpe : saved?.rir;
+      return {
+        setNumber,
+        reps: saved?.reps != null ? String(saved.reps) : "",
+        duration: saved?.durationSeconds != null ? String(saved.durationSeconds) : "",
+        kg: saved?.weight != null ? String(saved.weight) : "",
+        effort: effort != null ? String(effort) : "",
+        isSaved: true,
+        isDirty: false,
+      };
+    }
+    const effort = effortMode === "RPE" ? lastRef?.rpe : lastRef?.rir;
+    return {
+      setNumber,
+      reps: "",
+      duration: "",
+      kg: "",
+      effort: "",
+      repsPlaceholder: ex.target?.reps != null ? String(ex.target.reps) : undefined,
+      durationPlaceholder: ex.target?.durationSeconds != null ? String(ex.target.durationSeconds) : undefined,
+      kgPlaceholder: lastRef?.weight != null ? String(lastRef.weight) : undefined,
+      effortPlaceholder: effort != null
+        ? String(effort)
+        : ex.target?.intensityTarget != null
+          ? String(ex.target.intensityTarget)
+          : undefined,
+      isSaved: false,
+    };
+  });
+}
+
+export function sheetCanRefill(rows: SheetRow[]): boolean {
+  return rows.length === 0 || rows.every((row) => !row.isDirty && !row.isSaved);
+}
+
 export function markRowDirty(row: SheetRow, patch: Partial<SheetRow>): SheetRow {
   return { ...row, ...patch, isDirty: true, suggestionLabel: patch.suggestionLabel ?? null };
 }

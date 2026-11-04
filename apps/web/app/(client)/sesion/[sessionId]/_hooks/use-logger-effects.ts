@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { SessionDetail } from "@regen/types";
 import type { EffortMode, SheetRow, LastRef } from "../_components/_types";
+import { buildSheetRows, sheetCanRefill } from "../_lib/logger-save";
 
 export function useLoggerEffects({
   sessionId,
@@ -77,47 +78,13 @@ export function useLoggerEffects({
   useEffect(() => {
     if (!loggerOpen || !session) return;
     const target = session.exercises[currentExIdx];
-    if (!target || target.block.type === "warmup") return;
-    if (sheetRows.length > 0) return;
-    const id = setTimeout(() => {
-      const existing = target.sets ?? [];
-      const baseCount = Math.max(existing.length, target.target?.sets ?? 0, 1);
-      setSheetRows(Array.from({ length: baseCount }).map((_, idx) => {
-        const setNumber = idx + 1;
-        const s = existing.find((x) => x.setNumber === setNumber);
-        if (s?.weight != null || s?.reps != null || s?.durationSeconds != null) {
-          const effort = effortMode === "RPE" ? s?.rpe : s?.rir;
-          return {
-            setNumber,
-            reps: s?.reps != null ? String(s.reps) : "",
-            duration: s?.durationSeconds != null ? String(s.durationSeconds) : "",
-            kg: s?.weight != null ? String(s.weight) : "",
-            effort: effort != null ? String(effort) : "",
-            isSaved: true,
-            isDirty: false,
-          };
-        }
-        const effort = effortMode === "RPE" ? lastRef?.rpe : lastRef?.rir;
-        const repsPh = target.target?.reps != null ? String(target.target.reps) : "";
-        const kgPh = lastRef?.weight != null ? String(lastRef.weight) : "";
-        const effortPh = effort != null ? String(effort) : target.target?.intensityTarget != null ? String(target.target.intensityTarget) : "";
-        const durationPh = target.target?.durationSeconds != null ? String(target.target.durationSeconds) : "";
-        return {
-          setNumber,
-          reps: "",
-          duration: "",
-          kg: "",
-          effort: "",
-          repsPlaceholder: repsPh || undefined,
-          durationPlaceholder: durationPh || undefined,
-          kgPlaceholder: kgPh || undefined,
-          effortPlaceholder: effortPh || undefined,
-          isSaved: false,
-        };
-      }));
-    }, 0);
+    if (!target?.block || target.block.type === "warmup") return;
+    if (!sheetCanRefill(sheetRows)) return;
+    const waitingForLast = !!lastRef?.weight && sheetRows.some((row) => !row.kg && !row.kgPlaceholder);
+    if (sheetRows.length > 0 && !waitingForLast) return;
+    const id = setTimeout(() => setSheetRows(buildSheetRows(target, effortMode, lastRef)), 0);
     return () => clearTimeout(id);
-  }, [loggerOpen, session, currentExIdx, effortMode, lastRef, sheetRows.length, setSheetRows]);
+  }, [loggerOpen, session, currentExIdx, effortMode, lastRef, sheetRows, setSheetRows]);
 
   // Restore an active per-set timer when returning from background / lock screen.
   useEffect(() => {
@@ -179,7 +146,7 @@ export function useLoggerEffects({
   useEffect(() => {
     if (!loggerOpen || !session) return;
     const target = session.exercises[currentExIdx];
-    if (!target || target.block.type === "warmup") return;
+    if (!target?.block || target.block.type === "warmup") return;
     const exId = target.exercise.id;
     if (lastRefMap[exId]) return;
     api.get<LastRef | null>(`/client/exercises/${exId}/last-set`)

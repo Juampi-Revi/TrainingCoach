@@ -3,24 +3,21 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui";
 import type { IconName } from "@/components/ui";
-import { useNotifications } from "@/lib/use-notifications";
 
-type NavId = "dashboard" | "athletes" | "templates" | "messages" | "notifications";
+type NavId = "athletes" | "plans" | "templates" | "library";
 
 interface CoachBottomNavProps {
   active?: NavId;
 }
 
 const ITEMS: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
-  { id: "dashboard",     icon: "home",     label: "Inicio",     href: "/coach"               },
-  { id: "athletes",      icon: "users",    label: "Alumnos",    href: "/coach/alumnos"       },
-  { id: "templates",     icon: "dumbbell", label: "Entrenos",   href: "/coach/workouts"      },
-  { id: "messages",      icon: "msg",      label: "Mensajes",   href: "/coach/mensajes"      },
-  { id: "notifications", icon: "bell",     label: "Notifs",     href: "/coach/notificaciones" },
+  { id: "athletes",  icon: "users",    label: "Alumnos",    href: "/coach/alumnos" },
+  { id: "plans",     icon: "book",     label: "Planes",     href: "/coach/planes" },
+  { id: "templates", icon: "dumbbell", label: "Entrenos",   href: "/coach/workouts" },
+  { id: "library",   icon: "star",     label: "Ejercicios", href: "/coach/ejercicios" },
 ];
 
 export function CoachBottomNav({ active }: CoachBottomNavProps) {
-  const { unreadCount } = useNotifications();
 
   return (
     <nav
@@ -37,18 +34,20 @@ export function CoachBottomNav({ active }: CoachBottomNavProps) {
         padding: "8px 8px 28px",
         zIndex: 50,
         display: "flex",
+        maxWidth: "100%",
+        overflow: "hidden",
       }}
     >
       {ITEMS.map((item) => {
         const isActive = item.id === active;
-        const badge = item.id === "notifications" ? unreadCount : 0;
         return (
           <Link
             key={item.id}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             style={{
-              flex: 1,
+              flex: "1 1 0",
+              minWidth: 0,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -59,15 +58,8 @@ export function CoachBottomNav({ active }: CoachBottomNavProps) {
               position: "relative",
             }}
           >
-            <div style={{ position: "relative" }}>
-              <Icon name={item.icon} size={22} color={isActive ? "var(--accent-text)" : "var(--text-mute)"} />
-              {badge > 0 && (
-                <div style={{ position: "absolute", top: -4, right: -8, minWidth: 16, height: 16, borderRadius: 8, background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
-                  <span style={{ fontSize: 9, fontWeight: 800, color: "var(--bg)" }}>{badge > 9 ? "9+" : badge}</span>
-                </div>
-              )}
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: ".02em" }}>
+            <Icon name={item.icon} size={22} color={isActive ? "var(--accent-text)" : "var(--text-mute)"} />
+            <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: ".02em", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {item.label}
             </span>
           </Link>

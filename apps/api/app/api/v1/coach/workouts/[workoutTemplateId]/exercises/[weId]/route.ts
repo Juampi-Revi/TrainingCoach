@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, err, withHandler } from "@/lib/api-response";
 import { workoutExercisePatchSchema } from "@/lib/schemas";
+import { preserveAssignedSessions } from "@/lib/training/session-prescription";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string; weId: string }> };
 
@@ -21,6 +22,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const { workoutTemplateId, weId } = await params;
     const we = await verifyOwner(workoutTemplateId, weId, auth.user.sub);
     if (!we) return forbidden();
+    await preserveAssignedSessions([workoutTemplateId]);
 
     const raw = await req.json().catch(() => ({}));
 
@@ -178,6 +180,7 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     const { workoutTemplateId, weId } = await params;
     const we = await verifyOwner(workoutTemplateId, weId, auth.user.sub);
     if (!we) return notFound("Ejercicio no encontrado");
+    await preserveAssignedSessions([workoutTemplateId]);
 
     await prisma.workoutExercise.delete({ where: { id: weId } });
     return ok({ deleted: true });

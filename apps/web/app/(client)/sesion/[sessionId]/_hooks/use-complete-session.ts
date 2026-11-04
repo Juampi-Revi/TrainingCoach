@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import {
   clearPendingComplete,
   isClosedSessionStatus,
-  readPendingComplete,
   savePendingComplete,
 } from "../_lib/session-complete";
 
@@ -75,18 +74,6 @@ export function useCompleteSession({
       inflight.current = false;
     }
   }, [alreadyClosed, closeOnServer, flushQueue, leaveLogger, sessionId, toast]);
-
-  useEffect(() => {
-    const pending = readPendingComplete(sessionId);
-    if (pending) void completeSession(pending.sessionNotes);
-
-    const onOnline = () => {
-      const next = readPendingComplete(sessionId);
-      if (next) void completeSession(next.sessionNotes);
-    };
-    window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
-  }, [completeSession, sessionId]);
 
   return { completing, completeSession };
 }

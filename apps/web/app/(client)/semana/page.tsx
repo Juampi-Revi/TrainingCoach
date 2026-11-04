@@ -62,7 +62,7 @@ export default function SemanaPage() {
     );
   }
 
-  if (!data.plan) {
+  if (!data.plan && data.workouts.length === 0) {
     return (
       <div style={{ minHeight: "100dvh", background: "var(--bg)", paddingBottom: 84 }}>
         <div style={{ padding: "48px 20px 14px" }}>
@@ -77,14 +77,7 @@ export default function SemanaPage() {
           <StateBlock
             kind="empty"
             title="Tu plan todavía no está listo"
-            body="Tu coach está armando tu programa. Te avisamos cuando esté activo."
-            cta={
-              <Link href="/mensajes" style={{ textDecoration: "none" }}>
-                <Button size="sm" icon="msg">
-                  Escribir al coach
-                </Button>
-              </Link>
-            }
+            body="Tu coach está armando tu programa. Cuando lo asigne, vas a ver los entrenamientos acá."
           />
         </div>
       </div>
@@ -121,8 +114,14 @@ export default function SemanaPage() {
               Hola, {user?.name?.split(" ")[0] ?? ""}
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.02em", marginTop: 2 }}>
-              Semana {data.weekNumber}{" "}
-              <span style={{ color: "var(--text-mute)", fontWeight: 500 }}>/ {data.totalWeeks}</span>
+              {data.plan ? (
+                <>
+                  Semana {data.weekNumber}{" "}
+                  <span style={{ color: "var(--text-mute)", fontWeight: 500 }}>/ {data.totalWeeks}</span>
+                </>
+              ) : (
+                "Tu entrenamiento"
+              )}
             </div>
           </div>
           <Avatar name={user?.name ?? "U"} size={36} tone="var(--lime)" textColor="var(--text-on-accent)" />
@@ -173,7 +172,7 @@ export default function SemanaPage() {
               Plan
             </div>
             <div className="ta-mono ta-ellipsis" style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: "var(--text)" }}>
-              {data.plan.title}
+              {data.plan?.title ?? "En curso"}
             </div>
           </div>
         </div>

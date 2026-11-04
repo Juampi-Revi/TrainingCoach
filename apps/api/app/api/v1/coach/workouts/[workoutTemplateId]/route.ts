@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, forbidden, withHandler } from "@/lib/api-response";
 import { notify } from "@/lib/notify";
 import { mapWorkoutBlockStep } from "@/lib/training/endurance";
+import { preserveAssignedSessions } from "@/lib/training/session-prescription";
 
 type Ctx = { params: Promise<{ workoutTemplateId: string }> };
 
@@ -113,6 +114,7 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
       select: { id: true },
     });
     if (!existing) return forbidden();
+    await preserveAssignedSessions([workoutTemplateId]);
 
     await prisma.workoutTemplate.delete({ where: { id: workoutTemplateId } });
     return ok({ deleted: true });

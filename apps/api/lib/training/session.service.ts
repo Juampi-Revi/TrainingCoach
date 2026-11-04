@@ -1,4 +1,42 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { buildPrescription } from "@/lib/training/session-prescription";
+
+const activeAssignment = (clientUserId: string) => ({
+  plan: {
+    assignments: {
+      some: {
+        clientUserId,
+        OR: [{ status: "active" }, { status: "paused" }],
+      },
+    },
+  },
+});
+
+/** The plan cell the coach saved last. A stale id means the plan was rewritten. */
+export async function resolveStartPlanWorkout(
+  clientUserId: string,
+  workoutTemplateId: string,
+  planWeekWorkoutId: string | null,
+): Promise<{ pwwId: string | null; planChanged: boolean }> {
+  if (planWeekWorkoutId) {
+    const current = await prisma.planWeekWorkout.findFirst({
+      where: { id: planWeekWorkoutId, planWeek: activeAssignment(clientUserId) },
+      select: { id: true, workoutTemplateId: true },
+    });
+    if (current?.workoutTemplateId === workoutTemplateId) {
+      return { pwwId: current.id, planChanged: false };
+    }
+  }
+
+  const replacement = await prisma.planWeekWorkout.findFirst({
+    where: { workoutTemplateId, planWeek: activeAssignment(clientUserId) },
+    select: { id: true },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (replacement) return { pwwId: replacement.id, planChanged: false };
+  return { pwwId: null, planChanged: planWeekWorkoutId != null };
+}
 
 export async function createSession(clientUserId: string, data: { workoutTemplateId?: string; performedAt?: string }) {
   if (data.workoutTemplateId) {
@@ -22,6 +60,13 @@ export async function createSession(clientUserId: string, data: { workoutTemplat
       const workoutExercises = await tx.workoutExercise.findMany({
         where: { workoutTemplateId: data.workoutTemplateId },
         orderBy: { sortOrder: "asc" },
+        include: {
+          workoutBlock: { include: { steps: { orderBy: { sortOrder: "asc" } }, _count: { select: { exercises: true } } } },
+          alternatives: {
+            orderBy: { priority: "asc" },
+            include: { alternativeExercise: { select: { id: true, name: true, primaryMuscle: true, equipment: true } } },
+          },
+        },
       });
       for (const we of workoutExercises) {
         await tx.workoutSessionExercise.create({
@@ -31,6 +76,7 @@ export async function createSession(clientUserId: string, data: { workoutTemplat
             plannedExerciseId: we.exerciseId,
             performedExerciseId: we.exerciseId,
             sortOrder: we.sortOrder,
+            prescription: buildPrescription(we) as unknown as Prisma.InputJsonValue,
           },
         });
       }

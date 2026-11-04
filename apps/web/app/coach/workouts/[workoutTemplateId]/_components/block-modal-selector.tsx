@@ -1,7 +1,7 @@
 "use client";
 
 import { Icon } from "@/components/ui";
-import { BLOCK_PATTERNS, type BlockPattern } from "./block-pattern-selector";
+import { FOCUS_BLOCK_PATTERNS, type BlockPattern } from "./block-pattern-selector";
 
 interface BlockModalSelectorProps {
   currentPattern: BlockPattern | null;
@@ -15,7 +15,7 @@ export function BlockModalSelector({ currentPattern, onChange }: BlockModalSelec
         Tipo de bloque
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {BLOCK_PATTERNS.map((p) => {
+        {FOCUS_BLOCK_PATTERNS.map((p) => {
           const pInterval = p.type === "intervals" ? p.intervalType : null;
           const cInterval = currentPattern?.type === "intervals" ? currentPattern.intervalType : null;
           const isActive = currentPattern

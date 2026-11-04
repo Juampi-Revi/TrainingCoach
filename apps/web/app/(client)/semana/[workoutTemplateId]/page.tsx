@@ -47,6 +47,10 @@ export default function WorkoutDetailPage() {
       const res = await api.post<{ id: string }>("/client/sessions", { workoutTemplateId: data.id, planWeekWorkoutId: pwwId });
       router.push(`/sesion/${res.id}`);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        router.replace("/semana");
+        return;
+      }
       const msg = e instanceof ApiError ? e.message : "Error al iniciar sesión";
       setError(msg);
       setStarting(false);

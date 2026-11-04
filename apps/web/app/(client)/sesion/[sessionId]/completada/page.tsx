@@ -15,7 +15,6 @@ import {
   clearPendingComplete,
   isClosedSessionStatus,
   readPendingComplete,
-  savePendingComplete,
 } from "../_lib/session-complete";
 import "../_styles.css";
 
@@ -78,12 +77,9 @@ export default function SessionCompletadaPage() {
         const s = await api.get<SessionDetail>(`/client/sessions/${sessionId}`);
         if (cancelled) return;
         if (!isClosedSessionStatus(s.status)) {
-          try {
-            await api.patch(`/client/sessions/${sessionId}`, { status: "completed" }, { timeoutMs: 15_000, delaysMs: [] });
-            clearPendingComplete(sessionId);
-          } catch {
-            savePendingComplete(sessionId);
-          }
+          clearPendingComplete(sessionId);
+          router.replace(`/sesion/${sessionId}`);
+          return;
         }
         setSession(s);
         setEnergy(s.energyRating != null ? Math.ceil(s.energyRating / 2) : null);
@@ -98,7 +94,7 @@ export default function SessionCompletadaPage() {
     }
     void load();
     return () => { cancelled = true; };
-  }, [api, sessionId, toast]);
+  }, [api, router, sessionId, toast]);
 
   async function save() {
     setSaving(true);
@@ -291,7 +287,7 @@ export default function SessionCompletadaPage() {
           }))))}
         />
 
-        <CompletadaNextStep sessionId={sessionId} />
+        <CompletadaNextStep />
 
         {planned.steps > 0 && (
           <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
@@ -359,14 +355,14 @@ export default function SessionCompletadaPage() {
       </div>
 
       {/* Bottom actions */}
-      <div style={{ padding: "10px 16px 28px", borderTop: "1px solid var(--line)", display: "flex", gap: 8, background: "var(--bg)" }}>
+      <div style={{ padding: "10px 16px 28px", borderTop: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 8, background: "var(--bg)" }}>
         <Button
-          size="lg" variant="secondary" icon="msg" style={{ flex: 1 }}
-          onClick={() => router.push(`/comentarios/${sessionId}`)}
+          size="lg"
+          block
+          disabled={saving}
+          onClick={save}
+          style={{ whiteSpace: "normal", height: "auto", minHeight: 52, padding: "12px 16px" }}
         >
-          Comentarios
-        </Button>
-        <Button size="lg" style={{ flex: 1.4 }} disabled={saving} onClick={save}>
           {saving ? "Guardando…" : "Guardar y cerrar sesión"}
           {!saving && <Icon name="check" size={14} color="var(--bg)" />}
         </Button>

@@ -23,6 +23,11 @@ export const BLOCK_PATTERNS: BlockPattern[] = [
   { type: "cooldown", label: "Recuperación", desc: "Estiramiento y respiración · sin registrar series", icon: "moon" },
 ];
 
+/** Fuerza, calentamiento y recuperación. Intervalos y cardio siguen definidos arriba, pero no se ofrecen. */
+export const FOCUS_BLOCK_PATTERNS: BlockPattern[] = BLOCK_PATTERNS.filter(
+  (pattern) => pattern.type === "warmup" || pattern.type === "strength" || pattern.type === "cooldown",
+);
+
 interface BlockPatternSelectorProps {
   value: BlockPattern | null;
   onChange: (pattern: BlockPattern) => void;
@@ -44,7 +49,7 @@ export function BlockPatternSelector({ value, onChange }: BlockPatternSelectorPr
         ¿Cómo se ejecuta este bloque?
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-        {BLOCK_PATTERNS.map((p) => {
+        {FOCUS_BLOCK_PATTERNS.map((p) => {
           const active = isActive(p);
           return (
             <button

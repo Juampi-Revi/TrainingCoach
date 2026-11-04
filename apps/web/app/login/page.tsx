@@ -22,8 +22,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login({ email, password });
-      if (user.role === "coach") router.replace("/coach");
-      else if (user.role === "gym") router.replace("/gym");
+      if (user.role === "coach" || user.role === "gym") router.replace("/coach/alumnos");
       else router.replace("/semana");
     } catch (e) {
       if (e instanceof ApiError) {

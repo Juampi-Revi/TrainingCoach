@@ -5,6 +5,13 @@ import { ok, unauthorized, notFound, err, withHandler } from "@/lib/api-response
 import { sessionPatchSchema } from "@/lib/schemas";
 import { mapWorkoutBlockStep } from "@/lib/training/endurance";
 import { awardCompletedSessionRewards } from "@/lib/training/session-rewards";
+import {
+  freezeMissingPrescriptions,
+  progressExercise,
+  readPrescription,
+  resolveExercisePlan,
+  uniqueStoredBlocks,
+} from "@/lib/training/session-prescription";
 import { resolveSessionStatus, summarizeSessionProgress } from "@/lib/training/session-status";
 
 // GET /api/v1/client/sessions/:sessionId
@@ -102,7 +109,13 @@ export async function GET(
 
     if (!session) return notFound("Session not found");
 
-    const progressSummary = summarizeSessionProgress(session.exercises);
+    await freezeMissingPrescriptions(session.exercises);
+    const exercisePlans = session.exercises.map((ex) => resolveExercisePlan(ex));
+    const frozenBlocks = session.exercises.some((ex) => readPrescription(ex.prescription))
+      ? uniqueStoredBlocks(exercisePlans)
+      : null;
+
+    const progressSummary = summarizeSessionProgress(session.exercises.map((ex) => progressExercise(ex)));
     const resolvedStatus = resolveSessionStatus(session.status, progressSummary);
 
     return ok({
@@ -122,7 +135,7 @@ export async function GET(
             tags: session.workoutTemplate.tags,
           }
         : null,
-      blocks: (session.workoutTemplate?.workoutBlocks ?? []).map((block) => ({
+      blocks: frozenBlocks ?? (session.workoutTemplate?.workoutBlocks ?? []).map((block) => ({
         id: block.id,
         type: block.type,
         label: block.label,
@@ -150,39 +163,13 @@ export async function GET(
         exerciseCount: block._count.exercises,
         steps: block.steps.map(mapWorkoutBlockStep),
       })),
-      exercises: session.exercises.map((ex) => ({
+      exercises: session.exercises.map((ex, index) => {
+        const plan = exercisePlans[index] ?? resolveExercisePlan(ex);
+        return {
         id: ex.id,
         sortOrder: ex.sortOrder,
-        supersetGroup: ex.workoutExercise?.supersetGroup ?? null,
-        block: ex.workoutExercise?.workoutBlock
-          ? {
-              id: ex.workoutExercise.workoutBlock.id,
-              type: ex.workoutExercise.workoutBlock.type,
-              label: ex.workoutExercise.workoutBlock.label,
-              isExtra: ex.workoutExercise.workoutBlock.isExtra,
-              labels: {
-                role: ex.workoutExercise.workoutBlock.roleLabel,
-                effort: ex.workoutExercise.workoutBlock.effortLabel,
-                execution: ex.workoutExercise.workoutBlock.executionLabel,
-              },
-              description: ex.workoutExercise.workoutBlock.description,
-              sortOrder: ex.workoutExercise.workoutBlock.sortOrder,
-              restAfterSeconds: ex.workoutExercise.workoutBlock.restAfterSeconds,
-              intervalType: ex.workoutExercise.workoutBlock.intervalType,
-              prepareSeconds: ex.workoutExercise.workoutBlock.prepareSeconds,
-              workSeconds: ex.workoutExercise.workoutBlock.workSeconds,
-              restSeconds: ex.workoutExercise.workoutBlock.restSeconds,
-              rounds: ex.workoutExercise.workoutBlock.rounds,
-              setCount: ex.workoutExercise.workoutBlock.setCount,
-              restBetweenSetsSeconds: ex.workoutExercise.workoutBlock.restBetweenSetsSeconds,
-              intervalExerciseStrategy: ex.workoutExercise.workoutBlock.intervalExerciseStrategy,
-              totalDurationSeconds: ex.workoutExercise.workoutBlock.totalDurationSeconds,
-              restBetweenExercisesSeconds: ex.workoutExercise.workoutBlock.restBetweenExercisesSeconds,
-              targetMinutes: ex.workoutExercise.workoutBlock.targetMinutes,
-              targetZone: ex.workoutExercise.workoutBlock.targetZone,
-              steps: ex.workoutExercise.workoutBlock.steps.map(mapWorkoutBlockStep),
-            }
-          : null,
+        supersetGroup: plan.supersetGroup,
+        block: plan.block,
         exercise: {
           id: ex.performedExercise.id,
           name: ex.performedExercise.name,
@@ -220,37 +207,8 @@ export async function GET(
           }
           return { id: m.id, mediaType: m.mediaType, url: m.url, publicId: m.publicId, isPrimary: m.isPrimary };
         }),
-        alternatives: (ex.workoutExercise?.alternatives ?? []).map((a) => ({
-          exerciseId: a.alternativeExercise.id,
-          name: a.alternativeExercise.name,
-          primaryMuscle: a.alternativeExercise.primaryMuscle,
-          equipment: a.alternativeExercise.equipment,
-        })),
-        target: ex.workoutExercise
-          ? {
-              sets: ex.workoutExercise.targetSets,
-              reps: ex.workoutExercise.targetReps,
-              durationSeconds: ex.workoutExercise.durationSeconds,
-              labels: {
-                role: ex.workoutExercise.roleLabel,
-                effort: ex.workoutExercise.effortLabel,
-                execution: ex.workoutExercise.executionLabel,
-              },
-              intensityType: ex.workoutExercise.intensityType,
-              intensityTarget: ex.workoutExercise.intensityTarget
-                ? String(ex.workoutExercise.intensityTarget)
-                : null,
-              restSeconds: ex.workoutExercise.restSeconds,
-              notes: ex.workoutExercise.notes,
-              groupNote: ex.workoutExercise.groupNote,
-              groupIsExtra: ex.workoutExercise.groupIsExtra,
-              groupLabels: {
-                role: ex.workoutExercise.groupRoleLabel,
-                effort: ex.workoutExercise.groupEffortLabel,
-                execution: ex.workoutExercise.groupExecutionLabel,
-              },
-            }
-          : null,
+        alternatives: plan.alternatives,
+        target: plan.target,
         sets: ex.sets.map((s) => ({
           id: s.id,
           setNumber: s.setNumber,
@@ -261,7 +219,8 @@ export async function GET(
           rir: s.rir ? String(s.rir) : null,
           notes: s.notes,
         })),
-      })),
+        };
+      }),
       activities: session.activities.map((activity) => ({
         id: activity.id,
         provider: activity.provider,
@@ -315,6 +274,7 @@ export async function PATCH(
         workoutTemplate: { select: { title: true } },
         exercises: {
           select: {
+            prescription: true,
             _count: { select: { sets: true } },
             workoutExercise: {
               select: {
@@ -329,7 +289,7 @@ export async function PATCH(
     if (!session) return notFound("Session not found");
 
     const alreadyClosed = session.status === "completed" || session.status === "partial";
-    const progressSummary = summarizeSessionProgress(session.exercises);
+    const progressSummary = summarizeSessionProgress(session.exercises.map((ex) => progressExercise(ex)));
     const nextStatus =
       alreadyClosed && body.status === "completed"
         ? undefined

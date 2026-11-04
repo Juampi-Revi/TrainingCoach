@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { CommandPalette } from "@/components/features/search/command-palette";
+import { isHiddenCoachPath } from "@/lib/focus-routes";
 
 export default function CoachLayout({ children }: { children: ReactNode }) {
   const { ready, token, user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname() ?? "";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -22,8 +24,9 @@ export default function CoachLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
-    if (user?.role !== "coach" && user?.role !== "gym") { router.replace("/semana"); }
-  }, [ready, token, user, router]);
+    if (user?.role !== "coach" && user?.role !== "gym") { router.replace("/semana"); return; }
+    if (isHiddenCoachPath(pathname)) { router.replace("/coach/alumnos"); }
+  }, [ready, token, user, router, pathname]);
 
   if (!ready) return null;
   if (!token) return null;
