@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractBearer } from "@/lib/api-auth";
 import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
+import { isAssistantBetaEmail } from "@/lib/assistant/beta";
 
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
       role: user.role,
       billingStatus: user.billingStatus,
       emailVerified: user.emailVerified,
+      assistantBeta: isAssistantBetaEmail(user.email),
     });
   });
 }
@@ -56,6 +58,7 @@ export async function PATCH(req: NextRequest) {
       role: updated.role,
       billingStatus: updated.billingStatus,
       emailVerified: updated.emailVerified,
+      assistantBeta: isAssistantBetaEmail(updated.email),
     });
   });
 }

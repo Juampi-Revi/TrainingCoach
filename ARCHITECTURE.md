@@ -103,7 +103,12 @@ apps/api/
 └── prisma/
     └── models: HealthProviderConnection, HealthSyncedActivity,
               DailyHealthEntry, HealthGoal, BodyMetricEntry, NutritionTarget,
-              FoodItem, FoodLogEntry, FoodLogItem
+              FoodItem, FoodLogEntry, FoodLogItem,
+              AssistantConversation, NutritionDrink, NutritionSupplement
+
+### 2b. Nutrition assistant (beta, allowlist)
+
+Chat de nutrición. El modelo no escribe macros: tools buscan en `FoodItem` y guardan en `FoodLogEntry`. Rutas bajo `client/assistant/`. UI en `app/(client)/asistente/` (oculta salvo `ASSISTANT_BETA_EMAILS`). El entrenamiento sigue en Semana / Sesión.
 
 apps/web/
 ├── app/

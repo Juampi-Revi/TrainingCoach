@@ -6,6 +6,7 @@ import { ok, err, withValidatedHandler, ValidationError } from "@/lib/api-respon
 import { rateLimit } from "@/lib/rate-limit";
 import { loginRequestSchema } from "@/lib/schemas";
 import { createRefreshToken } from "@/lib/auth/refresh-token.service";
+import { isAssistantBetaEmail } from "@/lib/assistant/beta";
 import { z } from "zod";
 
 const twoFactorLoginSchema = z.object({
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
         role: user.role,
         billingStatus: user.billingStatus,
         emailVerified: user.emailVerified,
+        assistantBeta: isAssistantBetaEmail(user.email),
       },
     });
   });

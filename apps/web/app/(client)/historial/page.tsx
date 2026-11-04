@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { Badge, Button, ConfirmModal, Icon, StateBlock, Tabs } from "@/components/ui";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import type { SessionDetail, SessionSummary } from "@regen/types";
@@ -184,6 +185,7 @@ function SessionDetailInline({ detail, loading }: {
 
 export default function HistorialPage() {
   const { api } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,12 +211,12 @@ export default function HistorialPage() {
     try {
       const r = await api.get<{ items: SessionSummary[]; nextCursor: string | null }>("/client/sessions?limit=50");
       setSessions(r.items);
-    } catch (e: unknown) {
-      console.error(e);
+    } catch {
+      toast.error("No se pudo cargar el historial");
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, toast]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -303,8 +305,8 @@ export default function HistorialPage() {
       await api.patch(`/client/sessions/${sessionId}`, { status: "discarded" });
       setSessions((prev) => prev.filter((x) => x.id !== sessionId));
       if (expandedId === sessionId) setExpandedId(null);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      toast.error("No se pudo borrar el entrenamiento");
     } finally {
       setDeletingId(null);
     }

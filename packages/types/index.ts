@@ -106,6 +106,7 @@ export interface AuthUser {
   role: UserRole;
   billingStatus: BillingStatus;
   emailVerified?: boolean;
+  assistantBeta?: boolean;
 }
 
 export interface LoginRequest {
@@ -1019,4 +1020,136 @@ export interface ChallengeParticipant {
 
 export interface ChallengeDetail extends Challenge {
   leaderboard: ChallengeParticipant[];
+}
+
+// ─────────────────────────────────────────────────────────────
+// Nutrition assistant
+// ─────────────────────────────────────────────────────────────
+
+export type AssistantCard =
+  | {
+      kind: "meal";
+      title: string;
+      approximate: boolean;
+      updated?: boolean;
+      items: AssistantFoodLine[];
+      totals: AssistantMacroTotals;
+    }
+  | { kind: "drinks"; items: Array<{ name: string; milliliters: number; kcal: number }> }
+  | {
+      kind: "options";
+      options: Array<{
+        title: string;
+        items: Array<{ name: string; quantity: number; unit: string; grams: number | null }>;
+        totals: AssistantMacroTotals;
+      }>;
+    };
+
+export interface AssistantFoodLine {
+  name: string;
+  quantity: number | null;
+  unit: string;
+  grams: number | null;
+  kcal: number;
+  proteinG: number;
+  carbsG: number | null;
+  fatG: number | null;
+}
+
+export interface AssistantMacroTotals {
+  kcal: number;
+  proteinG: number;
+  carbsG: number | null;
+  fatG: number | null;
+}
+
+export interface AssistantChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  inputKind: string;
+  createdAt: string;
+  cards: AssistantCard[];
+  image?: string | null;
+}
+
+export interface AssistantDayMeal {
+  id: string;
+  note: string | null;
+  consumedAt: string;
+  items: Array<{
+    id: string;
+    displayName: string;
+    quantity: number;
+    unit: string;
+    grams: number;
+    kcal: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+    provenance: string;
+  }>;
+}
+
+export interface AssistantDayDrink {
+  id: string;
+  displayName: string;
+  quantity: number;
+  unit: string;
+  milliliters: number;
+  kcal: number;
+  provenance: string;
+}
+
+export interface AssistantDaySupplement {
+  id: string;
+  name: string;
+  timeOfDay: string;
+  note: string | null;
+  status: string | null;
+}
+
+export interface AssistantDay {
+  localDate: string;
+  consumed: { kcal: number; proteinG: number; carbsG: number; fatG: number };
+  goals: { kcal: number | null; proteinG: number | null; carbsG: number | null; fatG: number | null };
+  remaining: { kcal: number | null; proteinG: number | null };
+  liquidsMl: number;
+  meals: AssistantDayMeal[];
+  drinks: AssistantDayDrink[];
+  supplements: AssistantDaySupplement[];
+}
+
+export interface AssistantNote {
+  id: string;
+  text: string;
+  remindAt: string | null;
+  createdAt: string;
+}
+
+export interface AssistantPostResponse {
+  kind: string;
+  text: string;
+  assistantMode: "openai" | "local";
+  day: AssistantDay;
+  notes: AssistantNote[];
+  cards: AssistantCard[];
+  replayed: boolean;
+}
+
+export interface AssistantRangeDay {
+  localDate: string;
+  weekday: string;
+  day: number;
+  kcal: number;
+  proteinG: number;
+  milliliters: number;
+}
+
+export interface AssistantRange {
+  kind: "week" | "month";
+  from: string;
+  to: string;
+  days: AssistantRangeDay[];
+  totals: { kcal: number; proteinG: number; milliliters: number };
 }

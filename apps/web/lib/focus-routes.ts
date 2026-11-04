@@ -11,7 +11,6 @@ const CLIENT_HIDDEN = [
   "/desafios",
   "/logros",
   "/onboarding",
-  "/cuenta/metas",
   "/cuenta/wearable",
   "/cuenta/mediciones",
   "/cuenta/configuracion",

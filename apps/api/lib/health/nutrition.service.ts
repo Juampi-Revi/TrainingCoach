@@ -201,7 +201,7 @@ export async function getNutritionToday(clientUserId: string, day = new Date()) 
     getNutritionProfile(clientUserId),
     getNutritionTarget(clientUserId),
     prisma.foodLogEntry.findMany({
-      where: { clientUserId, loggedAt: { gte: start, lt: end } },
+      where: { clientUserId, deletedAt: null, loggedAt: { gte: start, lt: end } },
       orderBy: { loggedAt: "asc" },
       include: {
         items: { orderBy: { sortOrder: "asc" } },

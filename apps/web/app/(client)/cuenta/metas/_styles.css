@@ -176,8 +176,26 @@
   margin-bottom: 6px;
 }
 
+.metas-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metas-nutrition {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.metas-nutrition-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-mute);
+}
+
 .card-cuenta {
-  margin-top: 12px;
   background: var(--bg-1);
   border: 1px solid var(--line);
   border-radius: 14px;

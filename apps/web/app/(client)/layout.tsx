@@ -9,15 +9,25 @@ import { InstallPrompt } from "@/components/features/pwa/install-prompt";
 import type { IconName } from "@/components/ui";
 import { isHiddenClientPath } from "@/lib/focus-routes";
 
-type NavId = "home" | "history" | "me";
-const NAV: Array<{ id: NavId; icon: IconName; label: string; href: string }> = [
+type NavId = "home" | "history" | "nutrition" | "me";
+type NavItem = { id: NavId; icon: IconName; label: string; href: string };
+
+const NAV: NavItem[] = [
   { id: "home",    icon: "home",    label: "Semana",    href: "/semana" },
   { id: "history", icon: "history", label: "Historial", href: "/historial" },
   { id: "me",      icon: "user",    label: "Cuenta",    href: "/cuenta" },
 ];
 
+const NUTRITION_NAV: NavItem = {
+  id: "nutrition",
+  icon: "apple",
+  label: "Nutrición",
+  href: "/asistente",
+};
+
 function useActiveNav(): NavId {
   const p = usePathname() ?? "";
+  if (p.startsWith("/asistente")) return "nutrition";
   if (p.startsWith("/historial")) return "history";
   if (p.startsWith("/cuenta")) return "me";
   return "home";
@@ -43,6 +53,10 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     if (!ready) return;
     if (!token) { router.replace("/login"); return; }
     if (user?.role === "coach" || user?.role === "gym") { router.replace("/coach/alumnos"); return; }
+    if (pathname.startsWith("/asistente") && !user?.assistantBeta) {
+      router.replace("/semana");
+      return;
+    }
     if (isHiddenClientPath(pathname)) { router.replace("/semana"); }
   }, [ready, token, user, router, pathname]);
 
@@ -54,6 +68,9 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
 
   const name = user?.name ?? user?.email ?? "Cliente";
   const hideMobileNav = pathname.startsWith("/sesion/");
+  const nav = user?.assistantBeta
+    ? [NAV[0], NAV[1], NUTRITION_NAV, NAV[2]]
+    : NAV;
 
   return (
     <div className="client-layout">
@@ -70,7 +87,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           Alumno
         </div>
 
-        {NAV.map((n) => {
+        {nav.map((n) => {
           const isActive = n.id === active;
           return (
             <Link key={n.id} href={n.href} aria-current={isActive ? "page" : undefined} className="ta-nav-item" style={{
@@ -117,7 +134,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           padding: "8px 8px calc(28px + env(safe-area-inset-bottom))",
           zIndex: 50,
         }}>
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const isActive = item.id === active;
           return (
             <Link key={item.id} href={item.href} aria-current={isActive ? "page" : undefined} style={{

@@ -47,6 +47,13 @@ export default function CuentaPage() {
             </div>
             <Icon name="chevR" size={18} color="var(--text-dim)" />
           </div>
+          <div className="card-cuenta-row" onClick={() => router.push("/cuenta/metas")}>
+            <div className="card-cuenta-left">
+              <Icon name="target" size={20} color="var(--lime)" />
+              <span>Metas</span>
+            </div>
+            <Icon name="chevR" size={18} color="var(--text-dim)" />
+          </div>
           <div className="card-cuenta-row">
             <div className="card-cuenta-left">
               <Icon name={theme === "dark" ? "sun" : "moon"} size={20} color="var(--lime)" />

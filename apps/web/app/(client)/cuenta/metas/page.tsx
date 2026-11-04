@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
+import { NutritionGoals } from "./_components/nutrition-goals";
 import "./_styles.css";
 
 interface Goal {
@@ -203,30 +204,6 @@ export default function MetasPage() {
   const hasGoals = data && data.goals.length > 0;
   const anyShared = data?.goals.some((g) => g.shareWithCoach) ?? false;
 
-  if (loading) {
-    return (
-      <div className="metas-page">
-        <div className="metas-header">
-          <button onClick={() => router.back()} className="back-button">
-            <Icon name="chevL" size={16} color="var(--text-mute)" />
-            Volver
-          </button>
-          <div className="metas-title">Metas de salud</div>
-          <div className="metas-subtitle">Define tus objetivos de pasos, sueño y entrenamientos</div>
-        </div>
-
-        <div className="metas-content">
-          <div className="metas-skeleton">
-            <div className="skeleton-block skeleton-sm" />
-            <div className="skeleton-block skeleton-sm skeleton-delay-1" />
-            <div className="skeleton-block skeleton-sm skeleton-delay-2" />
-            <div className="skeleton-block skeleton-sm skeleton-delay-3" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="metas-page">
       <div className="metas-header">
@@ -234,11 +211,26 @@ export default function MetasPage() {
           <Icon name="chevL" size={16} color="var(--text-mute)" />
           Volver
         </button>
-        <div className="metas-title">Metas de salud</div>
-        <div className="metas-subtitle">Define tus objetivos de pasos, sueño y entrenamientos</div>
+        <div className="metas-title">Metas</div>
+        <div className="metas-subtitle">Macros, peso, entrenos, pasos y sueño</div>
       </div>
 
       <div className="metas-content">
+        <section className="metas-block">
+          <div className="section-label">Nutrición</div>
+          <NutritionGoals />
+        </section>
+
+        <section className="metas-block">
+          <div className="section-label">Salud</div>
+          {loading ? (
+            <div className="metas-skeleton">
+              <div className="skeleton-block skeleton-sm" />
+              <div className="skeleton-block skeleton-sm skeleton-delay-1" />
+              <div className="skeleton-block skeleton-sm skeleton-delay-2" />
+              <div className="skeleton-block skeleton-sm skeleton-delay-3" />
+            </div>
+          ) : (
         <div className="card-cuenta">
           {data?.hasCoach && (
             <div className="card-cuenta-row is-disabled">
@@ -330,6 +322,8 @@ export default function MetasPage() {
             );
           })}
         </div>
+          )}
+        </section>
       </div>
     </div>
   );

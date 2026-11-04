@@ -5,7 +5,7 @@ export type IconName =
   | "play" | "pause" | "timer" | "reset" | "flame" | "dumbbell"
   | "user" | "users" | "calendar" | "chart" | "msg" | "bell" | "bellOff"
   | "alert" | "edit" | "trash" | "filter" | "more" | "x" | "logo"
-  | "send" | "home" | "history" | "settings" | "star" | "book" | "plate" | "beef"
+  | "send" | "home" | "history" | "settings" | "star" | "book" | "plate" | "apple" | "beef"
   | "eye" | "eyeOff" | "lock" | "sun" | "moon"
   | "image" | "video" | "repeat" | "footprint" | "footprints" | "walk" | "target" | "refresh"
   | "scale" | "ruler" | "chest" | "hips" | "arm" | "leg"
@@ -55,6 +55,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   star:     <path d="M12 3l3 6 6 .9-4.3 4.3 1 6.3L12 17.8 6.3 20.5l1-6.3L3 9.9 9 9l3-6z" />,
   book:     <><path d="M4 4v16a2 2 0 0 0 2 2h14V4H6a2 2 0 0 0-2 2z" /><path d="M4 20h14" /></>,
   plate:    <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2.2" /><path d="M6 3v6M8 3v6" /><path d="M6 6h2" /><path d="M18 3v9" /><path d="M20 3v9" /></>,
+  apple:    <><path d="M12 21c1.5 0 2.7 1 4 1 3 0 6-8 6-12.2A4.9 4.9 0 0 0 17 5c-2.2 0-4 1.4-5 2-1-.6-2.8-2-5-2a4.9 4.9 0 0 0-5 4.8C2 14 5 22 8 22c1.3 0 2.5-1 4-1z" fill="none" /><path d="M10 3c1 1.5 2 3 4 4" /></>,
   beef:     <><path d="M16.4 13.7A6.5 6.5 0 1 0 6.28 6.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3" /><path d="m18.5 6 2.19 4.5a6.48 6.48 0 0 1-2.29 7.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5" /><circle cx="12.5" cy="8.5" r="2.5" /></>,
   eye:      <><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></>,
   eyeOff:   <><path d="M17.9 17.9A10.9 10.9 0 0 1 12 19C5 19 1 12 1 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A11 11 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2" /><path d="M1 1l22 22" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,

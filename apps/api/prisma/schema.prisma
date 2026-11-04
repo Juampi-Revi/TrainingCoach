@@ -64,6 +64,15 @@ model User {
   foodLogEntries        FoodLogEntry[]
   foodCoachCommentsAsCoach FoodCoachComment[] @relation("FoodCoachCommentCoach")
   nutritionTarget       NutritionTarget?
+  nutritionDrinks       NutritionDrink[]
+  nutritionSupplements  NutritionSupplement[]
+  nutritionSupplementLogs NutritionSupplementLog[]
+  nutritionNotes        NutritionNote[]
+  nutritionPendingActions NutritionPendingAction[]
+  assistantConversations AssistantConversation[]
+  assistantMessages     AssistantMessage[]
+  assistantToolExecutions AssistantToolExecution[]
+  assistantUsageCharges AssistantUsageCharge[]
   createdFoodItems      FoodItem[]
   healthGoals           HealthGoal[]
   notifications         Notification[]
@@ -689,18 +698,20 @@ model Notification {
 }
 
 model FoodLogEntry {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   clientUserId String
-  loggedAt     DateTime @db.Timestamptz
+  loggedAt     DateTime  @db.Timestamptz
+  localDate    DateTime? @db.Date
   text         String?
   photoUrl     String?
-  source       String   @default("manual")
+  source       String    @default("manual")
   sourceRef    String?
   mealType     String?
   quality      String?
-  macroTags    String[] @default([])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  macroTags    String[]  @default([])
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   client User @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
 
@@ -708,6 +719,7 @@ model FoodLogEntry {
   items         FoodLogItem[]
 
   @@index([clientUserId, loggedAt(sort: Desc)])
+  @@index([clientUserId, localDate])
 }
 
 model NutritionTarget {
@@ -767,10 +779,17 @@ model FoodLogItem {
   name           String
   grams          Decimal  @db.Decimal(8, 1)
   servingLabel   String?
+  quantity       Decimal? @db.Decimal(8, 2)
+  unit           String?
+  provenance     String?
   kcal           Decimal  @db.Decimal(8, 1)
   proteinG       Decimal  @db.Decimal(7, 1)
   carbsG         Decimal  @db.Decimal(7, 1)
   fatG           Decimal  @db.Decimal(7, 1)
+  kcalPer100g    Decimal? @db.Decimal(7, 1)
+  proteinPer100g Decimal? @db.Decimal(6, 1)
+  carbsPer100g   Decimal? @db.Decimal(6, 1)
+  fatPer100g     Decimal? @db.Decimal(6, 1)
   sortOrder      Int      @default(0)
   createdAt      DateTime @default(now())
 
@@ -1046,4 +1065,154 @@ model AthleteOnboarding {
   updatedAt       DateTime @updatedAt
   
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Nutrition assistant (chat logs meals/drinks/supplements)
+// ─────────────────────────────────────────────────────────────
+
+model NutritionDrink {
+  id             String    @id @default(uuid())
+  clientUserId   String
+  localDate      DateTime  @db.Date
+  consumedAt     DateTime  @db.Timestamptz
+  foodItemId     String?
+  name           String
+  quantity       Decimal   @db.Decimal(8, 2)
+  unit           String
+  milliliters    Decimal   @db.Decimal(8, 2)
+  grams          Decimal   @db.Decimal(8, 2)
+  provenance     String
+  kcal           Decimal   @db.Decimal(8, 1)
+  proteinG       Decimal   @db.Decimal(7, 1)
+  carbsG         Decimal   @db.Decimal(7, 1)
+  fatG           Decimal   @db.Decimal(7, 1)
+  kcalPer100g    Decimal   @db.Decimal(7, 1)
+  proteinPer100g Decimal   @db.Decimal(6, 1)
+  carbsPer100g   Decimal   @db.Decimal(6, 1)
+  fatPer100g     Decimal   @db.Decimal(6, 1)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  client User @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@index([clientUserId, localDate])
+}
+
+model NutritionSupplement {
+  id           String   @id @default(uuid())
+  clientUserId String
+  name         String
+  timeOfDay    String
+  note         String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  client User                     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  logs   NutritionSupplementLog[]
+
+  @@index([clientUserId, active])
+}
+
+model NutritionSupplementLog {
+  id           String   @id @default(uuid())
+  clientUserId String
+  supplementId String
+  localDate    DateTime @db.Date
+  status       String
+  client       User     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  supplement   NutritionSupplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
+
+  @@unique([supplementId, localDate])
+  @@index([clientUserId, localDate])
+}
+
+model NutritionNote {
+  id           String    @id @default(uuid())
+  clientUserId String
+  text         String
+  remindAt     DateTime?
+  doneAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  client User @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@index([clientUserId, doneAt, createdAt])
+}
+
+model NutritionPendingAction {
+  id           String    @id @default(uuid())
+  clientUserId String
+  kind         String
+  payload      Json
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  client User @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@index([clientUserId, kind, consumedAt])
+}
+
+model AssistantConversation {
+  id        String   @id @default(uuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AssistantMessage[]
+
+  @@index([userId, createdAt])
+}
+
+model AssistantMessage {
+  id              String   @id @default(uuid())
+  conversationId  String
+  userId          String
+  role            String
+  text            String
+  inputKind       String   @default("text")
+  imageJpeg       Bytes?
+  clientMessageId String?
+  createdAt       DateTime @default(now())
+
+  conversation   AssistantConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolExecutions AssistantToolExecution[]
+
+  @@unique([userId, clientMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model AssistantToolExecution {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  toolName  String
+  arguments Json
+  result    Json?
+  status    String
+  createdAt DateTime @default(now())
+
+  message AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model AssistantUsageCharge {
+  id                String   @id @default(uuid())
+  userId            String
+  monthKey          String
+  provider          String
+  model             String
+  inputTokens       Int
+  cachedInputTokens Int
+  outputTokens      Int
+  costMicroUsd      Int
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([monthKey])
 }
