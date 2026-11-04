@@ -80,7 +80,7 @@ export function blockPatternLabel(block: Pick<WorkoutBlockSummary, "type" | "int
     case "steady_state":
       return "Cardio continuo";
     case "recovery":
-      return "Recuperación";
+      return "Descanso";
     default:
       return "Lista de ejercicios";
   }

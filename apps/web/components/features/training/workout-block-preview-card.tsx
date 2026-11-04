@@ -62,7 +62,7 @@ function buildStudentRecipe(block: WorkoutBlockSummary) {
     return `${stepCount} paso${stepCount === 1 ? "" : "s"} · seguí las consignas de cada pasada`;
   }
   if (pattern === "recovery") {
-    return `${block.targetMinutes ? `${block.targetMinutes} min` : "bloque libre"} · soltura y recuperación`;
+    return `${block.targetMinutes ? `${block.targetMinutes} min` : "bloque libre"} · soltura y descanso`;
   }
   return blockCoachSummary(block);
 }

@@ -65,7 +65,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   strength: "Fuerza",
   intervals: "Intervalos",
   cardio:   "Cardio",
-  cooldown: "Enfriamiento",
+  cooldown: "Descanso",
 };
 
 export const INTERVAL_TYPE_LABELS: Record<IntervalType, string> = {

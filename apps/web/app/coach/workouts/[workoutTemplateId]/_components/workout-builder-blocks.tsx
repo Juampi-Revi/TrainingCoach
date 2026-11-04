@@ -100,7 +100,7 @@ export function WorkoutBuilderBlocks({
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700 }}>Este bloque todavía no tiene ejercicios</div>
                       <div style={{ fontSize: 12, color: "var(--text-mute)", marginTop: 2, lineHeight: 1.35 }}>
-                        Agregá ejercicios para que el bloque tenga contenido. Si es EMOM, los ejercicios se alternan por minuto.
+                        Agregá ejercicios para que el bloque tenga contenido.
                       </div>
                     </div>
                   </div>

@@ -16,7 +16,7 @@ export function RecoveryBlockBuilder({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ fontSize: 12, color: "var(--text-mute)", lineHeight: 1.5 }}>
-        Movilidad, estiramientos, respiración o vuelta a la calma. El alumno no registra series ni peso.
+        Estiramiento y vuelta a la calma. El alumno no registra series ni peso.
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Input

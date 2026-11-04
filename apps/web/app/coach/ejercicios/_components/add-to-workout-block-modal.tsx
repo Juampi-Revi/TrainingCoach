@@ -5,11 +5,11 @@ import { Button } from "@/components/ui";
 import type { WorkoutTemplateDetail } from "@regen/types";
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
-  warmup: "Warmup",
+  warmup: "Calentamiento",
   strength: "Fuerza",
   intervals: "Intervalos",
   cardio: "Cardio",
-  cooldown: "Cooldown",
+  cooldown: "Descanso",
 };
 
 export function AddToWorkoutBlockModal({

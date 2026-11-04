@@ -1,7 +1,7 @@
 "use client";
 
 import { Icon } from "@/components/ui";
-import type { BlockType, IntervalType } from "@regen/types";
+import type { IntervalType } from "@regen/types";
 
 export type BlockPattern =
   | { type: "warmup"; label: string; desc: string; icon: IconName }
@@ -12,21 +12,16 @@ export type BlockPattern =
 
 type IconName = "flame" | "dumbbell" | "timer" | "repeat" | "moon";
 
-export const BLOCK_PATTERNS: BlockPattern[] = [
+/** Solo fuerza por ahora: calentamiento, trabajo y descanso. */
+export const FOCUS_BLOCK_PATTERNS: BlockPattern[] = [
   { type: "warmup", label: "Calentamiento", desc: "Movilidad y activación · sin registrar series", icon: "flame" },
   { type: "strength", label: "Fuerza", desc: "Series y repeticiones · con peso", icon: "dumbbell" },
-  { type: "intervals", intervalType: "tabata", label: "Tabata", desc: "20s trabajo · 10s descanso · 8 rondas", icon: "timer" },
-  { type: "intervals", intervalType: "hiit", label: "HIIT", desc: "Intervalos de alta intensidad · configurable", icon: "timer" },
-  { type: "intervals", intervalType: "emom", label: "EMOM", desc: "Cada minuto un ejercicio · X minutos", icon: "timer" },
-  { type: "intervals", intervalType: "amrap", label: "AMRAP", desc: "Tantas rondas como sea posible · tiempo fijo", icon: "timer" },
-  { type: "cardio", label: "Cardio / Running", desc: "Pasadas con zonas de FC o ritmo", icon: "repeat" },
-  { type: "cooldown", label: "Recuperación", desc: "Estiramiento y respiración · sin registrar series", icon: "moon" },
+  { type: "cooldown", label: "Descanso", desc: "Estiramiento y vuelta a la calma · sin registrar series", icon: "moon" },
 ];
 
-/** Fuerza, calentamiento y recuperación. Intervalos y cardio siguen definidos arriba, pero no se ofrecen. */
-export const FOCUS_BLOCK_PATTERNS: BlockPattern[] = BLOCK_PATTERNS.filter(
-  (pattern) => pattern.type === "warmup" || pattern.type === "strength" || pattern.type === "cooldown",
-);
+function patternKey(pattern: BlockPattern): string {
+  return pattern.type === "intervals" ? `${pattern.type}-${pattern.intervalType}` : pattern.type;
+}
 
 interface BlockPatternSelectorProps {
   value: BlockPattern | null;
@@ -53,7 +48,7 @@ export function BlockPatternSelector({ value, onChange }: BlockPatternSelectorPr
           const active = isActive(p);
           return (
             <button
-              key={`${p.type}-${(p as any).intervalType ?? ""}`}
+              key={patternKey(p)}
               onClick={() => onChange(p)}
               style={{
                 display: "flex",
@@ -63,7 +58,7 @@ export function BlockPatternSelector({ value, onChange }: BlockPatternSelectorPr
                 padding: "12px 14px",
                 borderRadius: 10,
                 border: `1px solid ${active ? "var(--lime)" : "var(--line-2)"}`,
-                background: active ? "rgba(215,255,58,.08)" : "var(--bg-2)",
+                background: active ? "color-mix(in srgb, var(--lime) 10%, transparent)" : "var(--bg-2)",
                 cursor: "pointer",
                 color: active ? "var(--lime)" : "var(--text)",
                 textAlign: "left",

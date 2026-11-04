@@ -7,7 +7,7 @@ import type { WB } from "./_types";
 import { BlockModalSelector } from "./block-modal-selector";
 import { BlockModalForm } from "./block-modal-form";
 import { BlockModalPreview } from "./block-modal-preview";
-import { type BlockPattern, BLOCK_PATTERNS } from "./block-pattern-selector";
+import { type BlockPattern } from "./block-pattern-selector";
 import { INTERVAL_PRESETS } from "./block-modal.constants";
 
 export interface BlockModalViewProps {

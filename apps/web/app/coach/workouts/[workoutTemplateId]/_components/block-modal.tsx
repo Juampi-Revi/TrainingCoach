@@ -18,9 +18,9 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
   const toast = useToast();
   
   // Block type state
-  const [blockType, setBlockType] = useState<BlockType>(block?.type ?? "intervals");
+  const [blockType, setBlockType] = useState<BlockType>(block?.type ?? "strength");
   const [intervalType, setIntervalType] = useState<IntervalType | null>(
-    block?.type === "intervals" ? (block.intervalType ?? "tabata") : null
+    block?.type === "intervals" ? (block.intervalType ?? null) : null
   );
   
   // Common fields
@@ -55,8 +55,8 @@ export function BlockModal({ templateId, block, onClose, onSaved, onDeleted }: {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      setBlockType(block?.type ?? "intervals");
-      setIntervalType(block?.type === "intervals" ? (block.intervalType ?? "tabata") : null);
+      setBlockType(block?.type ?? "strength");
+      setIntervalType(block?.type === "intervals" ? (block.intervalType ?? null) : null);
       setLabel(block?.label ?? "");
       setIsExtra(block?.isExtra ?? false);
       setLocalLabels(block?.labels ?? { role: null, effort: null, execution: null });

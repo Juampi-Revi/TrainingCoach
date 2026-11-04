@@ -95,7 +95,7 @@ export function BlockModalFields({
   return (
     <div style={{ padding: 18, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
       {/* 1. Nombre y descripción */}
-      <Input label="Nombre del bloque" placeholder="Ej: Tabata de piernas" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <Input label="Nombre del bloque" placeholder="Ej: Empuje · tren superior" value={label} onChange={(e) => setLabel(e.target.value)} />
       <WorkoutLabelEditor
         title="Intención del bloque"
         value={localLabels}

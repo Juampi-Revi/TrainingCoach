@@ -341,8 +341,6 @@ export default function TemplateEditorPage() {
                 setTitle={setTitle}
                 description={description}
                 setDescription={setDescription}
-              sport={sport}
-              setSport={setSport}
                 usedGroups={usedGroups}
                 groupSizes={groupSizes}
               />
