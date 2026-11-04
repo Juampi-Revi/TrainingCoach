@@ -1,4 +1,4 @@
-import { after, NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/api-auth";
 import { ok, unauthorized, notFound, err, withHandler } from "@/lib/api-response";
@@ -326,12 +326,12 @@ export async function PATCH(
     });
 
     if (nextStatus === "completed") {
-      after(() => awardCompletedSessionRewards({
+      void awardCompletedSessionRewards({
         userId: auth.user.sub,
         sessionId,
         workoutTitle: session.workoutTemplate?.title ?? null,
         energyRating: updated.energyRating,
-      }));
+      });
     }
 
     return ok(updated);
