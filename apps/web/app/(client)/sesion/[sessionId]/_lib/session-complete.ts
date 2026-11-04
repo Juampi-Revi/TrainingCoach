@@ -10,7 +10,8 @@ function key(sessionId: string) {
 
 export function savePendingComplete(sessionId: string, sessionNotes?: string): void {
   try {
-    const payload: PendingSessionComplete = sessionNotes ? { sessionNotes } : {};
+    const notes = typeof sessionNotes === "string" ? sessionNotes : undefined;
+    const payload: PendingSessionComplete = notes ? { sessionNotes: notes } : {};
     localStorage.setItem(key(sessionId), JSON.stringify(payload));
   } catch {
     /* ignore */
@@ -38,4 +39,11 @@ export function clearPendingComplete(sessionId: string): void {
 
 export function isClosedSessionStatus(status: string): boolean {
   return status === "completed" || status === "partial";
+}
+
+export function isNetworkCloseError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ("status" in error && (error as { status: unknown }).status === 0) return true;
+  if (error instanceof Error && error.name === "AbortError") return true;
+  return false;
 }

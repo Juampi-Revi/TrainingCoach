@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
-import { Icon, StateBlock } from "@/components/ui";
+import { Button, Icon, StateBlock } from "@/components/ui";
 import { fmtDuration } from "@/lib/constants";
 import { SessionHeader } from "./_components/session-header";
 import { ExerciseList } from "./_components/exercise-list";
@@ -43,7 +43,7 @@ export default function SessionInProgressPage() {
     toggleWarmup, resetWarmup, finishWarmup,
   } = useSession(sessionId);
 
-  const { completing, completeSession } = useCompleteSession({ sessionId, flushQueue });
+  const { completing, completeSession, leftLogger } = useCompleteSession({ sessionId, flushQueue });
 
   const {
     effortMode, setEffortMode,
@@ -176,6 +176,19 @@ export default function SessionInProgressPage() {
       setResetting(false);
       if (e instanceof ApiError && e.status === 409) router.replace("/semana");
     }
+  }
+
+  if (leftLogger) {
+    return (
+      <div style={{ minHeight: "100dvh", background: "var(--bg)" }}>
+        <StateBlock
+          kind="empty"
+          title="Sesión lista"
+          body="Se va a sincronizar cuando haya conexión."
+          cta={<Button block onClick={() => router.replace("/semana")}>Volver a Semana</Button>}
+        />
+      </div>
+    );
   }
 
   if (loading || !session) {

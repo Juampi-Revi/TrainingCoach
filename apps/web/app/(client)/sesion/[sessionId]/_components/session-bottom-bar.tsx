@@ -73,7 +73,7 @@ export function SessionBottomBar({
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {allDone ? (
-          <Button size="lg" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={onComplete}>
+          <Button size="lg" block icon="check" style={{ fontSize: 16 }} disabled={completing} onClick={() => onComplete()}>
             {completing ? "Completando…" : "Finalizar sesión"}
           </Button>
         ) : (

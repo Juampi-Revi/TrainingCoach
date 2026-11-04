@@ -1,21 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { Button, Icon, StateBlock } from "@/components/ui";
-import type { SessionDetail } from "@regen/types";
 import { formatSecondsShort, summarizeEnduranceSteps } from "@/lib/constants";
 import { CompletadaHeroExtras, CompletadaNextStep } from "../_components/completada-next-step";
 import { CompletadaEnergyCard, CompletadaHighlights, CompletadaStatCard } from "../_components/completada-cards";
 import { EffortSummaryCard } from "../_components/effort-summary-card";
 import { summarizeSets } from "@/lib/effort";
-import {
-  clearPendingComplete,
-  isClosedSessionStatus,
-  readPendingComplete,
-} from "../_lib/session-complete";
+import { useCompletadaSync } from "../_hooks/use-completada-sync";
 import "../_styles.css";
 
 function fmtDuration(ms: number) {
@@ -26,11 +21,6 @@ function fmtDuration(ms: number) {
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m ${s}s`;
   return `${s}s`;
-}
-
-function toLocalInputValue(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function parseManualMeta(sessionNotes: string | null) {
@@ -51,56 +41,21 @@ export default function SessionCompletadaPage() {
   const toast = useToast();
   const router = useRouter();
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [session, setSession] = useState<SessionDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [energy, setEnergy] = useState<number | null>(null);
-  const [notes, setNotes] = useState("");
+  const {
+    session,
+    loading,
+    offlineClosed,
+    energy,
+    setEnergy,
+    notes,
+    setNotes,
+    performedAtInput,
+    setPerformedAtInput,
+    completedAtInput,
+    setCompletedAtInput,
+  } = useCompletadaSync(sessionId);
   const [saving, setSaving] = useState(false);
   const [editingTime, setEditingTime] = useState(false);
-  const [performedAtInput, setPerformedAtInput] = useState<string>("");
-  const [completedAtInput, setCompletedAtInput] = useState<string>("");
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const pending = readPendingComplete(sessionId);
-      if (pending) {
-        try {
-          await api.patch(`/client/sessions/${sessionId}`, {
-            status: "completed",
-            ...(pending.sessionNotes ? { sessionNotes: pending.sessionNotes } : {}),
-          }, { timeoutMs: 15_000, delaysMs: [] });
-          clearPendingComplete(sessionId);
-        } catch { /* retry on next open */ }
-      }
-      try {
-        let s = await api.get<SessionDetail>(`/client/sessions/${sessionId}`);
-        if (cancelled) return;
-        if (!isClosedSessionStatus(s.status) && pending) {
-          try {
-            await api.patch(`/client/sessions/${sessionId}`, { status: "completed" }, { timeoutMs: 20_000, delaysMs: [] });
-            clearPendingComplete(sessionId);
-            s = await api.get<SessionDetail>(`/client/sessions/${sessionId}`);
-          } catch { /* keep the in-progress session below */ }
-        }
-        if (!isClosedSessionStatus(s.status)) {
-          router.replace(`/sesion/${sessionId}`);
-          return;
-        }
-        setSession(s);
-        setEnergy(s.energyRating != null ? Math.ceil(s.energyRating / 2) : null);
-        setNotes(s.sessionNotes ?? "");
-        setPerformedAtInput(toLocalInputValue(new Date(s.performedAt)));
-        setCompletedAtInput(s.completedAt ? toLocalInputValue(new Date(s.completedAt)) : "");
-      } catch {
-        toast.error("No se pudo cargar la sesión");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void load();
-    return () => { cancelled = true; };
-  }, [api, router, sessionId, toast]);
 
   async function save() {
     setSaving(true);
@@ -123,6 +78,19 @@ export default function SessionCompletadaPage() {
       toast.error(e instanceof Error ? e.message : "No se pudo guardar");
       setSaving(false);
     }
+  }
+
+  if (offlineClosed && !session) {
+    return (
+      <div style={{ minHeight: "100dvh", background: "var(--bg)" }}>
+        <StateBlock
+          kind="empty"
+          title="Sesión lista"
+          body="Se va a sincronizar cuando haya conexión."
+          cta={<Button block onClick={() => router.replace("/semana")}>Volver a Semana</Button>}
+        />
+      </div>
+    );
   }
 
   if (loading || !session) {
