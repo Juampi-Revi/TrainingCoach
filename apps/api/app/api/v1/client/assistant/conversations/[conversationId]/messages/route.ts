@@ -23,8 +23,9 @@ export async function GET(
     const { conversationId } = await ctx.params;
     try {
       return ok(await listMessages(auth.user.sub, conversationId));
-    } catch {
-      return notFound();
+    } catch (error) {
+      if (error instanceof Error && error.message === "not_found") return notFound();
+      throw error;
     }
   });
 }
@@ -47,8 +48,9 @@ export async function POST(
         clientMessageId: body.clientMessageId,
         image: body.image,
       }));
-    } catch {
-      return notFound();
+    } catch (error) {
+      if (error instanceof Error && error.message === "not_found") return notFound();
+      throw error;
     }
   });
 }

@@ -56,6 +56,7 @@ export function useAssistant() {
       const reply = await api.post<AssistantPostResponse>(
         `/client/assistant/conversations/${conversationId}/messages`,
         { text: sent, inputKind: kind, clientMessageId: crypto.randomUUID(), image: photo },
+        { timeoutMs: 60_000, delaysMs: [] },
       );
       setMessages((prev) => [
         ...prev.filter((message) => message.id !== pendingId),

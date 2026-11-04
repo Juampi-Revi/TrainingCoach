@@ -88,8 +88,8 @@ export class ApiClient {
     return this.request<T>("GET", path);
   }
 
-  post<T>(path: string, body?: unknown) {
-    return this.request<T>("POST", path, body);
+  post<T>(path: string, body?: unknown, retry?: FetchRetryOptions) {
+    return this.request<T>("POST", path, body, retry);
   }
 
   postForm<T>(path: string, body: FormData) {

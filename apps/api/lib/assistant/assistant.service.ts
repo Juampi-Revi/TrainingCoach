@@ -88,9 +88,9 @@ export async function postMessage(userId: string, conversationId: string, input:
     });
   } catch (error) {
     if (!isUniqueConflict(error)) throw error;
-    const raced = await replayTurn(userId, conversationId, input.clientMessageId);
+    const raced = await waitForReplay(userId, conversationId, input.clientMessageId);
     if (raced) return raced;
-    throw error;
+    return emptyReply(userId, "Todavía estoy contestando ese mensaje.");
   }
 
   const mode = await assistantMode();
@@ -230,6 +230,15 @@ async function ownedConversation(userId: string, conversationId: string): Promis
     select: { id: true },
   });
   if (!conversation) throw new Error("not_found");
+}
+
+async function waitForReplay(userId: string, conversationId: string, clientMessageId: string) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const replay = await replayTurn(userId, conversationId, clientMessageId);
+    if (replay) return replay;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  return null;
 }
 
 async function replayTurn(userId: string, conversationId: string, clientMessageId: string) {
