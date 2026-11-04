@@ -1,4 +1,5 @@
 import { runtimeEnv } from "./runtime-env";
+import { getAssistantSetting } from "./settings.service";
 
 const HARDCODED_BETA_EMAILS = [
   "client@example.com",
@@ -8,8 +9,8 @@ const HARDCODED_BETA_EMAILS = [
   "alumno5@example.com",
 ];
 
-export function assistantBetaEmails(): string[] {
-  const fromEnv = runtimeEnv("ASSISTANT_BETA_EMAILS")
+function parseEmails(raw: string): string[] {
+  return raw
     .split(/[,;\n]/)
     .map((value) =>
       value
@@ -20,11 +21,23 @@ export function assistantBetaEmails(): string[] {
         .toLowerCase(),
     )
     .filter(Boolean);
-  return [...new Set([...HARDCODED_BETA_EMAILS, ...fromEnv])];
 }
 
-export function isAssistantBetaEmail(email: string | null | undefined): boolean {
+export async function assistantBetaEmails(): Promise<string[]> {
+  const fromSetting = parseEmails(await getAssistantSetting("ASSISTANT_BETA_EMAILS"));
+  return [...new Set([...HARDCODED_BETA_EMAILS, ...fromSetting])];
+}
+
+export async function isAssistantBetaEmail(email: string | null | undefined): Promise<boolean> {
   if (!email) return false;
   if (runtimeEnv("NODE_ENV") !== "production") return true;
-  return assistantBetaEmails().includes(email.toLowerCase());
+  return (await assistantBetaEmails()).includes(email.toLowerCase());
+}
+
+export async function resolveAssistantBeta(user: {
+  email: string;
+  assistantBeta: boolean;
+}): Promise<boolean> {
+  if (user.assistantBeta) return true;
+  return isAssistantBetaEmail(user.email);
 }

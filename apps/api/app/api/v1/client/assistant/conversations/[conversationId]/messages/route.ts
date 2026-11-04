@@ -18,7 +18,7 @@ export async function GET(
   ctx: { params: Promise<{ conversationId: string }> },
 ) {
   return withHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const { conversationId } = await ctx.params;
     try {
@@ -34,7 +34,7 @@ export async function POST(
   ctx: { params: Promise<{ conversationId: string }> },
 ) {
   return withValidatedHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const { conversationId } = await ctx.params;
     const body = await validateBody(req, postSchema);

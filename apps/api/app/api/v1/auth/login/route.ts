@@ -6,7 +6,7 @@ import { ok, err, withValidatedHandler, ValidationError } from "@/lib/api-respon
 import { rateLimit } from "@/lib/rate-limit";
 import { loginRequestSchema } from "@/lib/schemas";
 import { createRefreshToken } from "@/lib/auth/refresh-token.service";
-import { isAssistantBetaEmail } from "@/lib/assistant/beta";
+import { resolveAssistantBeta } from "@/lib/assistant/beta";
 import { z } from "zod";
 
 const twoFactorLoginSchema = z.object({
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
       const user = await prisma.user.findUnique({
         where: { id: payload.sub },
-        select: { id: true, email: true, displayName: true, role: true, billingStatus: true, emailVerified: true, twoFactorSecret: true, twoFactorEnabled: true },
+        select: { id: true, email: true, displayName: true, role: true, billingStatus: true, emailVerified: true, twoFactorSecret: true, twoFactorEnabled: true, assistantBeta: true },
       });
       if (!user?.twoFactorEnabled || !user.twoFactorSecret) return err("2FA no configurado", 400);
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         token: accessToken,
         refreshToken: refreshTokenResult.token,
         refreshTokenExpiresAt: refreshTokenResult.expiresAt.toISOString(),
-        user: { id: user.id, email: user.email, name: user.displayName ?? user.email, role: user.role, billingStatus: user.billingStatus, emailVerified: user.emailVerified },
+        user: { id: user.id, email: user.email, name: user.displayName ?? user.email, role: user.role, billingStatus: user.billingStatus, emailVerified: user.emailVerified, assistantBeta: await resolveAssistantBeta(user) },
       });
     }
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
-      select: { id: true, email: true, passwordHash: true, googleId: true, displayName: true, role: true, billingStatus: true, emailVerified: true, twoFactorEnabled: true },
+      select: { id: true, email: true, passwordHash: true, googleId: true, displayName: true, role: true, billingStatus: true, emailVerified: true, twoFactorEnabled: true, assistantBeta: true },
     });
     if (!user) return err("Invalid credentials", 401);
 
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         role: user.role,
         billingStatus: user.billingStatus,
         emailVerified: user.emailVerified,
-        assistantBeta: isAssistantBetaEmail(user.email),
+        assistantBeta: await resolveAssistantBeta(user),
       },
     });
   });

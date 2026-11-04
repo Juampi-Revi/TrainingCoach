@@ -11,7 +11,7 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   return withValidatedHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const body = await validateBody(req, schema);
     const result = await logDrinks(auth.user.sub, { items: [body] });

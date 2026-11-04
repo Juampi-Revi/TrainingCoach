@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractBearer } from "@/lib/api-auth";
 import { ok, unauthorized, err, withHandler } from "@/lib/api-response";
-import { isAssistantBetaEmail } from "@/lib/assistant/beta";
+import { resolveAssistantBeta } from "@/lib/assistant/beta";
 
 export async function GET(req: NextRequest) {
   return withHandler(async () => {
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: auth.user.sub },
-      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true, emailVerified: true },
+      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true, emailVerified: true, assistantBeta: true },
     });
     if (!user) return unauthorized("User not found");
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       role: user.role,
       billingStatus: user.billingStatus,
       emailVerified: user.emailVerified,
-      assistantBeta: isAssistantBetaEmail(user.email),
+      assistantBeta: await resolveAssistantBeta(user),
     });
   });
 }
@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.user.update({
       where: { id: auth.user.sub },
       data,
-      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true, emailVerified: true },
+      select: { id: true, email: true, displayName: true, avatarUrl: true, role: true, billingStatus: true, emailVerified: true, assistantBeta: true },
     });
 
     return ok({
@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest) {
       role: updated.role,
       billingStatus: updated.billingStatus,
       emailVerified: updated.emailVerified,
-      assistantBeta: isAssistantBetaEmail(updated.email),
+      assistantBeta: await resolveAssistantBeta(updated),
     });
   });
 }

@@ -6,7 +6,7 @@ import { GPT_6_LUNA_STANDARD, usdToMicroUsd } from "./cost";
 import { FallbackModel, OpenAIResponsesModel } from "./openai-model";
 import { cardsFromTraces, type ChatCard } from "./cards";
 import * as journal from "./journal.service";
-import { runtimeEnv } from "./runtime-env";
+import { getAssistantSetting } from "./settings.service";
 
 const PHOTO_LIMIT = 8;
 
@@ -93,18 +93,21 @@ export async function postMessage(userId: string, conversationId: string, input:
     throw error;
   }
 
-  const mode = assistantMode();
+  const mode = await assistantMode();
+  const openaiKey = await getAssistantSetting("OPENAI_API_KEY");
+  const openaiModel = (await getAssistantSetting("OPENAI_MODEL")) || "gpt-6-luna";
+  const budgetUsd = Number((await getAssistantSetting("MONTHLY_BUDGET_USD")) || 20);
   let result;
   try {
     result = await runTurn(
       {
         userId,
         spentMicroUsd: await journal.spentMicroUsd(),
-        limitMicroUsd: usdToMicroUsd(Number(runtimeEnv("MONTHLY_BUDGET_USD") || 20)),
+        limitMicroUsd: usdToMicroUsd(budgetUsd),
         rates: GPT_6_LUNA_STANDARD,
         registry: registry(userId),
         model: mode === "openai"
-          ? new OpenAIResponsesModel(runtimeEnv("OPENAI_API_KEY"), runtimeEnv("OPENAI_MODEL") || "gpt-6-luna")
+          ? new OpenAIResponsesModel(openaiKey, openaiModel)
           : new FallbackModel(),
         systemPrompt: `${SYSTEM_PROMPT}\n\n${await journal.briefing(userId)}\n\n${await recentTalk(userId, conversationId)}`,
       },
@@ -150,7 +153,7 @@ export async function postMessage(userId: string, conversationId: string, input:
       userId,
       monthKey: journal.monthKey(),
       provider: mode,
-      model: mode === "openai" ? (runtimeEnv("OPENAI_MODEL") || "gpt-6-luna") : "local",
+      model: mode === "openai" ? openaiModel : "local",
       inputTokens: result.usage.inputTokens,
       cachedInputTokens: result.usage.cachedInputTokens,
       outputTokens: result.usage.outputTokens,
@@ -247,7 +250,7 @@ async function replayTurn(userId: string, conversationId: string, clientMessageI
   return {
     kind: "message" as const,
     text: assistant.text,
-    assistantMode: assistantMode(),
+    assistantMode: await assistantMode(),
     day: await journal.day(userId, journal.today()),
     notes: (await journal.listNotes(userId)).notes,
     cards: cardsFromTraces(traces),
@@ -259,7 +262,7 @@ async function emptyReply(userId: string, text: string) {
   return {
     kind: "message" as const,
     text,
-    assistantMode: assistantMode(),
+    assistantMode: await assistantMode(),
     day: await journal.day(userId, journal.today()),
     notes: (await journal.listNotes(userId)).notes,
     cards: [] as ChatCard[],
@@ -267,8 +270,8 @@ async function emptyReply(userId: string, text: string) {
   };
 }
 
-function assistantMode(): "local" | "openai" {
-  return runtimeEnv("OPENAI_API_KEY") ? "openai" : "local";
+async function assistantMode(): Promise<"local" | "openai"> {
+  return (await getAssistantSetting("OPENAI_API_KEY")) ? "openai" : "local";
 }
 
 function readQuery(args: unknown): string {

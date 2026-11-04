@@ -41,6 +41,7 @@ model User {
   birthYear      Int?
   heightCm       Decimal?  @db.Decimal(5, 1)
   activityLevel  String?   // 'sedentary' | 'light' | 'moderate' | 'very' | 'extra'
+  assistantBeta  Boolean  @default(false)
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -1215,4 +1216,10 @@ model AssistantUsageCharge {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([monthKey])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

@@ -12,7 +12,7 @@ export async function PATCH(
   ctx: { params: Promise<{ supplementId: string }> },
 ) {
   return withValidatedHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const { supplementId } = await ctx.params;
     const body = await validateBody(req, schema);

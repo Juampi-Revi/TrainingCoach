@@ -12,7 +12,7 @@ export async function PATCH(
   ctx: { params: Promise<{ drinkId: string }> },
 ) {
   return withValidatedHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const { drinkId } = await ctx.params;
     const body = await validateBody(req, schema);
@@ -29,7 +29,7 @@ export async function DELETE(
   ctx: { params: Promise<{ drinkId: string }> },
 ) {
   return withValidatedHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const { drinkId } = await ctx.params;
     const result = await deleteDrink(auth.user.sub, drinkId);

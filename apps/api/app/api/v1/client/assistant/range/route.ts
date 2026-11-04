@@ -4,7 +4,7 @@ import { range } from "@/lib/assistant/journal.service";
 
 export async function GET(req: Request) {
   return withHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const url = new URL(req.url);
     const kind = url.searchParams.get("kind") === "month" ? "month" : "week";

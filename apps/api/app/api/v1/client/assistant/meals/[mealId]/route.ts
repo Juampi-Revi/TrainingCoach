@@ -7,7 +7,7 @@ export async function DELETE(
   ctx: { params: Promise<{ mealId: string }> },
 ) {
   return withHandler(async () => {
-    const auth = requireAssistantBeta(req);
+    const auth = await requireAssistantBeta(req);
     if (auth instanceof Response) return auth;
     const { mealId } = await ctx.params;
     const result = await deleteMeal(auth.user.sub, mealId, true);
