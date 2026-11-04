@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { createClient, ApiError } from "./api";
+import type { FetchRetryOptions } from "./api-fetch";
 import type { AuthUser, LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse } from "@regen/types";
 
 const TOKEN_KEY = "regen_token";
@@ -147,9 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Add response interceptor for 401 handling
     const originalRequest = client.request.bind(client);
-    client.request = async <T,>(method: string, url: string, body?: unknown): Promise<T> => {
+    client.request = async <T,>(method: string, url: string, body?: unknown, retry?: FetchRetryOptions): Promise<T> => {
       try {
-        return await originalRequest(method, url, body);
+        return await originalRequest(method, url, body, retry);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401 && state.refreshToken) {
           // Try to refresh token
@@ -166,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             // Retry original request with new token
             const retryClient = createClient(refreshed.token);
-            return await retryClient.request(method, url, body);
+            return await retryClient.request(method, url, body, retry);
           } catch {
             // Refresh failed, logout
             logout();

@@ -5,6 +5,7 @@ import { GROUP_COLORS, groupLabel, fmtDuration, blockTypeLabel, blockSummary } f
 import type { SessionDetail, SessionExercise, WorkoutBlockSummary } from "@regen/types";
 import { WorkoutLabelChips } from "@/components/features/training/workout-label-chips";
 import { isSessionExerciseExtra } from "@/lib/workout-labels";
+import { isExerciseLogged } from "../_lib/session-view";
 import { ExerciseAltChips } from "./exercise-alt-chips";
 
 interface BlockGroup {
@@ -158,7 +159,7 @@ export function ExerciseList({
                     </div>
                   )}
                   {sg.items.map(({ e, realIdx }, itemIdx) => {
-                    const done = e.sets.length >= (e.target?.sets ?? 3);
+                    const done = isExerciseLogged(e);
                     const active = realIdx === currentExIdx;
                     const isExtra = isSessionExerciseExtra(e);
                     const isLast = itemIdx === sg.items.length - 1 && sgi === supersetGroups.length - 1;

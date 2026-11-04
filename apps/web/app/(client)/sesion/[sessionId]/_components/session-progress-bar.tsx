@@ -1,6 +1,7 @@
 "use client";
 
 import type { SessionExercise } from "@regen/types";
+import { isExerciseLogged } from "../_lib/session-view";
 import "../_styles.css";
 
 export function SessionProgressBar({
@@ -19,7 +20,7 @@ export function SessionProgressBar({
     <div className="session-progress" role="navigation" aria-label="Progreso de la sesión">
       <div className="session-progress__track">
         {exercises.map((ex, i) => {
-          const done = (ex.sets?.length ?? 0) >= (ex.target?.sets ?? 3);
+          const done = isExerciseLogged(ex);
           const active = i === safeIdx;
           const past = i < safeIdx;
           const short = shortName(ex.exercise.name);

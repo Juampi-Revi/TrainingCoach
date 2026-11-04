@@ -4,11 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
-import {
-  clearPendingComplete,
-  isClosedSessionStatus,
-  savePendingComplete,
-} from "../_lib/session-complete";
+import { clearPendingComplete, savePendingComplete } from "../_lib/session-complete";
 
 export function useCompleteSession({
   sessionId,
@@ -23,24 +19,11 @@ export function useCompleteSession({
   const [completing, setCompleting] = useState(false);
   const inflight = useRef(false);
 
-  const leaveLogger = useCallback(() => {
-    router.replace(`/sesion/${sessionId}/completada`);
-  }, [router, sessionId]);
-
-  const alreadyClosed = useCallback(async () => {
-    try {
-      const current = await api.get<{ status: string }>(`/client/sessions/${sessionId}`);
-      return isClosedSessionStatus(current.status);
-    } catch {
-      return false;
-    }
-  }, [api, sessionId]);
-
   const closeOnServer = useCallback(async (sessionNotes?: string) => {
     await api.patch(`/client/sessions/${sessionId}`, {
       status: "completed",
       ...(sessionNotes ? { sessionNotes } : {}),
-    }, { timeoutMs: 15_000, delaysMs: [] });
+    }, { timeoutMs: 20_000, delaysMs: [] });
     clearPendingComplete(sessionId);
   }, [api, sessionId]);
 
@@ -49,31 +32,25 @@ export function useCompleteSession({
     inflight.current = true;
     setCompleting(true);
     try {
-      let remaining = await flushQueue();
-      if (remaining > 0) remaining = await flushQueue();
-      if (remaining > 0) {
-        if (await alreadyClosed()) {
-          clearPendingComplete(sessionId);
-          leaveLogger();
-          return;
-        }
-        toast.error("No se pudieron subir todas las series. Reintentá Finalizar.");
-        setCompleting(false);
-        return;
-      }
+      await Promise.race([
+        flushQueue().catch(() => 0),
+        new Promise<number>((resolve) => setTimeout(() => resolve(0), 8000)),
+      ]);
       try {
         await closeOnServer(sessionNotes);
       } catch {
         savePendingComplete(sessionId, sessionNotes);
+        await closeOnServer(sessionNotes);
       }
-      leaveLogger();
+      router.replace(`/sesion/${sessionId}/completada`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "No se pudo cerrar la sesión");
+      savePendingComplete(sessionId, sessionNotes);
+      toast.error(e instanceof Error ? e.message : "No se pudo cerrar la sesión. Reintentá Finalizar.");
       setCompleting(false);
     } finally {
       inflight.current = false;
     }
-  }, [alreadyClosed, closeOnServer, flushQueue, leaveLogger, sessionId, toast]);
+  }, [closeOnServer, flushQueue, router, sessionId, toast]);
 
   return { completing, completeSession };
 }

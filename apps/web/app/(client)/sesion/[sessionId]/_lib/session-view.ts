@@ -14,11 +14,17 @@ export function nextSupersetIndex(
   return index + 1;
 }
 
+export function isExerciseLogged(exercise: SessionExercise): boolean {
+  if (exercise.block?.type === "warmup" || exercise.block?.type === "cooldown") return true;
+  if (exercise.target?.durationSeconds && !exercise.target.sets) return exercise.sets.length > 0;
+  return exercise.sets.length >= (exercise.target?.sets ?? 3);
+}
+
 export function sessionWorkSplit(session: SessionDetail) {
   const warmupExercises = session.exercises.filter((e) => e.block?.type === "warmup");
   const workExercises = session.exercises.filter((e) => e.block?.type !== "warmup");
   const requiredExercises = workExercises.filter((e) => !isSessionExerciseExtra(e));
-  const completedExs = requiredExercises.filter((e) => e.sets.length >= (e.target?.sets ?? 3)).length;
+  const completedExs = requiredExercises.filter(isExerciseLogged).length;
   const extraBlockCount = (session.blocks ?? []).filter((block) => block.isExtra).length;
   const extraGroupCount = Array.from(
     new Set(

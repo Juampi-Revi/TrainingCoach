@@ -74,10 +74,16 @@ export default function SessionCompletadaPage() {
         } catch { /* retry on next open */ }
       }
       try {
-        const s = await api.get<SessionDetail>(`/client/sessions/${sessionId}`);
+        let s = await api.get<SessionDetail>(`/client/sessions/${sessionId}`);
         if (cancelled) return;
+        if (!isClosedSessionStatus(s.status) && pending) {
+          try {
+            await api.patch(`/client/sessions/${sessionId}`, { status: "completed" }, { timeoutMs: 20_000, delaysMs: [] });
+            clearPendingComplete(sessionId);
+            s = await api.get<SessionDetail>(`/client/sessions/${sessionId}`);
+          } catch { /* keep the in-progress session below */ }
+        }
         if (!isClosedSessionStatus(s.status)) {
-          clearPendingComplete(sessionId);
           router.replace(`/sesion/${sessionId}`);
           return;
         }

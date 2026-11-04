@@ -297,7 +297,7 @@ export async function PATCH(
           : body.status;
 
     const now = new Date();
-    const finalCompletedAt =
+    let finalCompletedAt =
       nextStatus === "completed" || nextStatus === "partial"
         ? body.completedAt === undefined
           ? now
@@ -309,7 +309,7 @@ export async function PATCH(
       const performedAtDate = new Date(nextPerformedAt);
       const completedAtDate = new Date(finalCompletedAt);
       if (completedAtDate.getTime() < performedAtDate.getTime()) {
-        return err("completedAt must be after performedAt", 400);
+        finalCompletedAt = performedAtDate;
       }
     }
 
