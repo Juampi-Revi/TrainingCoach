@@ -6,6 +6,7 @@ import { GPT_6_LUNA_STANDARD, usdToMicroUsd } from "./cost";
 import { FallbackModel, OpenAIResponsesModel } from "./openai-model";
 import { cardsFromTraces, type ChatCard } from "./cards";
 import * as journal from "./journal.service";
+import { runtimeEnv } from "./runtime-env";
 
 const PHOTO_LIMIT = 8;
 
@@ -99,11 +100,11 @@ export async function postMessage(userId: string, conversationId: string, input:
       {
         userId,
         spentMicroUsd: await journal.spentMicroUsd(),
-        limitMicroUsd: usdToMicroUsd(Number(process.env.MONTHLY_BUDGET_USD ?? 20)),
+        limitMicroUsd: usdToMicroUsd(Number(runtimeEnv("MONTHLY_BUDGET_USD") || 20)),
         rates: GPT_6_LUNA_STANDARD,
         registry: registry(userId),
         model: mode === "openai"
-          ? new OpenAIResponsesModel(process.env.OPENAI_API_KEY ?? "", process.env.OPENAI_MODEL || "gpt-6-luna")
+          ? new OpenAIResponsesModel(runtimeEnv("OPENAI_API_KEY"), runtimeEnv("OPENAI_MODEL") || "gpt-6-luna")
           : new FallbackModel(),
         systemPrompt: `${SYSTEM_PROMPT}\n\n${await journal.briefing(userId)}\n\n${await recentTalk(userId, conversationId)}`,
       },
@@ -149,7 +150,7 @@ export async function postMessage(userId: string, conversationId: string, input:
       userId,
       monthKey: journal.monthKey(),
       provider: mode,
-      model: mode === "openai" ? (process.env.OPENAI_MODEL || "gpt-6-luna") : "local",
+      model: mode === "openai" ? (runtimeEnv("OPENAI_MODEL") || "gpt-6-luna") : "local",
       inputTokens: result.usage.inputTokens,
       cachedInputTokens: result.usage.cachedInputTokens,
       outputTokens: result.usage.outputTokens,
@@ -267,7 +268,7 @@ async function emptyReply(userId: string, text: string) {
 }
 
 function assistantMode(): "local" | "openai" {
-  return process.env.OPENAI_API_KEY ? "openai" : "local";
+  return runtimeEnv("OPENAI_API_KEY") ? "openai" : "local";
 }
 
 function readQuery(args: unknown): string {

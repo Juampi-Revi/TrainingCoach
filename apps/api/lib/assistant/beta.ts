@@ -1,3 +1,5 @@
+import { runtimeEnv } from "./runtime-env";
+
 const HARDCODED_BETA_EMAILS = [
   "client@example.com",
   "alumno2@example.com",
@@ -7,9 +9,16 @@ const HARDCODED_BETA_EMAILS = [
 ];
 
 export function assistantBetaEmails(): string[] {
-  const fromEnv = (process.env.ASSISTANT_BETA_EMAILS ?? "")
-    .split(",")
-    .map((value) => value.trim().replace(/^['"]|['"]$/g, "").trim().toLowerCase())
+  const fromEnv = runtimeEnv("ASSISTANT_BETA_EMAILS")
+    .split(/[,;\n]/)
+    .map((value) =>
+      value
+        .trim()
+        .replace(/^['"]|['"]$/g, "")
+        .replace(/^assistant_beta_emails\s*=\s*/i, "")
+        .trim()
+        .toLowerCase(),
+    )
     .filter(Boolean);
   return [...new Set([...HARDCODED_BETA_EMAILS, ...fromEnv])];
 }
