@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendResetEmail } from "@/lib/email";
+import { getWebBaseUrl } from "@/lib/public-urls";
 import { ok, err, withHandler } from "@/lib/api-response";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -36,15 +37,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const appUrl = process.env.FRONTEND_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3001";
-    const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
+    const resetPath = `/reset-password?token=${rawToken}`;
+    const resetUrl = `${getWebBaseUrl()}${resetPath}`;
 
-    const { sent } = await sendResetEmail({
+    const { sent, configured } = await sendResetEmail({
       to: user.email,
       name: user.displayName ?? user.email,
       resetUrl,
     });
 
-    return ok({ sent });
+    if (sent) return ok({ sent: true });
+    if (!configured) return ok({ sent: false, resetUrl: resetPath });
+    return ok({ sent: false });
   });
 }

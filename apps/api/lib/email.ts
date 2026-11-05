@@ -7,7 +7,7 @@ type SendResetParams = {
 export async function sendResetEmail({ to, name, resetUrl }: SendResetParams) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.EMAIL_FROM?.trim();
-  if (!apiKey || !from) return { sent: false };
+  if (!apiKey || !from) return { sent: false, configured: false };
 
   const subject = "Resetear contraseña — Training Challenge";
   const text = `Hola ${name},\n\nHacé clic en el siguiente link para resetear tu contraseña (válido por 1 hora):\n\n${resetUrl}\n\nSi no pediste este email, ignoralo.`;
@@ -24,7 +24,7 @@ export async function sendResetEmail({ to, name, resetUrl }: SendResetParams) {
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from, to, subject, text, html }),
   });
-  return { sent: res.ok };
+  return { sent: res.ok, configured: true };
 }
 
 type SendVerifyParams = {

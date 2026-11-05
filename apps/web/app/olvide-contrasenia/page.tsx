@@ -77,34 +77,27 @@ export default function OlvideContraseniaPage() {
             >
               <Icon name="check" size={24} color="var(--text-on-accent)" />
             </div>
-            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>
-              Revisá tu email
-            </div>
-            <div style={{ fontSize: 14, color: "var(--text-mute)", lineHeight: 1.6 }}>
-              Si existe una cuenta con ese email, te enviamos un link para resetear tu contraseña.
-            </div>
-
-            {devUrl && (
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: 14,
-                  background: "var(--bg-1)",
-                  border: "1px solid var(--line)",
-                  borderLeft: "3px solid var(--warn)",
-                  borderRadius: 10,
-                }}
-              >
-                <div style={{ fontSize: 11, color: "var(--warn)", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".08em" }}>
-                  Dev — email no configurado
+            {devUrl ? (
+              <>
+                <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>
+                  Elegí una nueva contraseña
                 </div>
-                <Link
-                  href={devUrl}
-                  style={{ fontSize: 12, color: "var(--accent-text)", wordBreak: "break-all", lineHeight: 1.5 }}
-                >
-                  {devUrl}
-                </Link>
-              </div>
+                <div style={{ fontSize: 14, color: "var(--text-mute)", lineHeight: 1.6, marginBottom: 20 }}>
+                  El mail todavía no está configurado. Con este link podés entrar de nuevo. Vale 1 hora.
+                </div>
+                <Button as={Link} href={devUrl} block size="lg">
+                  Crear nueva contraseña
+                </Button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>
+                  Revisá tu email
+                </div>
+                <div style={{ fontSize: 14, color: "var(--text-mute)", lineHeight: 1.6 }}>
+                  Si existe una cuenta con ese email, te enviamos un link para resetear tu contraseña.
+                </div>
+              </>
             )}
 
             <Link
