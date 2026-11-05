@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { Icon } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import { shrinkPhoto } from "../_lib/photo";
 import { useVoiceRecorder, type AssistantAudio } from "../_hooks/use-voice-recorder";
+import { CameraCapture } from "./camera-capture";
 
 export type AssistantPhoto = { mediaType: "image/jpeg"; data: string };
 
@@ -16,12 +17,15 @@ export function Composer({
   onSend: (text: string, photo?: AssistantPhoto, audio?: AssistantAudio) => void;
 }) {
   const toast = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState<AssistantPhoto | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const voice = useVoiceRecorder();
   const ready = text.trim() !== "" || photo !== null || voice.recording;
+  const mediaBusy = busy || voice.recording;
 
   function clearPhoto() {
     setPhoto(null);
@@ -44,6 +48,23 @@ export function Composer({
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "No pude leer esa foto");
     }
+  }
+
+  function onPicked(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void pickPhoto(file);
+  }
+
+  function openCamera() {
+    if (mediaBusy) return;
+    const phone = window.matchMedia("(pointer: coarse)").matches
+      || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (phone || !navigator.mediaDevices?.getUserMedia) {
+      cameraRef.current?.click();
+      return;
+    }
+    setCameraOpen(true);
   }
 
   async function toggleVoice() {
@@ -69,7 +90,7 @@ export function Composer({
       {preview ? (
         <div className="asistente-photo-preview">
           <img src={preview} alt="Foto lista para enviar" />
-          <button type="button" onClick={clearPhoto} aria-label="Sacar la foto" disabled={busy}>
+          <button type="button" onClick={clearPhoto} aria-label="Quitar la foto" disabled={busy}>
             <Icon name="x" size={14} />
           </button>
         </div>
@@ -86,23 +107,37 @@ export function Composer({
         }}
       >
         <input
-          ref={fileRef}
+          ref={galleryRef}
           className="asistente-photo-file"
           type="file"
           accept="image/*"
-          aria-label="Archivo de la foto"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (file) void pickPhoto(file);
-          }}
+          aria-label="Archivo de la galería"
+          onChange={onPicked}
+        />
+        <input
+          ref={cameraRef}
+          className="asistente-photo-file"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          aria-label="Cámara del teléfono"
+          onChange={onPicked}
         />
         <button
           type="button"
           className="asistente-photo"
-          disabled={busy || voice.recording}
-          aria-label="Adjuntar una foto del plato"
-          onClick={() => fileRef.current?.click()}
+          disabled={mediaBusy}
+          aria-label="Sacar una foto del plato"
+          onClick={openCamera}
+        >
+          <Icon name="camera" size={18} />
+        </button>
+        <button
+          type="button"
+          className="asistente-photo"
+          disabled={mediaBusy}
+          aria-label="Elegir una foto de la galería"
+          onClick={() => galleryRef.current?.click()}
         >
           <Icon name="image" size={18} />
         </button>
@@ -138,6 +173,19 @@ export function Composer({
           <Icon name="send" size={16} />
         </button>
       </form>
+      {cameraOpen ? (
+        <CameraCapture
+          onCapture={(file) => {
+            setCameraOpen(false);
+            void pickPhoto(file);
+          }}
+          onClose={() => setCameraOpen(false)}
+          onUnavailable={() => {
+            setCameraOpen(false);
+            cameraRef.current?.click();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

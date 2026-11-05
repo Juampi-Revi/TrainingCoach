@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assumedGrams, defaultPlateGrams, standardPortion } from "./portions";
+import { assumedGrams, cleanPlateQuery, defaultPlateGrams, pickCatalogFood, standardPortion } from "./portions";
 
 describe("standard portions", () => {
   it("matches a common food by token", () => {
@@ -23,5 +23,24 @@ describe("standard portions", () => {
     expect(defaultPlateGrams("arroz", 1)).toEqual({ grams: 150, assumed: true });
     expect(defaultPlateGrams("algo raro", 90)).toEqual({ grams: 90, assumed: true });
     expect(defaultPlateGrams("algo raro", null)).toEqual({ grams: 150, assumed: true });
+  });
+
+  it("drops size and color words from a plate query", () => {
+    expect(cleanPlateQuery("zanahoria mediana")).toBe("zanahoria");
+    expect(cleanPlateQuery("cebolla grande")).toBe("cebolla");
+    expect(cleanPlateQuery("pimiento verde")).toBe("pimiento");
+    expect(cleanPlateQuery("pechuga a la plancha")).toBe("pechuga");
+  });
+
+  it("picks the plain cooked food over fries or turkey", () => {
+    expect(pickCatalogFood("papa", [
+      { name: "Papas fritas" },
+      { name: "Papa cocida" },
+      { name: "Papas snack" },
+    ])?.name).toBe("Papa cocida");
+    expect(pickCatalogFood("pechuga", [
+      { name: "Pechuga de pavo" },
+      { name: "Pechuga de pollo" },
+    ])?.name).toBe("Pechuga de pollo");
   });
 });

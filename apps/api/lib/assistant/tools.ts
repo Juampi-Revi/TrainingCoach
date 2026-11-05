@@ -13,8 +13,29 @@ const per100gSchema = z.strictObject({
 });
 
 export const searchFoodsInput = z.strictObject({
-  query: z.string().trim().min(1).max(120),
+  queries: z.array(z.string().trim().min(1).max(80)).min(1).max(8),
 });
+
+export function searchQueriesFrom(args: unknown): string[] {
+  if (!args || typeof args !== "object") return [];
+  const row = args as { queries?: unknown; query?: unknown };
+  const raw = [
+    ...(Array.isArray(row.queries) ? row.queries : []),
+    ...(typeof row.query === "string" ? [row.query] : []),
+  ];
+  const seen = new Set<string>();
+  const queries: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const query = item.trim().slice(0, 80);
+    const key = query.toLowerCase();
+    if (!query || seen.has(key)) continue;
+    seen.add(key);
+    queries.push(query);
+    if (queries.length >= 8) break;
+  }
+  return queries;
+}
 
 export const catalogMealItemInput = z.strictObject({
   kind: z.literal("catalog"),
@@ -103,7 +124,7 @@ export const logPlateInput = z.strictObject({
   items: z.array(z.strictObject({
     query: z.string().trim().min(1).max(80),
     grams: z.number().positive().max(2000).optional(),
-  })).min(1).max(6),
+  })).min(1).max(8),
 });
 
 export const suggestMealsInput = z.strictObject({

@@ -9,6 +9,7 @@ import * as journal from "./journal.service";
 import { localHour, shouldRemindAt } from "./supplement-windows";
 import { getAssistantSetting } from "./settings.service";
 import { transcribeAudio, type TurnAudio } from "./transcribe";
+import { searchQueriesFrom } from "./tools";
 
 const PHOTO_LIMIT = 8;
 const VOICE_LIMIT = 16;
@@ -200,7 +201,7 @@ export async function postMessage(userId: string, conversationId: string, input:
 
 function registry(userId: string): ToolRegistry {
   return {
-    search_foods: (args) => journal.searchFoods(userId, readQuery(args)),
+    search_foods: (args) => journal.searchFoods(userId, searchQueriesFrom(args)),
     log_meal: (args) => journal.logMeal(userId, args as Parameters<typeof journal.logMeal>[1]),
     get_day_summary: async (args) => summary(await journal.day(userId, readDate(args))),
     list_meals: async (args) => {
@@ -316,10 +317,6 @@ async function emptyReply(userId: string, text: string) {
 
 async function assistantMode(): Promise<"local" | "openai"> {
   return (await getAssistantSetting("OPENAI_API_KEY")) ? "openai" : "local";
-}
-
-function readQuery(args: unknown): string {
-  return args && typeof args === "object" && "query" in args ? String((args as { query: unknown }).query) : "";
 }
 
 function readDate(args: unknown): string {

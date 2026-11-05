@@ -67,9 +67,9 @@ export async function ensureSystemFoods() {
 }
 
 export async function searchFoods(query: string, userId: string, take = 20): Promise<CatalogFoodDTO[]> {
-  await ensureSystemFoods();
   const q = normalizeFoodName(query);
   if (q.length < 1) {
+    await ensureSystemFoods();
     const recent = await prisma.foodItem.findMany({
       where: { OR: [{ isSystem: true }, { createdByUserId: userId }] },
       orderBy: [{ isSystem: "desc" }, { name: "asc" }],
@@ -77,18 +77,47 @@ export async function searchFoods(query: string, userId: string, take = 20): Pro
     });
     return recent.map(toCatalogDTO);
   }
+  const [row] = await searchFoodsMany([query], userId, take);
+  return row?.results ?? [];
+}
 
+export async function searchFoodsMany(
+  queries: string[],
+  userId: string,
+  take = 8,
+): Promise<Array<{ query: string; results: CatalogFoodDTO[] }>> {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of queries) {
+    const query = raw.trim();
+    const key = normalizeFoodName(query);
+    if (!query || !key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(query);
+    if (unique.length >= 8) break;
+  }
+  if (unique.length === 0) return [];
+
+  await ensureSystemFoods();
+  const needles = unique.map((query) => ({ query, q: normalizeFoodName(query) }));
   const items = await prisma.foodItem.findMany({
     where: {
       AND: [
         { OR: [{ isSystem: true }, { createdByUserId: userId }, { source: "off" }] },
-        { nameNormalized: { contains: q, mode: "insensitive" } },
+        { OR: needles.map(({ q }) => ({ nameNormalized: { contains: q, mode: "insensitive" } })) },
       ],
     },
     orderBy: [{ isSystem: "desc" }, { name: "asc" }],
-    take: Math.min(40, Math.max(5, take)),
+    take: Math.min(120, Math.max(take, needles.length * 20)),
   });
-  return items.map(toCatalogDTO);
+
+  return needles.map(({ query, q }) => ({
+    query,
+    results: items
+      .filter((item) => item.nameNormalized.includes(q))
+      .slice(0, take)
+      .map(toCatalogDTO),
+  }));
 }
 
 export async function getFoodById(id: string) {

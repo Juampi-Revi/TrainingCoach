@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getFoodById, searchFoods as catalogSearch } from "@/lib/health/food-catalog.service";
+import { getFoodById, searchFoodsMany as catalogSearchMany } from "@/lib/health/food-catalog.service";
 import { getNutritionProfile, getNutritionTarget } from "@/lib/health/nutrition.service";
 import {
   argentinaDateTime,
@@ -14,7 +14,7 @@ import {
   weekdayLabel,
 } from "./calendar";
 import { nutrientsForGrams, remainingOf, sumNutrients, type NutrientVector } from "./nutrients";
-import { assumedGrams, cleanServingUnit, defaultPlateGrams, fold, gramsFor, millilitersForUnit, volumeFor } from "./portions";
+import { assumedGrams, cleanPlateQuery, cleanServingUnit, defaultPlateGrams, gramsFor, millilitersForUnit, pickCatalogFood, volumeFor } from "./portions";
 import { localHour, shouldRemindAt } from "./supplement-windows";
 
 function n(value: { toString(): string } | number | null | undefined): number {
@@ -99,16 +99,19 @@ export async function day(userId: string, isoDate: string) {
   };
 }
 
-export async function searchFoods(userId: string, query: string) {
-  const rows = await catalogSearch(query, userId, 8);
+export async function searchFoods(userId: string, queries: string[]) {
+  const matches = await catalogSearchMany(queries, userId, 8);
   return {
-    results: rows.map((food) => ({
-      id: food.id,
-      name: food.name,
-      provenance: food.source === "custom" ? "user_defined" : "verified",
-      servings: food.servingGrams
-        ? [{ label: cleanServingUnit(food.servingLabel ?? "unidad"), grams: food.servingGrams }]
-        : [{ label: "g", grams: 1 }],
+    matches: matches.map((row) => ({
+      query: row.query,
+      results: row.results.map((food) => ({
+        id: food.id,
+        name: food.name,
+        provenance: food.source === "custom" ? "user_defined" : "verified",
+        servings: food.servingGrams
+          ? [{ label: cleanServingUnit(food.servingLabel ?? "unidad"), grams: food.servingGrams }]
+          : [{ label: "g", grams: 1 }],
+      })),
     })),
   };
 }
@@ -465,25 +468,35 @@ export async function suggestMeals(
 }
 
 export async function logPlate(userId: string, input: { items: Array<{ query: string; grams?: number }> }) {
-  const resolved = [];
-  for (const item of input.items) {
-    const found = await searchFoods(userId, plateQuery(item.query));
-    const chosen = choosePlateFood(item.query, found.results);
-    const match = chosen ?? (found.results.length === 1 ? found.results[0] : null);
+  const { matches } = await searchFoods(
+    userId,
+    input.items.map((item) => cleanPlateQuery(item.query)),
+  );
+  const resultsOf = async (query: string) => {
+    const cleaned = cleanPlateQuery(query);
+    const found = matches.find((row) => row.query === cleaned)?.results ?? [];
+    if (found.length > 0) return found;
+    if (cleaned.length < 6) return [];
+    const retry = await searchFoods(userId, [cleaned.slice(0, 4)]);
+    return retry.matches[0]?.results ?? [];
+  };
+
+  const resolved = await Promise.all(input.items.map(async (item) => {
+    const results = await resultsOf(item.query);
+    const match = pickCatalogFood(cleanPlateQuery(item.query), results);
     const food = match ? await getFoodById(match.id) : null;
     const catalogServing = food?.servingGrams != null ? n(food.servingGrams) : null;
     const portion = item.grams != null
       ? { grams: item.grams, assumed: false }
       : defaultPlateGrams(item.query, catalogServing);
     if (!food) {
-      resolved.push({
+      return {
         query: item.query,
         grams: portion.grams,
         assumedStandard: portion.assumed,
-        status: found.results.length > 1 ? "ambiguous" as const : "not_found" as const,
-        options: found.results.map((row) => row.name),
-      });
-      continue;
+        status: results.length > 1 ? "ambiguous" as const : "not_found" as const,
+        options: results.map((row) => row.name),
+      };
     }
     const line = lineFrom(
       1,
@@ -494,8 +507,8 @@ export async function logPlate(userId: string, input: { items: Array<{ query: st
       per100Of(food),
       food.id,
     );
-    resolved.push({ query: item.query, grams: portion.grams, assumedStandard: portion.assumed, status: "ready" as const, line });
-  }
+    return { query: item.query, grams: portion.grams, assumedStandard: portion.assumed, status: "ready" as const, line };
+  }));
   if (resolved.some((item) => item.status !== "ready")) {
     return {
       saved: false as const,
@@ -896,19 +909,3 @@ function mealTypeForNow(): string {
   return "dinner";
 }
 
-function plateQuery(query: string): string {
-  const simplified = fold(query)
-    .replace(/\ba la (plancha|parrilla)\b/g, " ")
-    .replace(/\bal horno\b/g, " ")
-    .replace(/\b(hervid|cocid|frit|saltead|grillad|crud)[oa]s?\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return simplified.length > 2 ? simplified : fold(query);
-}
-
-function choosePlateFood(query: string, results: Array<{ id: string; name: string }>) {
-  if (results.length < 2) return null;
-  const needle = fold(query);
-  const covering = results.filter((food) => fold(food.name) === needle || fold(food.name).includes(needle));
-  return covering.length === 1 ? covering[0] : null;
-}

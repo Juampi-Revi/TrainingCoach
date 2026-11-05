@@ -134,6 +134,39 @@ export function defaultPlateGrams(query: string, catalogServingGrams: number | n
   return { grams: FALLBACK_PORTION_GRAMS, assumed: true };
 }
 
+export function cleanPlateQuery(query: string): string {
+  const simplified = fold(query)
+    .replace(/\ba la (plancha|parrilla)\b/g, " ")
+    .replace(/\bal horno\b/g, " ")
+    .replace(/\b(hervid|cocid|frit|saltead|grillad|crud)[oa]s?\b/g, " ")
+    .replace(/\b(mediana?|medi[oa]|grande|chic[oa]|pequena?|pequeno)\b/g, " ")
+    .replace(/\b(verde|roj[oa]|amarill[oa]|blanc[oa]|negr[oa])\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return simplified.length > 2 ? simplified : fold(query);
+}
+
+export function pickCatalogFood<T extends { name: string }>(query: string, results: T[]): T | null {
+  if (results.length === 0) return null;
+  if (results.length === 1) return results[0];
+  const needle = fold(query);
+  const ranked = results.map((food) => {
+    const name = fold(food.name);
+    let score = 0;
+    if (name === needle) score += 80;
+    if (name.startsWith(needle)) score += 30;
+    if (name.includes(needle)) score += 12;
+    if (/\b(frit|snack|reboz|milanes)/.test(name)) score -= 60;
+    if (/\b(cocid|hervid|plancha)\b/.test(name)) score += 16;
+    if (/\bpavo\b/.test(name) && !/\bpavo\b/.test(needle)) score -= 25;
+    if (/\bpollo\b/.test(name) && !/\bpavo\b/.test(needle)) score += 8;
+    score -= Math.min(name.length, 40);
+    return { food, score };
+  });
+  ranked.sort((a, b) => b.score - a.score);
+  return ranked[0]?.food ?? null;
+}
+
 function portionKeyFits(needle: string, key: string): boolean {
   if (needle === key) return true;
   const tokens = needle.split(/\s+/);

@@ -1,4 +1,4 @@
-import { toolInputs, type ToolName } from "./tools";
+import { searchQueriesFrom, toolInputs, type ToolName } from "./tools";
 import { budgetAllows, costMicroUsd, type ModelRates, type TokenUsage } from "./cost";
 
 export const MAX_TOOL_CALLS = 8;
@@ -89,7 +89,7 @@ export async function runTurn(
   let toolCalls = 0;
   let usage: TokenUsage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
 
-  while (toolCalls <= MAX_TOOL_CALLS) {
+  while (toolCalls < MAX_TOOL_CALLS) {
     if (!budgetAllows(context.spentMicroUsd + chargedMicroUsd, context.limitMicroUsd)) {
       return {
         kind: "budget_exceeded",
@@ -123,37 +123,12 @@ export async function runTurn(
       };
     }
 
-    const outputs = [];
-    for (const call of response.calls) {
-      toolCalls += 1;
-      if (toolCalls > MAX_TOOL_CALLS) {
-        outputs.push({ callId: call.callId, ok: false, error: "tool_limit" });
-        traces.push({ name: call.name, arguments: call.arguments, ok: false, output: "tool_limit" });
-        break;
-      }
-      const output = await executeCall(context, call);
-      outputs.push(output);
-      traces.push({
-        name: call.name,
-        arguments: call.arguments,
-        ok: output.ok === true,
-        output: output.ok === true ? output.output : output.error,
-      });
-    }
-
-    messages.push({ role: "assistant", calls: response.calls });
-    messages.push({ role: "tool", outputs });
-
-    if (toolCalls > MAX_TOOL_CALLS) {
-      return {
-        kind: "tool_limit",
-        chargedMicroUsd,
-        toolCalls,
-        traces,
-        usage,
-        text: "No pude terminar la consulta sin pasarme del límite de herramientas. No guardé nada en este último paso.",
-      };
-    }
+    toolCalls += 1;
+    const round = response.calls.slice(0, 8);
+    const executed = await executeRound(context, round);
+    traces.push(...executed.traces);
+    messages.push({ role: "assistant", calls: round });
+    messages.push({ role: "tool", outputs: executed.outputs });
   }
 
   return {
@@ -166,11 +141,56 @@ export async function runTurn(
   };
 }
 
+async function executeRound(context: TurnContext, calls: ToolCall[]) {
+  const outputs: Record<string, unknown>[] = [];
+  const traces: ToolTrace[] = [];
+  const searchCalls = calls.filter((call) => call.name === "search_foods");
+  const batchedQueries = searchQueriesFrom({
+    queries: searchCalls.flatMap((call) => searchQueriesFrom(call.arguments)),
+  });
+  let searchOutput: Record<string, unknown> | null = null;
+
+  for (const call of calls) {
+    if (call.name === "search_foods") {
+      if (!searchOutput) {
+        const batched: ToolCall = {
+          callId: call.callId,
+          name: "search_foods",
+          arguments: { queries: batchedQueries },
+        };
+        searchOutput = await executeCall(context, batched);
+        traces.push({
+          name: "search_foods",
+          arguments: batched.arguments,
+          ok: searchOutput.ok === true,
+          output: searchOutput.ok === true ? searchOutput.output : searchOutput.error,
+        });
+      }
+      outputs.push({ ...searchOutput, callId: call.callId });
+      continue;
+    }
+
+    const output = await executeCall(context, call);
+    outputs.push(output);
+    traces.push({
+      name: call.name,
+      arguments: call.arguments,
+      ok: output.ok === true,
+      output: output.ok === true ? output.output : output.error,
+    });
+  }
+
+  return { outputs, traces };
+}
+
 async function executeCall(context: TurnContext, call: ToolCall): Promise<Record<string, unknown>> {
   if (!isToolName(call.name)) {
     return { callId: call.callId, ok: false, error: "unknown_tool" };
   }
-  const parsed = toolInputs[call.name].safeParse(call.arguments);
+  const arguments_ = call.name === "search_foods"
+    ? { queries: searchQueriesFrom(call.arguments) }
+    : call.arguments;
+  const parsed = toolInputs[call.name].safeParse(arguments_);
   if (!parsed.success) {
     return { callId: call.callId, ok: false, error: "invalid_arguments" };
   }

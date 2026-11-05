@@ -2,7 +2,7 @@ import { toolInputs, type ToolName } from "./tools";
 import type { LanguageModel, ModelRequest, ModelTurn, ToolCall } from "./run-turn";
 
 const DESCRIPTIONS: Record<ToolName, string> = {
-  search_foods: "Busca alimentos visibles para esta cuenta.",
+  search_foods: "Busca todos los alimentos detectados en una sola llamada. Mandá queries con cada nombre. Nunca la llames una vez por alimento.",
   log_meal: "Guarda una comida. El servidor calcula los nutrientes.",
   get_day_summary: "Totales ya calculados del día.",
   list_meals: "Comidas guardadas del día, con ids.",
@@ -17,7 +17,7 @@ const DESCRIPTIONS: Record<ToolName, string> = {
   list_notes: "Apuntes abiertos de esta cuenta.",
   log_drink: "Guarda lo que la persona tomó. El servidor calcula mililitros y calorías.",
   suggest_meals: "Calcula hasta 3 platos con alimentos ya buscados, también para más tarde. No los guarda.",
-  log_plate: "Guarda un plato. Mandá el nombre; omití grams para usar 1 porción estándar. El servidor calcula.",
+  log_plate: "Guarda un plato mixto. Mandá todos los alimentos juntos; omití grams para usar 1 porción estándar. El servidor busca y calcula. No uses search_foods antes.",
   review_last_meal: "Última comida guardada con macros reales, lo consumido y lo que resta del día. Usalo para opinar.",
   get_account: "Devuelve el cuerpo, la dieta con sus macros, los suplementos y los recordatorios configurados.",
 };
