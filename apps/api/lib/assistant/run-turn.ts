@@ -37,6 +37,7 @@ export type TurnContext = {
   registry: ToolRegistry;
   model: LanguageModel;
   systemPrompt: string;
+  toolNames?: readonly ToolName[];
 };
 
 export type ToolTrace = {
@@ -103,7 +104,7 @@ export async function runTurn(
     const response = await context.model.complete({
       systemPrompt: context.systemPrompt,
       messages,
-      toolNames: Object.keys(context.registry) as ToolName[],
+        toolNames: (context.toolNames ?? Object.keys(context.registry)) as ToolName[],
     });
     chargedMicroUsd += costMicroUsd(response.usage, context.rates);
     usage = {

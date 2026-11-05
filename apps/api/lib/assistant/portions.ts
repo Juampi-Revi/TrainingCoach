@@ -134,15 +134,31 @@ export function defaultPlateGrams(query: string, catalogServingGrams: number | n
   return { grams: FALLBACK_PORTION_GRAMS, assumed: true };
 }
 
+export function plateItemGrams(
+  query: string,
+  catalogServingGrams: number | null,
+  grams?: number,
+  quantity?: number,
+): { grams: number; assumed: boolean } {
+  if (grams != null) return { grams, assumed: false };
+  const one = defaultPlateGrams(query, catalogServingGrams);
+  return { grams: one.grams * (quantity ?? 1), assumed: true };
+}
+
 export function cleanPlateQuery(query: string): string {
   const simplified = fold(query)
+    .replace(/\([^)]*\)/g, " ")
     .replace(/\ba la (plancha|parrilla)\b/g, " ")
     .replace(/\bal horno\b/g, " ")
-    .replace(/\b(hervid|cocid|frit|saltead|grillad|crud)[oa]s?\b/g, " ")
+    .replace(/\b(hervid|cocid|frit|saltead|grillad|crud|pesad)[oa]s?\b/g, " ")
     .replace(/\b(mediana?|medi[oa]|grande|chic[oa]|pequena?|pequeno)\b/g, " ")
     .replace(/\b(verde|roj[oa]|amarill[oa]|blanc[oa]|negr[oa])\b/g, " ")
+    .replace(/\bqueso\s+(?=muzzarella|mozzarella|muzza)\b/g, " ")
+    .replace(/[.,;:!?]/g, " ")
+    .replace(/\b\d+(?:[.,]\d+)?\s*(?:gramos?|gr|g)?\b/g, " ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .replace(/^de\s+/, "");
   return simplified.length > 2 ? simplified : fold(query);
 }
 

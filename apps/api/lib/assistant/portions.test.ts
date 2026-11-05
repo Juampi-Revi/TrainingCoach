@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assumedGrams, cleanPlateQuery, defaultPlateGrams, pickCatalogFood, standardPortion } from "./portions";
+import { assumedGrams, cleanPlateQuery, defaultPlateGrams, pickCatalogFood, plateItemGrams, standardPortion } from "./portions";
 
 describe("standard portions", () => {
   it("matches a common food by token", () => {
@@ -25,11 +25,19 @@ describe("standard portions", () => {
     expect(defaultPlateGrams("algo raro", null)).toEqual({ grams: 150, assumed: true });
   });
 
-  it("drops size and color words from a plate query", () => {
+  it("drops size, color and amounts from a plate query", () => {
     expect(cleanPlateQuery("zanahoria mediana")).toBe("zanahoria");
     expect(cleanPlateQuery("cebolla grande")).toBe("cebolla");
     expect(cleanPlateQuery("pimiento verde")).toBe("pimiento");
     expect(cleanPlateQuery("pechuga a la plancha")).toBe("pechuga");
+    expect(cleanPlateQuery("arroz integral cocido")).toBe("arroz integral");
+    expect(cleanPlateQuery("2 huevos")).toBe("huevos");
+    expect(cleanPlateQuery("20 g de muzzarella")).toBe("muzzarella");
+  });
+
+  it("multiplies a standard portion when quantity is given", () => {
+    expect(plateItemGrams("huevo", 50, undefined, 2)).toEqual({ grams: 100, assumed: true });
+    expect(plateItemGrams("arroz integral", 150, 200, undefined)).toEqual({ grams: 200, assumed: false });
   });
 
   it("picks the plain cooked food over fries or turkey", () => {

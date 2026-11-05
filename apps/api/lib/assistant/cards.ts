@@ -47,7 +47,7 @@ export function cardsFromTraces(traces: Trace[]): ChatCard[] {
 function cardOf(trace: Trace): ChatCard | null {
   if (trace.toolName === "log_meal") return mealCard(trace, false);
   if (trace.toolName === "update_meal_item") return mealCard(trace, true);
-  if (trace.toolName === "log_plate") return plateCard(trace.result);
+  if (trace.toolName === "log_plate") return plateCard(trace.result, record(trace.arguments));
   if (trace.toolName === "log_drink") return drinkCard(trace.result);
   if (trace.toolName === "suggest_meals") return optionsCard(trace.result);
   if (trace.toolName === "list_pending_supplements") return supplementsCard(trace.result);
@@ -70,12 +70,20 @@ function mealCard(trace: Trace, updated: boolean): ChatCard | null {
   };
 }
 
-function plateCard(result: unknown): ChatCard | null {
+function plateCard(result: unknown, args?: Record<string, unknown> | null): ChatCard | null {
   const row = record(result);
   if (!row || row.saved !== true || "error" in row) return null;
   const items = lines(row.items).map((item) => ({ ...item, unit: item.unit || "g" }));
   if (items.length === 0) return null;
-  return { kind: "meal", title: "Plato", approximate: true, standardPortion: row.assumedStandard === true, items, totals: totalsOf(items) };
+  return {
+    kind: "meal",
+    title: titleOf(text(row.note) || text(args?.note) || "plato"),
+    approximate: true,
+    standardPortion: row.assumedStandard === true,
+    updated: row.replaced === true,
+    items,
+    totals: totalsOf(items),
+  };
 }
 
 function drinkCard(result: unknown): ChatCard | null {

@@ -17,8 +17,8 @@ const DESCRIPTIONS: Record<ToolName, string> = {
   list_notes: "Apuntes abiertos de esta cuenta.",
   log_drink: "Guarda lo que la persona tomó. El servidor calcula mililitros y calorías.",
   suggest_meals: "Calcula hasta 3 platos con alimentos ya buscados, también para más tarde. No los guarda.",
-  log_plate: "Guarda un plato mixto. Mandá todos los alimentos juntos; omití grams para usar 1 porción estándar. El servidor busca y calcula. No uses search_foods antes.",
-  review_last_meal: "Última comida guardada con macros reales, lo consumido y lo que resta del día. Usalo para opinar.",
+  log_plate: "Guarda o reemplaza un plato mixto. Mandá todos los alimentos juntos. Si corrige la última comida, replaceLast true con el plato completo. 2 huevos: query huevo y quantity 2. El servidor busca y calcula. No uses search_foods ni log_meal.",
+  review_last_meal: "Última comida con macros y remaining. No lo llames si log_plate ya trajo remaining.",
   get_account: "Devuelve el cuerpo, la dieta con sus macros, los suplementos y los recordatorios configurados.",
 };
 

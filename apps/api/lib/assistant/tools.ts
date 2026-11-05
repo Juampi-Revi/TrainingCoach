@@ -121,9 +121,13 @@ export const logDrinkInput = z.strictObject({
 });
 
 export const logPlateInput = z.strictObject({
+  replaceLast: z.boolean().optional(),
+  mealId: z.string().uuid().optional(),
+  note: z.string().trim().min(1).max(80).optional(),
   items: z.array(z.strictObject({
     query: z.string().trim().min(1).max(80),
     grams: z.number().positive().max(2000).optional(),
+    quantity: z.number().positive().max(20).optional(),
   })).min(1).max(8),
 });
 

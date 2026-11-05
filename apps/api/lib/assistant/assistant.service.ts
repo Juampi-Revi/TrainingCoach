@@ -10,6 +10,7 @@ import { localHour, shouldRemindAt } from "./supplement-windows";
 import { getAssistantSetting } from "./settings.service";
 import { transcribeAudio, type TurnAudio } from "./transcribe";
 import { searchQueriesFrom } from "./tools";
+import { parseLoggedPlate } from "./parse-plate";
 
 const PHOTO_LIMIT = 8;
 const VOICE_LIMIT = 16;
@@ -123,6 +124,8 @@ export async function postMessage(userId: string, conversationId: string, input:
   const openaiKey = await getAssistantSetting("OPENAI_API_KEY");
   const openaiModel = (await getAssistantSetting("OPENAI_MODEL")) || "gpt-6-luna";
   const budgetUsd = Number((await getAssistantSetting("MONTHLY_BUDGET_USD")) || 20);
+  const parsedPlate = !input.image ? parseLoggedPlate(spokenText) : null;
+  const prelogged = parsedPlate ? await journal.logPlate(userId, parsedPlate) : null;
   let result;
   try {
     result = await runTurn(
@@ -135,11 +138,28 @@ export async function postMessage(userId: string, conversationId: string, input:
         model: mode === "openai"
           ? new OpenAIResponsesModel(openaiKey, openaiModel)
           : new FallbackModel(),
-        systemPrompt: `${SYSTEM_PROMPT}\n\n${await journal.briefing(userId)}\n\n${await recentTalk(userId, conversationId)}`,
+        systemPrompt: [
+          SYSTEM_PROMPT,
+          await journal.briefing(userId),
+          await recentTalk(userId, conversationId),
+          prelogged ? platePrompt(prelogged) : "",
+        ].filter(Boolean).join("\n\n"),
+        toolNames: prelogged?.saved === true ? [] : undefined,
       },
       spokenText || "Foto del plato",
       input.image,
     );
+    if (parsedPlate && prelogged) {
+      result = {
+        ...result,
+        traces: [{
+          name: "log_plate",
+          arguments: parsedPlate,
+          ok: prelogged.saved === true,
+          output: prelogged,
+        }, ...result.traces],
+      };
+    }
   } catch (error) {
     const detail = error instanceof Error ? error.message : "";
     console.error(`assistant_turn_failed ${detail.slice(0, 180)}`);
@@ -317,6 +337,15 @@ async function emptyReply(userId: string, text: string) {
 
 async function assistantMode(): Promise<"local" | "openai"> {
   return (await getAssistantSetting("OPENAI_API_KEY")) ? "openai" : "local";
+}
+
+function platePrompt(result: Awaited<ReturnType<typeof journal.logPlate>>): string {
+  if (result.saved) {
+    const n = (value: number) => Math.round(value).toLocaleString("es-AR");
+    const foods = result.items.map((item) => `${item.displayName} ${item.grams} g`).join(", ");
+    return `El servidor ya guardó el plato: ${n(result.totals.kcal)} kcal, ${n(result.totals.proteinG)} g de proteína (${foods}). Remaining: ${JSON.stringify(result.remaining)}. Respondé en 2 o 3 frases con esas cifras. No llames herramientas.`;
+  }
+  return `El servidor no pudo guardar el plato todavía: ${JSON.stringify(result.items)}. Llamá un solo log_plate con queries cortos y los gramos que dijo.`;
 }
 
 function readDate(args: unknown): string {

@@ -14,7 +14,7 @@ import {
   weekdayLabel,
 } from "./calendar";
 import { nutrientsForGrams, remainingOf, sumNutrients, type NutrientVector } from "./nutrients";
-import { assumedGrams, cleanPlateQuery, cleanServingUnit, defaultPlateGrams, gramsFor, millilitersForUnit, pickCatalogFood, volumeFor } from "./portions";
+import { assumedGrams, cleanPlateQuery, cleanServingUnit, gramsFor, millilitersForUnit, pickCatalogFood, plateItemGrams, volumeFor } from "./portions";
 import { localHour, shouldRemindAt } from "./supplement-windows";
 
 function n(value: { toString(): string } | number | null | undefined): number {
@@ -467,48 +467,16 @@ export async function suggestMeals(
   return { options };
 }
 
-export async function logPlate(userId: string, input: { items: Array<{ query: string; grams?: number }> }) {
-  const { matches } = await searchFoods(
-    userId,
-    input.items.map((item) => cleanPlateQuery(item.query)),
-  );
-  const resultsOf = async (query: string) => {
-    const cleaned = cleanPlateQuery(query);
-    const found = matches.find((row) => row.query === cleaned)?.results ?? [];
-    if (found.length > 0) return found;
-    if (cleaned.length < 6) return [];
-    const retry = await searchFoods(userId, [cleaned.slice(0, 4)]);
-    return retry.matches[0]?.results ?? [];
-  };
-
-  const resolved = await Promise.all(input.items.map(async (item) => {
-    const results = await resultsOf(item.query);
-    const match = pickCatalogFood(cleanPlateQuery(item.query), results);
-    const food = match ? await getFoodById(match.id) : null;
-    const catalogServing = food?.servingGrams != null ? n(food.servingGrams) : null;
-    const portion = item.grams != null
-      ? { grams: item.grams, assumed: false }
-      : defaultPlateGrams(item.query, catalogServing);
-    if (!food) {
-      return {
-        query: item.query,
-        grams: portion.grams,
-        assumedStandard: portion.assumed,
-        status: results.length > 1 ? "ambiguous" as const : "not_found" as const,
-        options: results.map((row) => row.name),
-      };
-    }
-    const line = lineFrom(
-      1,
-      portion.assumed ? "porción" : "g",
-      portion.grams,
-      food.name,
-      "estimated",
-      per100Of(food),
-      food.id,
-    );
-    return { query: item.query, grams: portion.grams, assumedStandard: portion.assumed, status: "ready" as const, line };
-  }));
+export async function logPlate(
+  userId: string,
+  input: {
+    replaceLast?: boolean;
+    mealId?: string;
+    note?: string;
+    items: Array<{ query: string; grams?: number; quantity?: number }>;
+  },
+) {
+  const resolved = await resolvePlateItems(userId, input.items);
   if (resolved.some((item) => item.status !== "ready")) {
     return {
       saved: false as const,
@@ -523,41 +491,19 @@ export async function logPlate(userId: string, input: { items: Array<{ query: st
     };
   }
   const lines = resolved.flatMap((item) => item.status === "ready" ? [item.line] : []);
-  const meal = await prisma.foodLogEntry.create({
-    data: {
-      clientUserId: userId,
-      loggedAt: new Date(),
-      localDate: asDate(today()),
-      text: "foto",
-      source: "assistant",
-      mealType: mealTypeForNow(),
-      items: {
-        create: lines.map((line, index) => ({
-          foodItemId: line.foodId,
-          name: line.displayName,
-          grams: line.grams,
-          servingLabel: line.unit,
-          quantity: line.quantity,
-          unit: line.unit,
-          provenance: "estimated",
-          kcal: line.kcal,
-          proteinG: line.proteinG,
-          carbsG: line.carbsG,
-          fatG: line.fatG,
-          kcalPer100g: line.kcalPer100g,
-          proteinPer100g: line.proteinPer100g,
-          carbsPer100g: line.carbsPer100g,
-          fatPer100g: line.fatPer100g,
-          sortOrder: index,
-        })),
-      },
-    },
-  });
+  const note = input.note?.trim() || null;
+  const target = await plateTarget(userId, input);
+  const mealId = target
+    ? await replacePlateItems(target.id, lines, note)
+    : await createPlateMeal(userId, lines, note ?? "foto");
+  const snapshot = await day(userId, today());
   return {
     saved: true as const,
+    replaced: Boolean(target),
     approximate: true as const,
-    assumedStandard: true as const,
-    mealId: meal.id,
+    assumedStandard: resolved.some((item) => item.assumedStandard),
+    mealId,
+    note,
     items: lines.map((line) => ({
       displayName: line.displayName,
       quantity: line.quantity,
@@ -569,6 +515,9 @@ export async function logPlate(userId: string, input: { items: Array<{ query: st
       fatG: line.fatG,
     })),
     totals: sumNutrients(lines.map(asVector)),
+    consumed: snapshot.consumed,
+    goals: snapshot.goals,
+    remaining: snapshot.remaining,
   };
 }
 
@@ -895,6 +844,122 @@ function lineFrom(
 
 function asVector(line: { kcal: number; proteinG: number; carbsG: number; fatG: number }): NutrientVector {
   return { kcal: line.kcal, proteinG: line.proteinG, carbsG: line.carbsG, fatG: line.fatG };
+}
+
+type PlateLine = ReturnType<typeof lineFrom>;
+
+type ResolvedPlateItem =
+  | { query: string; grams: number; assumedStandard: boolean; status: "ready"; line: PlateLine; options?: string[] }
+  | { query: string; grams: number; assumedStandard: boolean; status: "ambiguous" | "not_found"; options: string[]; line?: PlateLine };
+
+async function resolvePlateItems(
+  userId: string,
+  items: Array<{ query: string; grams?: number; quantity?: number }>,
+): Promise<ResolvedPlateItem[]> {
+  const { matches } = await searchFoods(
+    userId,
+    items.map((item) => cleanPlateQuery(item.query)),
+  );
+  const resultsOf = async (query: string) => {
+    const cleaned = cleanPlateQuery(query);
+    const found = matches.find((row) => row.query === cleaned)?.results ?? [];
+    if (found.length > 0) return found;
+    const tokens = cleaned.split(/\s+/).filter((token) => token.length >= 4);
+    for (const token of [...tokens].reverse()) {
+      const retry = await searchFoods(userId, [token]);
+      const rows = retry.matches[0]?.results ?? [];
+      if (rows.length > 0) return rows;
+    }
+    if (cleaned.length < 6) return [];
+    const retry = await searchFoods(userId, [cleaned.slice(0, 4)]);
+    return retry.matches[0]?.results ?? [];
+  };
+
+  return Promise.all(items.map(async (item) => {
+    const results = await resultsOf(item.query);
+    const match = pickCatalogFood(cleanPlateQuery(item.query), results);
+    const food = match ? await getFoodById(match.id) : null;
+    const catalogServing = food?.servingGrams != null ? n(food.servingGrams) : null;
+    const portion = plateItemGrams(item.query, catalogServing, item.grams, item.quantity);
+    if (!food) {
+      return {
+        query: item.query,
+        grams: portion.grams,
+        assumedStandard: portion.assumed,
+        status: results.length > 1 ? "ambiguous" as const : "not_found" as const,
+        options: results.map((row) => row.name),
+      };
+    }
+    const quantity = item.grams != null ? 1 : (item.quantity ?? 1);
+    const unit = item.grams != null ? "g" : item.quantity != null ? "unidad" : "porción";
+    const line = lineFrom(quantity, unit, portion.grams, food.name, "estimated", per100Of(food), food.id);
+    return { query: item.query, grams: portion.grams, assumedStandard: portion.assumed, status: "ready" as const, line };
+  }));
+}
+
+function plateItemCreates(lines: PlateLine[]) {
+  return lines.map((line, index) => ({
+    foodItemId: line.foodId,
+    name: line.displayName,
+    grams: line.grams,
+    servingLabel: line.unit,
+    quantity: line.quantity,
+    unit: line.unit,
+    provenance: "estimated" as const,
+    kcal: line.kcal,
+    proteinG: line.proteinG,
+    carbsG: line.carbsG,
+    fatG: line.fatG,
+    kcalPer100g: line.kcalPer100g,
+    proteinPer100g: line.proteinPer100g,
+    carbsPer100g: line.carbsPer100g,
+    fatPer100g: line.fatPer100g,
+    sortOrder: index,
+  }));
+}
+
+async function plateTarget(userId: string, input: { replaceLast?: boolean; mealId?: string }) {
+  if (input.mealId) {
+    return prisma.foodLogEntry.findFirst({
+      where: { id: input.mealId, clientUserId: userId, deletedAt: null },
+      select: { id: true },
+    });
+  }
+  if (!input.replaceLast) return null;
+  return prisma.foodLogEntry.findFirst({
+    where: { clientUserId: userId, deletedAt: null, localDate: asDate(today()) },
+    orderBy: { loggedAt: "desc" },
+    select: { id: true },
+  });
+}
+
+async function replacePlateItems(mealId: string, lines: PlateLine[], note: string | null) {
+  await prisma.$transaction([
+    prisma.foodLogItem.deleteMany({ where: { foodLogEntryId: mealId } }),
+    prisma.foodLogItem.createMany({
+      data: plateItemCreates(lines).map((row) => ({ ...row, foodLogEntryId: mealId })),
+    }),
+    prisma.foodLogEntry.update({
+      where: { id: mealId },
+      data: note ? { text: note } : {},
+    }),
+  ]);
+  return mealId;
+}
+
+async function createPlateMeal(userId: string, lines: PlateLine[], note: string) {
+  const meal = await prisma.foodLogEntry.create({
+    data: {
+      clientUserId: userId,
+      loggedAt: new Date(),
+      localDate: asDate(today()),
+      text: note,
+      source: "assistant",
+      mealType: mealTypeForNow(),
+      items: { create: plateItemCreates(lines) },
+    },
+  });
+  return meal.id;
 }
 
 function mealTypeForNow(): string {
