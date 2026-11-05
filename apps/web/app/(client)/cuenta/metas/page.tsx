@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/lib/auth";
 import { NutritionGoals } from "./_components/nutrition-goals";
+import { SupplementGoals } from "./_components/supplement-goals";
 import "./_styles.css";
 
 interface Goal {
@@ -61,7 +62,7 @@ const GOAL_CONFIGS = {
 
 export default function MetasPage() {
   const router = useRouter();
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const toast = useToast();
   const [data, setData] = useState<GoalsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -212,7 +213,7 @@ export default function MetasPage() {
           Volver
         </button>
         <div className="metas-title">Metas</div>
-        <div className="metas-subtitle">Macros, peso, entrenos, pasos y sueño</div>
+        <div className="metas-subtitle">Macros, suplementos, peso, entrenos, pasos y sueño</div>
       </div>
 
       <div className="metas-content">
@@ -220,6 +221,13 @@ export default function MetasPage() {
           <div className="section-label">Nutrición</div>
           <NutritionGoals />
         </section>
+
+        {user?.assistantBeta && (
+        <section className="metas-block">
+          <div className="section-label">Suplementos</div>
+          <SupplementGoals />
+        </section>
+        )}
 
         <section className="metas-block">
           <div className="section-label">Salud</div>

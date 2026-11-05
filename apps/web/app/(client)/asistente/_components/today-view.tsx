@@ -3,17 +3,10 @@
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import type { AssistantDay } from "@regen/types";
+import { SUPPLEMENT_TIME_LABELS } from "@/lib/supplements";
 import { amount, meter } from "../_lib/format";
 import { TodayMeals } from "./today-meals";
 import { TodayDrinks } from "./today-drinks";
-
-const TIME_LABEL: Record<string, string> = {
-  morning: "Mañana",
-  with_breakfast: "Con desayuno",
-  afternoon: "Tarde",
-  with_dinner: "Con cena",
-  night: "Noche",
-};
 
 export function TodayView({
   day,
@@ -56,13 +49,13 @@ export function TodayView({
       <section className="asistente-section">
         <h2>Suplementos</h2>
         {day.supplements.length === 0 ? (
-          <p className="asistente-empty">Decile al chat qué tomás para recordarlo.</p>
+          <p className="asistente-empty">Configuralos en Cuenta → Metas o decile al chat qué tomás.</p>
         ) : day.supplements.map((item) => (
           <article key={item.id} className="asistente-card">
             <div className="asistente-card-head">
               <span>
                 <strong>{item.name}</strong>
-                <small className="asistente-muted"> {TIME_LABEL[item.timeOfDay] ?? item.timeOfDay}</small>
+                <small className="asistente-muted"> {SUPPLEMENT_TIME_LABELS[item.timeOfDay] ?? item.timeOfDay}</small>
               </span>
               <em>{statusLabel(item.status)}</em>
             </div>

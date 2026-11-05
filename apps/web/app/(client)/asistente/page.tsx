@@ -8,6 +8,7 @@ import { useToast } from "@/lib/toast";
 import { useAssistant } from "./_hooks/use-assistant";
 import { ChatThread } from "./_components/chat-thread";
 import { Composer, type AssistantPhoto } from "./_components/composer";
+import type { AssistantAudio } from "./_hooks/use-voice-recorder";
 import { TodayView } from "./_components/today-view";
 import { HistoryView } from "./_components/history-view";
 import "./_styles.css";
@@ -50,9 +51,9 @@ export default function AsistentePage() {
     );
   }
 
-  async function handleSend(text: string, photo?: AssistantPhoto) {
+  async function handleSend(text: string, photo?: AssistantPhoto, audio?: AssistantAudio) {
     try {
-      await send(text, photo);
+      await send(text, photo, audio);
     } catch {
       toast.error("No se pudo enviar");
     }

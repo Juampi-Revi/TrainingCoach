@@ -18,13 +18,29 @@ export function ChatCards({
         if (card.kind === "meal") {
           return (
             <article className="asistente-card" key={`meal-${index}`}>
-              <div className="asistente-card-kicker">{card.updated ? "Actualizado" : "Sumado"}</div>
+              <div className="asistente-card-kicker">
+                {card.updated ? "Actualizado" : "Sumado"}
+                {card.standardPortion ? " · porción estándar" : ""}
+              </div>
               <div className="asistente-card-head">
                 <strong>{card.title}{card.approximate ? " · aprox." : ""}</strong>
                 <em>{amount(card.totals.kcal, 0)} kcal</em>
               </div>
               {card.items.map((item) => <FoodLineView key={`${item.name}-${item.quantity}`} item={item} />)}
             </article>
+          );
+        }
+        if (card.kind === "supplements") {
+          return (
+            <div className="asistente-chips" key={`supplements-${index}`}>
+              {card.items.map((item) => (
+                <span className="asistente-supplement-ask" key={item.id}>
+                  <strong>{item.name}</strong>
+                  <button type="button" disabled={busy} onClick={() => onPick(`Tomé ${item.name}`)}>Tomé</button>
+                  <button type="button" disabled={busy} onClick={() => onPick(`Hoy no tomé ${item.name}`)}>Hoy no</button>
+                </span>
+              ))}
+            </div>
           );
         }
         if (card.kind === "drinks") {
@@ -41,6 +57,7 @@ export function ChatCards({
             </article>
           );
         }
+        if (card.kind !== "options") return null;
         return (
           <div className="asistente-options" key={`options-${index}`}>
             {card.options.map((option) => (

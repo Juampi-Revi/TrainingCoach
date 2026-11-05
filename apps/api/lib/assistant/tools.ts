@@ -66,6 +66,12 @@ export const addSupplementInput = z.strictObject({
   name: z.string().trim().min(1).max(80),
   timeOfDay: supplementTimeOfDay,
   note: z.string().trim().max(160).optional(),
+  remind: z.boolean().optional(),
+});
+
+export const removeSupplementInput = z.strictObject({
+  supplementId: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(80).optional(),
 });
 
 export const setSupplementStatusInput = z.strictObject({
@@ -96,7 +102,7 @@ export const logDrinkInput = z.strictObject({
 export const logPlateInput = z.strictObject({
   items: z.array(z.strictObject({
     query: z.string().trim().min(1).max(80),
-    grams: z.number().positive().max(2000),
+    grams: z.number().positive().max(2000).optional(),
   })).min(1).max(6),
 });
 
@@ -122,6 +128,7 @@ export const toolNames = [
   "delete_meal",
   "list_supplements",
   "add_supplement",
+  "remove_supplement",
   "set_supplement_status",
   "list_pending_supplements",
   "add_note",
@@ -129,6 +136,7 @@ export const toolNames = [
   "log_drink",
   "suggest_meals",
   "log_plate",
+  "review_last_meal",
   "get_account",
 ] as const;
 
@@ -143,6 +151,7 @@ export const toolInputs = {
   delete_meal: deleteMealInput,
   list_supplements: emptyInput,
   add_supplement: addSupplementInput,
+  remove_supplement: removeSupplementInput,
   set_supplement_status: setSupplementStatusInput,
   list_pending_supplements: getDaySummaryInput,
   add_note: addNoteInput,
@@ -150,5 +159,6 @@ export const toolInputs = {
   log_drink: logDrinkInput,
   suggest_meals: suggestMealsInput,
   log_plate: logPlateInput,
+  review_last_meal: emptyInput,
   get_account: emptyInput,
 } as const;

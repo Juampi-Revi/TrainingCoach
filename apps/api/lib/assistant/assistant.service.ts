@@ -6,15 +6,19 @@ import { GPT_6_LUNA_STANDARD, usdToMicroUsd } from "./cost";
 import { FallbackModel, OpenAIResponsesModel } from "./openai-model";
 import { cardsFromTraces, type ChatCard } from "./cards";
 import * as journal from "./journal.service";
+import { localHour, shouldRemindAt } from "./supplement-windows";
 import { getAssistantSetting } from "./settings.service";
+import { transcribeAudio, type TurnAudio } from "./transcribe";
 
 const PHOTO_LIMIT = 8;
+const VOICE_LIMIT = 16;
 
 type PostedMessage = {
   text: string;
   inputKind: "text" | "voice" | "photo";
   clientMessageId: string;
   image?: TurnImage;
+  audio?: TurnAudio;
 };
 
 export async function openConversation(userId: string) {
@@ -71,8 +75,29 @@ export async function postMessage(userId: string, conversationId: string, input:
   if (input.image && await journal.photoCount(userId) >= PHOTO_LIMIT) {
     return emptyReply(userId, "Hoy ya usaste las 8 fotos. Describí el plato por texto.");
   }
+  if (input.audio && await journal.voiceCount(userId) >= VOICE_LIMIT) {
+    return emptyReply(userId, "Hoy ya mandaste muchos audios. Escribí o mandá una foto.");
+  }
   const replay = await replayTurn(userId, conversationId, input.clientMessageId);
   if (replay) return replay;
+
+  let spokenText = input.text.trim();
+  if (input.audio) {
+    const openaiKey = await getAssistantSetting("OPENAI_API_KEY");
+    if (!openaiKey) return emptyReply(userId, "El audio no está disponible ahora. Escribí el mensaje.");
+    try {
+      const heard = await transcribeAudio(openaiKey, input.audio);
+      if (!heard) return emptyReply(userId, "No pude escuchar ese audio. Probá de nuevo.");
+      spokenText = spokenText ? `${heard}. ${spokenText}` : heard;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "";
+      console.error(`assistant_transcribe_failed ${detail.slice(0, 180)}`);
+      return emptyReply(userId, "No pude escuchar ese audio. Probá de nuevo.");
+    }
+  }
+  if (!spokenText && !input.image) {
+    return emptyReply(userId, "No entendí el mensaje.");
+  }
 
   try {
     await prisma.assistantMessage.create({
@@ -80,8 +105,8 @@ export async function postMessage(userId: string, conversationId: string, input:
         conversationId,
         userId,
         role: "user",
-        text: input.text,
-        inputKind: input.inputKind,
+        text: spokenText || "Foto",
+        inputKind: input.image ? "photo" : input.audio ? "voice" : input.inputKind,
         imageJpeg: input.image ? Buffer.from(input.image.data, "base64") : null,
         clientMessageId: input.clientMessageId,
       },
@@ -111,7 +136,7 @@ export async function postMessage(userId: string, conversationId: string, input:
           : new FallbackModel(),
         systemPrompt: `${SYSTEM_PROMPT}\n\n${await journal.briefing(userId)}\n\n${await recentTalk(userId, conversationId)}`,
       },
-      input.text,
+      spokenText || "Foto del plato",
       input.image,
     );
   } catch (error) {
@@ -164,6 +189,7 @@ export async function postMessage(userId: string, conversationId: string, input:
   return {
     kind: result.kind,
     text: spoken,
+    userText: spokenText || "Foto",
     assistantMode: mode,
     day: await journal.day(userId, journal.today()),
     notes: (await journal.listNotes(userId)).notes,
@@ -196,16 +222,23 @@ function registry(userId: string): ToolRegistry {
     },
     list_supplements: () => journal.listSupplements(userId),
     add_supplement: (args) => journal.addSupplement(userId, args as Parameters<typeof journal.addSupplement>[1]),
+    remove_supplement: (args) => journal.removeSupplement(userId, args as { supplementId?: string; name?: string }),
     set_supplement_status: (args) => journal.setSupplementStatus(userId, args as Parameters<typeof journal.setSupplementStatus>[1]),
     list_pending_supplements: async (args) => {
       const snapshot = await journal.day(userId, readDate(args));
-      return { supplements: snapshot.supplements.filter((item) => item.status === null) };
+      const hour = localHour();
+      return {
+        supplements: snapshot.supplements.filter(
+          (item) => item.status === null && shouldRemindAt(item.timeOfDay, hour),
+        ),
+      };
     },
     add_note: (args) => journal.addNote(userId, args as Parameters<typeof journal.addNote>[1]),
     list_notes: () => journal.listNotes(userId),
     log_drink: (args) => journal.logDrinks(userId, args as Parameters<typeof journal.logDrinks>[1]),
     suggest_meals: (args) => journal.suggestMeals(userId, args as Parameters<typeof journal.suggestMeals>[1]),
     log_plate: (args) => journal.logPlate(userId, args as Parameters<typeof journal.logPlate>[1]),
+    review_last_meal: () => journal.reviewLastMeal(userId),
     get_account: () => journal.readAccount(userId),
   };
 }
@@ -259,6 +292,7 @@ async function replayTurn(userId: string, conversationId: string, clientMessageI
   return {
     kind: "message" as const,
     text: assistant.text,
+    userText: existing.text,
     assistantMode: await assistantMode(),
     day: await journal.day(userId, journal.today()),
     notes: (await journal.listNotes(userId)).notes,
@@ -271,6 +305,7 @@ async function emptyReply(userId: string, text: string) {
   return {
     kind: "message" as const,
     text,
+    userText: undefined as string | undefined,
     assistantMode: await assistantMode(),
     day: await journal.day(userId, journal.today()),
     notes: (await journal.listNotes(userId)).notes,

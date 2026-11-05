@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import type { AssistantChatMessage, AssistantDay, AssistantNote, AssistantPostResponse } from "@regen/types";
 import type { AssistantPhoto } from "../_components/composer";
+import type { AssistantAudio } from "./use-voice-recorder";
 
 function userMessage(
   id: string,
@@ -43,11 +44,11 @@ export function useAssistant() {
 
   useEffect(() => { void boot(); }, [boot]);
 
-  const send = useCallback(async (text: string, photo?: AssistantPhoto) => {
+  const send = useCallback(async (text: string, photo?: AssistantPhoto, audio?: AssistantAudio) => {
     if (!conversationId || sending) return;
-    const sent = text.trim() || (photo ? "Foto del plato" : "");
+    const sent = text.trim() || (photo ? "Foto del plato" : audio ? "Audio" : "");
     if (!sent) return;
-    const kind = photo ? "photo" : "text";
+    const kind = photo ? "photo" : audio ? "voice" : "text";
     const image = photo ? `data:${photo.mediaType};base64,${photo.data}` : null;
     const pendingId = crypto.randomUUID();
     setMessages((prev) => [...prev, userMessage(pendingId, sent, kind, image)]);
@@ -55,12 +56,13 @@ export function useAssistant() {
     try {
       const reply = await api.post<AssistantPostResponse>(
         `/client/assistant/conversations/${conversationId}/messages`,
-        { text: sent, inputKind: kind, clientMessageId: crypto.randomUUID(), image: photo },
+        { text: text.trim(), inputKind: kind, clientMessageId: crypto.randomUUID(), image: photo, audio },
         { timeoutMs: 60_000, delaysMs: [] },
       );
+      const userText = reply.userText?.trim() || sent;
       setMessages((prev) => [
         ...prev.filter((message) => message.id !== pendingId),
-        userMessage(pendingId, sent, kind, image),
+        userMessage(pendingId, userText, kind, image),
         { id: `${pendingId}-reply`, role: "assistant", text: reply.text, inputKind: "text", createdAt: new Date().toISOString(), cards: reply.cards },
       ]);
       setDay(reply.day);

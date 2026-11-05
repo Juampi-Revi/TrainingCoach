@@ -70,12 +70,18 @@ export function ChatThread({
       <div className="asistente-thread">
         {messages.length === 0 && !busy ? (
           <p className="asistente-empty">
-            Contame qué comiste, mandá una foto del plato o pedime opciones. El entreno sigue en Semana.
+            Contame qué comiste, mandá una foto o un audio, o pedime opciones. Si tomás suplementos, también los marco.
           </p>
         ) : messages.map((message) => (
           <div key={message.id} className={`asistente-turn ${message.role}`}>
             {message.image ? (
               <img className="asistente-thumb" src={message.image} alt="Foto del plato" />
+            ) : null}
+            {message.inputKind === "voice" && message.role === "user" ? (
+              <div className="asistente-voice-chip">
+                <Icon name="mic" size={12} />
+                Audio
+              </div>
             ) : null}
             {showBubble(message) ? (
             <div className={`asistente-bubble ${message.role}`}>
@@ -101,6 +107,10 @@ export function ChatThread({
 
 function showBubble(message: AssistantChatMessage): boolean {
   if (message.role === "assistant") return true;
+  if (message.inputKind === "voice") {
+    const text = message.text.trim();
+    return text !== "" && text !== "Audio";
+  }
   if (!message.image) return true;
   const text = message.text.trim();
   return text !== "" && text !== "Foto" && text !== "Foto del plato";

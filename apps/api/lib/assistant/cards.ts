@@ -17,7 +17,7 @@ export type MacroTotals = {
 };
 
 export type ChatCard =
-  | { kind: "meal"; title: string; approximate: boolean; updated?: boolean; items: FoodLine[]; totals: MacroTotals }
+  | { kind: "meal"; title: string; approximate: boolean; standardPortion?: boolean; updated?: boolean; items: FoodLine[]; totals: MacroTotals }
   | { kind: "drinks"; items: Array<{ name: string; milliliters: number; kcal: number }> }
   | {
       kind: "options";
@@ -26,7 +26,8 @@ export type ChatCard =
         items: Array<{ name: string; quantity: number; unit: string; grams: number | null }>;
         totals: MacroTotals;
       }>;
-    };
+    }
+  | { kind: "supplements"; items: Array<{ id: string; name: string; timeOfDay: string }> };
 
 type Trace = {
   toolName: string;
@@ -49,6 +50,7 @@ function cardOf(trace: Trace): ChatCard | null {
   if (trace.toolName === "log_plate") return plateCard(trace.result);
   if (trace.toolName === "log_drink") return drinkCard(trace.result);
   if (trace.toolName === "suggest_meals") return optionsCard(trace.result);
+  if (trace.toolName === "list_pending_supplements") return supplementsCard(trace.result);
   return null;
 }
 
@@ -61,6 +63,7 @@ function mealCard(trace: Trace, updated: boolean): ChatCard | null {
     kind: "meal",
     title: titleOf(text(result.note) || text(record(trace.arguments)?.note)),
     approximate: loggedItemsEstimated(result.items),
+    standardPortion: result.assumedStandard === true,
     updated,
     items,
     totals: totalsOf(items),
@@ -72,7 +75,7 @@ function plateCard(result: unknown): ChatCard | null {
   if (!row || row.saved !== true || "error" in row) return null;
   const items = lines(row.items).map((item) => ({ ...item, unit: item.unit || "g" }));
   if (items.length === 0) return null;
-  return { kind: "meal", title: "Plato", approximate: true, items, totals: totalsOf(items) };
+  return { kind: "meal", title: "Plato", approximate: true, standardPortion: row.assumedStandard === true, items, totals: totalsOf(items) };
 }
 
 function drinkCard(result: unknown): ChatCard | null {
@@ -119,6 +122,17 @@ function optionsCard(result: unknown): ChatCard | null {
     }];
   });
   return options.length === 0 ? null : { kind: "options", options };
+}
+
+function supplementsCard(result: unknown): ChatCard | null {
+  const row = record(result);
+  if (!row || !Array.isArray(row.supplements)) return null;
+  const items = row.supplements.flatMap((item) => {
+    const entry = record(item);
+    if (!entry || typeof entry.id !== "string" || typeof entry.name !== "string") return [];
+    return [{ id: entry.id, name: entry.name, timeOfDay: text(entry.timeOfDay) }];
+  });
+  return items.length === 0 ? null : { kind: "supplements", items };
 }
 
 function lines(value: unknown): FoodLine[] {

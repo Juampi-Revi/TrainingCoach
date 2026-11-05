@@ -10,6 +10,7 @@ const TYPE_ICON: Record<string, { icon: string; color: string }> = {
   plan_assigned:     { icon: "calendar", color: "#7AB8FF"      },
   client_added:      { icon: "users",    color: "#FFB547"      },
   session_completed: { icon: "check",    color: "var(--success)"},
+  supplement_reminder: { icon: "bolt",   color: "var(--lime)"        },
 };
 
 function timeAgo(iso: string) {

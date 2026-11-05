@@ -14,7 +14,8 @@ import {
   weekdayLabel,
 } from "./calendar";
 import { nutrientsForGrams, remainingOf, sumNutrients, type NutrientVector } from "./nutrients";
-import { cleanServingUnit, fold, gramsFor, millilitersForUnit, volumeFor } from "./portions";
+import { assumedGrams, cleanServingUnit, defaultPlateGrams, fold, gramsFor, millilitersForUnit, volumeFor } from "./portions";
+import { localHour, shouldRemindAt } from "./supplement-windows";
 
 function n(value: { toString(): string } | number | null | undefined): number {
   if (value == null) return 0;
@@ -137,9 +138,19 @@ export async function logMeal(
       const food = await getFoodById(item.foodId);
       if (!food) return { error: "food_not_found" as const };
       const unit = cleanServingUnit(item.unit);
-      const grams = gramsFor(food.servingLabel, food.servingGrams, item.quantity, unit);
+      const catalogGrams = gramsFor(food.servingLabel, food.servingGrams, item.quantity, unit);
+      const grams = catalogGrams ?? assumedGrams(food.name, item.quantity, unit);
       if (grams === null) return { error: "serving_not_found" as const };
-      lines.push(lineFrom(item.quantity, unit, grams, food.name, "catalog", per100Of(food), food.id));
+      const usedStandard = catalogGrams == null;
+      lines.push(lineFrom(
+        item.quantity,
+        unit,
+        grams,
+        food.name,
+        usedStandard ? "estimated" : "catalog",
+        per100Of(food),
+        food.id,
+      ));
     } else {
       lines.push(lineFrom(
         item.quantity ?? item.grams,
@@ -188,8 +199,10 @@ export async function logMeal(
     },
     include: { items: true },
   });
+  const payload = loggedMealPayload(meal);
   return {
-    ...loggedMealPayload(meal),
+    ...payload,
+    assumedStandard: payload.items.some((item) => item.provenance === "estimated"),
     day: await day(userId, isoDate),
   };
 }
@@ -294,30 +307,8 @@ export async function deleteMeal(userId: string, mealId: string, confirmed: bool
   return { status: "deleted" as const, mealId };
 }
 
-export async function listSupplements(userId: string) {
-  const supplements = await prisma.nutritionSupplement.findMany({
-    where: { clientUserId: userId, active: true },
-    orderBy: { createdAt: "asc" },
-  });
-  return {
-    supplements: supplements.map((row) => ({
-      id: row.id,
-      name: row.name,
-      timeOfDay: row.timeOfDay,
-      note: row.note,
-    })),
-  };
-}
-
-export async function addSupplement(
-  userId: string,
-  input: { name: string; timeOfDay: string; note?: string },
-) {
-  const supplement = await prisma.nutritionSupplement.create({
-    data: { clientUserId: userId, name: input.name, timeOfDay: input.timeOfDay, note: input.note },
-  });
-  return { id: supplement.id, name: supplement.name, timeOfDay: supplement.timeOfDay };
-}
+import { addSupplement, listSupplements, removeSupplement } from "./supplements.service";
+export { addSupplement, listSupplements, removeSupplement };
 
 export async function setSupplementStatus(
   userId: string,
@@ -473,24 +464,37 @@ export async function suggestMeals(
   return { options };
 }
 
-export async function logPlate(userId: string, input: { items: Array<{ query: string; grams: number }> }) {
+export async function logPlate(userId: string, input: { items: Array<{ query: string; grams?: number }> }) {
   const resolved = [];
   for (const item of input.items) {
     const found = await searchFoods(userId, plateQuery(item.query));
     const chosen = choosePlateFood(item.query, found.results);
     const match = chosen ?? (found.results.length === 1 ? found.results[0] : null);
     const food = match ? await getFoodById(match.id) : null;
+    const catalogServing = food?.servingGrams != null ? n(food.servingGrams) : null;
+    const portion = item.grams != null
+      ? { grams: item.grams, assumed: false }
+      : defaultPlateGrams(item.query, catalogServing);
     if (!food) {
       resolved.push({
         query: item.query,
-        grams: item.grams,
+        grams: portion.grams,
+        assumedStandard: portion.assumed,
         status: found.results.length > 1 ? "ambiguous" as const : "not_found" as const,
         options: found.results.map((row) => row.name),
       });
       continue;
     }
-    const line = lineFrom(item.grams, "g", item.grams, food.name, "estimated", per100Of(food), food.id);
-    resolved.push({ query: item.query, grams: item.grams, status: "ready" as const, line });
+    const line = lineFrom(
+      1,
+      portion.assumed ? "porción" : "g",
+      portion.grams,
+      food.name,
+      "estimated",
+      per100Of(food),
+      food.id,
+    );
+    resolved.push({ query: item.query, grams: portion.grams, assumedStandard: portion.assumed, status: "ready" as const, line });
   }
   if (resolved.some((item) => item.status !== "ready")) {
     return {
@@ -499,6 +503,7 @@ export async function logPlate(userId: string, input: { items: Array<{ query: st
       items: resolved.map((item) => ({
         query: item.query,
         grams: item.grams,
+        assumedStandard: item.assumedStandard,
         status: item.status,
         options: item.status === "ready" ? [item.line.displayName] : item.options,
       })),
@@ -518,9 +523,9 @@ export async function logPlate(userId: string, input: { items: Array<{ query: st
           foodItemId: line.foodId,
           name: line.displayName,
           grams: line.grams,
-          servingLabel: "g",
+          servingLabel: line.unit,
           quantity: line.quantity,
-          unit: "g",
+          unit: line.unit,
           provenance: "estimated",
           kcal: line.kcal,
           proteinG: line.proteinG,
@@ -538,9 +543,12 @@ export async function logPlate(userId: string, input: { items: Array<{ query: st
   return {
     saved: true as const,
     approximate: true as const,
+    assumedStandard: true as const,
     mealId: meal.id,
     items: lines.map((line) => ({
       displayName: line.displayName,
+      quantity: line.quantity,
+      unit: line.unit,
       grams: line.grams,
       kcal: line.kcal,
       proteinG: line.proteinG,
@@ -571,8 +579,17 @@ export async function briefing(userId: string): Promise<string> {
     `Pendiente de borrar: ${payload?.mealId ?? "ninguno"}`,
     mealLines.length ? mealLines.join("\n") : "Comidas: ninguna",
     `Bebidas: ${snapshot.drinks.map((d) => `${d.quantity} ${d.unit} ${d.displayName}`).join(", ") || "ninguna"}`,
-    `Suplementos: ${snapshot.supplements.map((s) => `${s.name} (${s.status ?? "pendiente"})`).join(", ") || "ninguno"}`,
+    `Suplementos: ${snapshot.supplements.map((s) => `${s.name} id ${s.id} (${s.status ?? "pendiente"}, ${s.timeOfDay})`).join(", ") || "ninguno"}`,
+    pendingSupplementsLine(snapshot.supplements),
   ].join("\n");
+}
+
+function pendingSupplementsLine(supplements: Array<{ id: string; name: string; timeOfDay: string; status: string | null }>): string {
+  const hour = localHour();
+  const due = supplements.filter((item) => item.status === null && shouldRemindAt(item.timeOfDay, hour));
+  if (due.length === 0) return "Suplementos pendientes ahora: ninguno. No preguntes si ya tienen respuesta.";
+  const names = due.map((item) => `${item.name} id ${item.id}`).join(", ");
+  return `Suplementos pendientes ahora: ${names}. Preguntá en una frase si los tomó hoy. Si dice que sí, set_supplement_status taken. Si dice que no, skipped. Si dice más tarde, planned.`;
 }
 
 export async function spentMicroUsd(): Promise<number> {
@@ -584,11 +601,48 @@ export async function spentMicroUsd(): Promise<number> {
 }
 
 export async function photoCount(userId: string): Promise<number> {
+  return kindCount(userId, "photo");
+}
+
+export async function voiceCount(userId: string): Promise<number> {
+  return kindCount(userId, "voice");
+}
+
+async function kindCount(userId: string, inputKind: "photo" | "voice"): Promise<number> {
   const start = localMidnight(today());
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   return prisma.assistantMessage.count({
-    where: { userId, role: "user", inputKind: "photo", createdAt: { gte: start, lt: end } },
+    where: { userId, role: "user", inputKind, createdAt: { gte: start, lt: end } },
   });
+}
+
+export async function reviewLastMeal(userId: string) {
+  const snapshot = await day(userId, today());
+  const meal = snapshot.meals.at(-1);
+  if (!meal) return { error: "no_meal" as const };
+  const totals = sumNutrients(meal.items.map((item) => ({
+    kcal: item.kcal, proteinG: item.proteinG, carbsG: item.carbsG, fatG: item.fatG,
+  })));
+  return {
+    meal: {
+      id: meal.id,
+      items: meal.items.map((item) => ({
+        id: item.id,
+        displayName: item.displayName,
+        quantity: item.quantity,
+        unit: item.unit,
+        grams: item.grams,
+        kcal: item.kcal,
+        proteinG: item.proteinG,
+        carbsG: item.carbsG,
+        fatG: item.fatG,
+      })),
+      totals,
+    },
+    consumed: snapshot.consumed,
+    goals: snapshot.goals,
+    remaining: snapshot.remaining,
+  };
 }
 
 export async function range(userId: string, kind: "week" | "month") {

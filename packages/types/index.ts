@@ -1031,6 +1031,7 @@ export type AssistantCard =
       kind: "meal";
       title: string;
       approximate: boolean;
+      standardPortion?: boolean;
       updated?: boolean;
       items: AssistantFoodLine[];
       totals: AssistantMacroTotals;
@@ -1043,7 +1044,8 @@ export type AssistantCard =
         items: Array<{ name: string; quantity: number; unit: string; grams: number | null }>;
         totals: AssistantMacroTotals;
       }>;
-    };
+    }
+  | { kind: "supplements"; items: Array<{ id: string; name: string; timeOfDay: string }> };
 
 export interface AssistantFoodLine {
   name: string;
@@ -1109,6 +1111,14 @@ export interface AssistantDaySupplement {
   status: string | null;
 }
 
+export interface AssistantSupplement {
+  id: string;
+  name: string;
+  timeOfDay: string;
+  note: string | null;
+  remind: boolean;
+}
+
 export interface AssistantDay {
   localDate: string;
   consumed: { kcal: number; proteinG: number; carbsG: number; fatG: number };
@@ -1130,6 +1140,7 @@ export interface AssistantNote {
 export interface AssistantPostResponse {
   kind: string;
   text: string;
+  userText?: string;
   assistantMode: "openai" | "local";
   day: AssistantDay;
   notes: AssistantNote[];

@@ -55,3 +55,88 @@ export function volumeFor(
 export function fold(value: string): string {
   return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
 }
+
+const STANDARD_PORTIONS: Array<{ key: string; grams: number; label: string }> = [
+  { key: "arroz con pollo", grams: 320, label: "plato" },
+  { key: "pure de papa", grams: 180, label: "porción" },
+  { key: "ensalada", grams: 150, label: "plato" },
+  { key: "milanesa", grams: 150, label: "unidad" },
+  { key: "empanada", grams: 80, label: "unidad" },
+  { key: "hamburguesa", grams: 180, label: "unidad" },
+  { key: "sandwich", grams: 180, label: "unidad" },
+  { key: "medialuna", grams: 50, label: "unidad" },
+  { key: "omelette", grams: 120, label: "unidad" },
+  { key: "tortilla", grams: 150, label: "porción" },
+  { key: "pechuga", grams: 150, label: "porción" },
+  { key: "pollo", grams: 150, label: "porción" },
+  { key: "carne", grams: 150, label: "porción" },
+  { key: "bife", grams: 150, label: "unidad" },
+  { key: "salmon", grams: 150, label: "porción" },
+  { key: "atun", grams: 120, label: "lata" },
+  { key: "merluza", grams: 150, label: "porción" },
+  { key: "fideos", grams: 180, label: "plato" },
+  { key: "pasta", grams: 180, label: "plato" },
+  { key: "arroz", grams: 150, label: "taza" },
+  { key: "quinoa", grams: 150, label: "taza" },
+  { key: "lentejas", grams: 200, label: "plato" },
+  { key: "garbanzos", grams: 160, label: "porción" },
+  { key: "papa", grams: 150, label: "unidad" },
+  { key: "batata", grams: 150, label: "porción" },
+  { key: "manzana", grams: 180, label: "unidad" },
+  { key: "banana", grams: 120, label: "unidad" },
+  { key: "naranja", grams: 150, label: "unidad" },
+  { key: "pera", grams: 160, label: "unidad" },
+  { key: "palta", grams: 100, label: "mitad" },
+  { key: "tomate", grams: 120, label: "unidad" },
+  { key: "huevo", grams: 50, label: "unidad" },
+  { key: "yogurt", grams: 150, label: "pote" },
+  { key: "yogur", grams: 150, label: "pote" },
+  { key: "avena", grams: 40, label: "porción" },
+  { key: "granola", grams: 40, label: "porción" },
+  { key: "leche", grams: 200, label: "vaso" },
+  { key: "queso", grams: 30, label: "porción" },
+  { key: "jamon", grams: 40, label: "feta" },
+  { key: "pan", grams: 40, label: "feta" },
+  { key: "tostada", grams: 30, label: "unidad" },
+  { key: "pizza", grams: 150, label: "porción" },
+  { key: "wrap", grams: 220, label: "unidad" },
+  { key: "fruta", grams: 150, label: "porción" },
+];
+
+const FALLBACK_PORTION_GRAMS = 150;
+
+export function standardPortion(name: string): { grams: number; label: string } | null {
+  const needle = fold(name);
+  if (!needle) return null;
+  let best: { grams: number; label: string; len: number } | null = null;
+  for (const row of STANDARD_PORTIONS) {
+    if (!portionKeyFits(needle, row.key)) continue;
+    if (!best || row.key.length > best.len) best = { grams: row.grams, label: row.label, len: row.key.length };
+  }
+  return best ? { grams: best.grams, label: best.label } : null;
+}
+
+export function assumedGrams(foodName: string, quantity: number, unit: string): number | null {
+  const folded = fold(cleanServingUnit(unit));
+  if (["g", "gr", "gramo", "gramos", "ml", "mililitro", "mililitros"].includes(folded)) return null;
+  const std = standardPortion(foodName);
+  if (std) return quantity * std.grams;
+  if (["unidad", "unidades", "porcion", "porciones", "plato", "platos", "taza", "vaso"].includes(folded)) {
+    return quantity * FALLBACK_PORTION_GRAMS;
+  }
+  return null;
+}
+
+export function defaultPlateGrams(query: string, catalogServingGrams: number | null): { grams: number; assumed: boolean } {
+  const std = standardPortion(query);
+  if (std) return { grams: std.grams, assumed: true };
+  if (catalogServingGrams && catalogServingGrams > 1) return { grams: catalogServingGrams, assumed: true };
+  return { grams: FALLBACK_PORTION_GRAMS, assumed: true };
+}
+
+function portionKeyFits(needle: string, key: string): boolean {
+  if (needle === key) return true;
+  const tokens = needle.split(/\s+/);
+  if (key.includes(" ")) return needle.includes(key);
+  return tokens.includes(key);
+}

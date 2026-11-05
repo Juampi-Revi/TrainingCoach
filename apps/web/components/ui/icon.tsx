@@ -10,7 +10,7 @@ export type IconName =
   | "image" | "video" | "repeat" | "footprint" | "footprints" | "walk" | "target" | "refresh"
   | "scale" | "ruler" | "chest" | "hips" | "arm" | "leg"
   | "heart" | "watch" | "activity" | "info"
-  | "trophy" | "bolt" | "fire" | "trendingUp" | "trendingDown" | "minus";
+  | "trophy" | "bolt" | "fire" | "trendingUp" | "trendingDown" | "minus" | "mic";
 
 interface IconProps {
   name: IconName;
@@ -86,6 +86,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   trendingUp: <><path d="M23 6l-9.5 9.5-5-5L1 18" /><path d="M17 6h6v6" /></>,
   trendingDown: <><path d="M23 18l-9.5-9.5-5 5L1 6" /><path d="M17 18h6v-6" /></>,
   minus:    <path d="M5 12h14" />,
+  mic:      <><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><path d="M12 19v3" /></>,
 };
 
 export function Icon({ name, size = 18, color = "currentColor", style, className }: IconProps) {

@@ -1101,13 +1101,15 @@ model NutritionDrink {
 }
 
 model NutritionSupplement {
-  id           String   @id @default(uuid())
-  clientUserId String
-  name         String
-  timeOfDay    String
-  note         String?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  id             String    @id @default(uuid())
+  clientUserId   String
+  name           String
+  timeOfDay      String
+  note           String?
+  remind         Boolean   @default(true)
+  lastRemindedOn DateTime? @db.Date
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
 
   client User                     @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
   logs   NutritionSupplementLog[]

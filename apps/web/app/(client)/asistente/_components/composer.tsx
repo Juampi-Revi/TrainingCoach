@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Icon } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import { shrinkPhoto } from "../_lib/photo";
+import { useVoiceRecorder, type AssistantAudio } from "../_hooks/use-voice-recorder";
 
 export type AssistantPhoto = { mediaType: "image/jpeg"; data: string };
 
@@ -12,24 +13,25 @@ export function Composer({
   onSend,
 }: {
   busy: boolean;
-  onSend: (text: string, photo?: AssistantPhoto) => void;
+  onSend: (text: string, photo?: AssistantPhoto, audio?: AssistantAudio) => void;
 }) {
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState<AssistantPhoto | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const ready = text.trim() !== "" || photo !== null;
+  const voice = useVoiceRecorder();
+  const ready = text.trim() !== "" || photo !== null || voice.recording;
 
   function clearPhoto() {
     setPhoto(null);
     setPreview(null);
   }
 
-  function submit() {
+  function submit(audio?: AssistantAudio) {
     const value = text.trim();
-    if ((!value && !photo) || busy) return;
-    onSend(value, photo ?? undefined);
+    if ((!value && !photo && !audio) || busy) return;
+    onSend(value, photo ?? undefined, audio);
     setText("");
     clearPhoto();
   }
@@ -41,6 +43,24 @@ export function Composer({
       setPreview(`data:image/jpeg;base64,${data}`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "No pude leer esa foto");
+    }
+  }
+
+  async function toggleVoice() {
+    if (busy) return;
+    if (voice.recording) {
+      try {
+        const audio = await voice.stop();
+        if (audio) submit(audio);
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : "No pude mandar el audio");
+      }
+      return;
+    }
+    try {
+      await voice.start();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "No pude grabar");
     }
   }
 
@@ -58,6 +78,10 @@ export function Composer({
         className="asistente-composer"
         onSubmit={(event) => {
           event.preventDefault();
+          if (voice.recording) {
+            void toggleVoice();
+            return;
+          }
           submit();
         }}
       >
@@ -76,25 +100,40 @@ export function Composer({
         <button
           type="button"
           className="asistente-photo"
-          disabled={busy}
+          disabled={busy || voice.recording}
           aria-label="Adjuntar una foto del plato"
           onClick={() => fileRef.current?.click()}
         >
           <Icon name="image" size={18} />
         </button>
-        <input
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder={photo ? "Sumá un detalle…" : "Comí, tomé… o una foto"}
-          maxLength={2000}
+        <button
+          type="button"
+          className={`asistente-mic${voice.recording ? " recording" : ""}`}
           disabled={busy}
-          aria-label="Mensaje al asistente"
-        />
+          aria-label={voice.recording ? "Detener y enviar el audio" : "Grabar un audio"}
+          onClick={() => { void toggleVoice(); }}
+        >
+          <Icon name="mic" size={18} />
+        </button>
+        {voice.recording ? (
+          <span className="asistente-mic-timer" aria-live="polite">
+            {voice.seconds}s
+          </span>
+        ) : (
+          <input
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder={photo ? "Sumá un detalle…" : "Comí, tomé, una foto o un audio"}
+            maxLength={2000}
+            disabled={busy}
+            aria-label="Mensaje al asistente"
+          />
+        )}
         <button
           type="submit"
           className="asistente-send"
           disabled={busy || !ready}
-          aria-label="Enviar"
+          aria-label={voice.recording ? "Enviar audio" : "Enviar"}
         >
           <Icon name="send" size={16} />
         </button>
